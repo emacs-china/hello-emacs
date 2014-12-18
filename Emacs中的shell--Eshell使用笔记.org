@@ -1,0 +1,385 @@
+#+TITLE: Eshell使用笔记
+#+AUTHOR: DarkSun
+#+EMAIL: lujun9972@gmail.com
+#+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
+
+* 什么是Eshell?
+  Eshell是Emacs完全用Elisp实现的类UNIX shell. 由于它完全是由Elisp实现的,因此它具有与Emacs相同的可移植性,而且它可以很自然的与Elisp代码相结合. 事实上,你完全可以在Eshell下运行lisp代码
+* Eshell与普通shell有什么不同?
+  * Eshell支持输出重定向但不支持输入重定向
+    
+  * Eshell没有job control功能,它不支持多进程的后台切换
+    
+  * Eshell没办法输入C-z,因为C-z会被emacs所捕获.
+    
+  * Eshell可以识别更多类型的参数
+    * 字符串
+    * 数字
+    * Lisp列表
+    * Lisp符号
+    * Emacs buffer
+    * Emacs process handles
+      
+  * Eshell类似于unix的shell,因此若你是在windows下运行Eshell,你会发现像dir,copy这一类cmd.exe执的内置命令无法使用了,取而代之的是ls,cp这一类的unix命令
+    
+  * Eshell并不直接调用exec这样的内核函数,它把输入的命令转换成一个可执行的Lisp代码形式,然后执行这段代码.
+
+	要查看输入的命令被转成什么样的Lisp代码,可以输入`eshell-parse-command "echo hello"`
+    
+  * Eshell的多开比较复杂,若你已经打开了一个Eshell,再允许M-x eshell,只会跳转到那个eshell而已. 解决的办法有:
+    * 先用rename-buffer把打开的那个*eshell* buffer重命名为其他命令,再调用M-x eshell
+
+    * 使用C-u 数字n M-x eshell会创建一个编号为n的的eshell窗口
+
+  * 更强大的输出重定向功能
+    * Eshell可以把输出重定向到buffer中,elisp变量中或者elisp函数中
+* 命令
+** 命令提示符
+   你可以通过变量`eshll-prompt-function`自定义eshell的命令提示符. 该变量可以是一个匿名函数或一个函数名称,该函数的返回值被显示为Eshell的命令提示符号.
+
+   当你改了自己的命令提示符后,为了让Eshell能够识别出一行输出的那个部分是命令提示符,你还需要冲定义变量`eshll-prompt-regexp`,符合该正则的部分被识别为命令提示符
+** Eshell中查找命令的顺序为(以cp命令为例)
+   1. 输入的是完整路径(/bin/cp),则直接调用该路径的命令
+   2. 查询命令前缀,若为*(由变量`eshell-explicit-command-char`决定),并且能够在search path中查找到命令,则执行查找到的命令
+   3. 查询定义的alias
+   4. 在search path,$PATH中查询该命令
+   5. 查询同名的Lisp函数cp或eshell定义的命令eshell/cp
+
+   但若变量`eshell-prefer-lisp-functions`设置为t,则会最优先搜索elisp函数和eshell定义的命令.
+
+   你可以用which命令来查看命令的指向. 例如
+   #+BEGIN_EXAMPLE
+	  ~ $ which ls
+	 eshell/ls is a compiled Lisp function in `em-ls.el'  
+   #+END_EXAMPLE
+
+   如果你想调用外部的同名命令,可以在命令前加星号*. 例如
+   #+BEGIN_EXAMPLE
+	  ~ $ which *ls
+	 /bin/ls
+   #+END_EXAMPLE
+** 内置命令
+   eshell自己实现了许多的内置命令,例如ls. 但通常这些内置命令只是实现了最常用的那些功能. 但是Eshell足够聪明,当你输入了一个内部命令不支持的参数时,eshell会自动调用外部命令来执行
+
+   大多数的eshell内置命令都提供--help选项,输出帮助信息
+
+   * addpath 路径/路径列表
+	 
+	 把路径加入到PATH环境变量中,如果不加参数,则输出当前的PATH变量值
+
+   * alias 别名 定义
+
+     定义命令别名,通过alias增加/删除的别名会自动记录在变量`eshell-aliases-file`指代的文件中(默认为~/.eshell/alias)
+
+     定义可以用单引号'括起来,这时可以使用$1表示第一个参数,$2表示第二个参数,以此类推,$*表示所有参数
+
+     此外Eshell还提供一种叫`auto-correcting aliasing`的东西. 若你输入一个错误的命令超过一定次数(由变量`eshell-bad-command-tolerance`决定,默认为3),则Eshell会提示你把它定义为某个正确命令的别名
+   * cd 路径
+     
+     Eshell的cd命令很强大. 你可以
+     * cd - 
+       回到上一个目录
+     * cd -n 
+       回到上n个目录
+     * cd=REGEXP 
+       回到上一个满足正则匹配的目录
+     * cd =
+       显示目录跳转的历史,每个历史项都有一个编号
+     * cd =数字
+       跳转到指定编号的历史项
+	 * cd 远程目录
+	   使用tramp格式的远程目录
+       
+   * cal-eval EXPR
+
+     使用Emacs calculator及损EXPR
+
+   * date
+
+	 该命令与GNU的date命令类似,只有很少一点区别
+
+   * define
+
+	 定义变量别名
+     
+   * dired 目录
+     
+     用dired打开目录
+
+   * diff 
+
+	 使用Emacs的内置diff(不要与ediff搞混)
+
+   * ediff-files 文件1 文件2
+
+     使用ediff比较文件1和文件2
+
+   * find-file 文件
+
+     用Emacs打开文件,可以用tramp格式打开远程文件
+
+   * grep / agrep / egrep /fgrep /glimpse
+
+	 Emacs的内置grep命令与GNU grep相兼容,但会弹出一个名为*grep*的buffer,将结果显示出来
+
+   * info
+
+	 与外置的info命令一样,但是是使用Emacs自身的info阅读器来阅读
+
+   * kill
+
+	 类似kill命令,但它不仅可以接进程id,还能接process object
+
+   * jobs
+
+	 列出Emacs的所有子进程(不仅仅是在eshell中调用的). 它实际上是执行一个名为`list-processes`的Lisp函数,会弹出一个*process list* buffer
+
+   * listify
+
+	 功能同lisp函数`list`,它将后面的参数组合为elisp中的list. 例如
+	 #+BEGIN_EXAMPLE
+	   e:/我的笔记 $ listify a b c 1 2 3
+	   ("a" "b" "c" 1 2 3)    
+	 #+END_EXAMPLE
+     
+   * listify 参数列表
+
+     将参数列表转换成Elisp的list形式
+
+   * locate
+
+	 目前该命令只是调用外部的locate命令,并返回结果
+
+   * make
+	 
+	 调用Emacs的compile命令
+
+   * occur
+
+	 Emacs的occur的别名
+
+   * printnl
+
+	 打印各个参数,每个参数一行
+
+   * su / sudo
+
+	 Uses TRAMP’s su or sudo method to run a command via su or sudo(即是说,当目录为远程目录时,该命令作用于登录远程系统的用户)
+
+   * whoami
+
+	 返回当前用户,如果是在远程目录时执行该命令,则返回登录远程系统的用户
+
+   * upcase 字符串 /downcase 字符串
+
+     转换字符串为大/小写形式
+
+   * unset 环境变量
+
+     取消指定的环境变量
+
+   * vc-dir 目录
+
+     显示目录的版本控制信息
+** 命令交互中的一些有用的keybind
+   | keybind | description |
+   |---------+-------------|
+   | C-c M-b | 插入buffer名称 |
+   | C-c M-i | 插入子进程名   |
+   | C-c M-v | 插入环境变量名 |
+   | C-d M-d | 若一些程序不能正确处理带缓冲的输入,则按这个键序列切换 |
+** 通配符
+   eshell下的通配符与zsh下的通配符很类似,它也提供了predicate和modifier的功能. 具体的扩展规则可以通过执行命令eshell-display-predicate-help 和 eshell-display-modifier-help来查看帮助文档
+
+   所谓predicate,是指对输出结果进行过滤的一种表示,它的格式为($predicate). 例如
+   #+BEGIN_EXAMPLE
+      $ echo *(^/)     #显示非目录
+     ("bar" "foo")  
+     
+   #+END_EXAMPLE
+
+   所谓modifier,是指对输出结果进行修改的一种表示,它的格式为(:$modifier).
+   #+BEGIN_EXAMPLE
+     $ echo *(:U)            #把结果转换成大些形式
+     ("BAR" "BIN/" "DEV/" "ETC/" "FOO" "HOME/" "LIB/" "TMP/" "USR/" "VAR/")  
+     
+     $ echo ("foo" "bar" "baz" "foo")(:gs/foo/blarg/)    #可以进行替换操作
+     ("blarg" "bar" "baz" "blarg")
+   #+END_EXAMPLE
+
+   通过修改变量`eshell-predicate-alist`和`eshell-modifier-alist`的值可以新增自己的predicate和modifier. 例如
+   #+BEGIN_SRC elisp
+     (add-to-list 'eshell-modifier-alist '(?X . '(lambda (lst) (mapcar 'rot13 lst))))
+   #+END_SRC
+
+* 命令历史
+  history命令会显示一张历史命令列表,每个命令前面都带有一个编号. eshell最多存储的历史命令个数由变量`eshell-history-size`决定. 
+
+  使用`!!`运行上一个命令
+  
+  使用`!n`命令可以运行历史命令表中第n个命令,若n为负数,则是从历史表的尾部往回数
+
+  使用`!foo`命令或运行最后执行的以foo开头的命令,而`!?foo`会运行最后执行的包含`foo`的命令. 若要运行最后执行的第n个参数为foo的命令,用`!foo:n`
+
+  这张历史命令表会自动记录在一个文件中,该文件路径由变量`eshell-history-file-name`决定. eshell每次启动/关闭时都会读取/写入命令历史表到该文件中.
+
+  eshell还提供了一些查询/遍历历史命令的操作符,如下:
+  * M-r / M-s
+    
+    向前/先后正则搜索匹配的命令
+  * M-p / M-n
+    
+    上一个/下一个执行过的命令. 若你输入了一些命令后再执行这两个操作,则会查询以已输入为开头的历史命令
+** 相关配置项
+   * eshell-hist-ignoredups
+
+     决定是否忽视重复的命令
+   * eshell-input-filter
+
+     该值为一个函数名,每个输入的命令都会作为参数传递给该参数,若函数返回t则保存历史列表中,否则不保存
+   * eshell-history-size
+
+     决定了保存多少条历史命令
+* 补全
+** 使用补全
+   在eshell中按<TAB>键会自动开始补全. eshell不仅仅能补全命令,文件,还能补全lisp代码.
+** 自定义补全
+   eshell使用名为pcomplete(programmable completion的缩写)的库来进行补全, 你可以为自己的命令自定义补全函数.
+
+   补全函数的命名规则为`pcomplete/命令名`或`pcomplete/MAJOR模式/命令名`. 下面是个例子
+   #+BEGIN_SRC elisp
+     ;; 首先获取补全可选项,这里获取当前符合名称的软件的列表
+     (defun pcmpl-package-cache (name)  
+       "return a list of packages in cache"  
+       (unless (equal name "")  
+         (split-string (shell-command-to-string  
+                        (concat "apt-cache pkgnames " name " 2> /dev/null")))))  
+     ;; 定义补全函数
+     (defun pcomplete/sai ()  
+       "completion for `sai'"  
+       (while  
+           (pcomplete-here  
+            (pcmpl-package-cache (pcomplete-arg 'last)))))  
+   #+END_SRC
+** 相关配置项
+   * eshell-cmpl-ignore-case
+     
+     补全时是否忽略大小写
+
+   * eshell-cmpl-cycle-completions
+
+     是否循环补全
+* 脚本
+  在eshell可以用source命令来执行eshell脚本. 也可以在emacs的任何地方用函数`eshell-source-file`来调用eshell脚本
+** 启动脚本
+   Eshell也支持login和profile/rc启动脚本,它们的路径分别由变量`eshell-login-scrip`和变量`eshell-rc-scrip`决定,默认放在`~/.eshell`目录下
+** 内置变量
+   eshell的变量与Emacs共享一个作用域. 
+   
+   此外eshell还定义了一些内置变量
+   * $+
+
+	 当前的工作目录
+
+   * $-
+
+	 前一个工作目录
+
+   * $_
+
+	 最后一个命令的最后一个参数
+
+   * $$
+
+	 最后一个内置命令的结果,如果上一个命令是外部命令,则为t或者nil
+
+   * $?
+
+	 最后一个命令的退出码,0或1
+** $扩展
+   eshell不提供字符串操作的expansion操作,这是因为Elisp library已经提供了大量的类似功能.
+   * $var
+	 
+	 扩展为变量var的值
+   * $#var
+	 
+	 扩展为变量var的值的长度
+   * $(lisp)
+	 
+	 扩展为lisp表达式的运行结果,它与(lisp)一样,但是可以嵌入到字符串中
+   * ${command}
+	 
+	 扩展为command的输出结果
+   * $var[i]
+
+	 扩展为变量var的值中的第i个元素,如果变量var的值为字符串,它会以空格为分隔符把它分割为list
+   * $var[: i]
+
+	 类似上面,但是以:为分割符号
+   * $var[: i j]
+
+	 类似上面,但是会返回一个list包含第i和第j元素值. 若该返回值内插入一个字符串中,则会转换为以空格连接各元素值的字符串.
+   * $var["\\\\" i]
+	 
+	 以反斜杠作为分隔符.
+
+	 事实上,第一个参数可以是任何的正则表达式. 例如如果你想以数字作为分隔符可以用`$var["[0-9]+" 10 20]`
+   * $var[hello]
+
+	 返回var数组中索引为hello的值
+   * $@var[hello]
+	 
+	 Returns the length of the cdr of the element of var who car is equal to "hello". 
+** for循环
+   for var in 列表 { 执行语句 }
+
+   这里的列表是以空格分割的一系列的值,也可以是某个命令的输出结果
+   #+BEGIN_EXAMPLE
+     e:/git-svn/server/pub/src $ for va in 2 3 4 {echo $va}
+     2
+     3
+     4  
+   #+END_EXAMPLE
+* Input/Output
+  
+  当在eshell下运行那些非line-oriented的程序(比如使用了ncurses库的程序)时,显示会异常.
+
+  要解决这个问题,需要手工添加这个命令到列表`eshell_visual_commands`中
+
+  eshell能够支持输出重定向和管道,但是目前还不支持输入重定向. 
+** 重定向到虚拟设备 
+
+   所谓虚拟设备可以认为是ELisp函数的一个别名,任何对虚拟设备的重定向操作都会调用对应的Elisp函数. 
+
+   虚拟设备与Elisp函数的对应关系存储在变量`eshell-virtual-targets`中. 默认情况下eshell自带了两个虚拟设备:
+   * /dev/kill会把输出流存入emacs kill ring
+   * /dev/clip会把输出流存入clipboard
+   * /dev/eshell会把输出流直接在eshell上输出
+   * /dev/null会吧输出流丢弃
+
+   如果你想新增自己的虚拟设备,你可以添加格式为("/dev/name" function mode)的list到变量`eshell-virtual-targets`中. 其中:
+   * /dev/name是虚拟设备的名称.
+   * function是一个lambda函数或者函数名称.
+
+	 若mode为nil则该函数作为output function; 若mode非nil,则该函数需要接收一个mode并返回一个output function. 
+     
+     function的参数接收的mode有三个可能值'overwrite,'append和'insert
+
+     output function接收一个字符串作为参数. eshell对输出重定向的每一行都会调用该output function来处理,直到输出完毕则传递参数nil.
+
+   * mode与function函数配合,用来指示第二个function的类型
+** 重定向到buffer
+   * 此外你还可以通过`ls > #<buffer buffer名称>`这样的方式来将输出覆盖到emacs的某个buffer中
+   * 此外你还可以通过`ls >> #<buffer buffer名称>`这样的方式来将输出添加到emacs的某个buffer中
+   * 此外你还可以通过`ls >>> #<buffer buffer名称>`这样的方式来将输出插入到emacs的某个buffer的光标处
+** 重定向到Elisp变量
+   你还可以使用>>#'变量名来将输出重定向到emacs lisp的某个变量中
+   #+BEGIN_SRC sh
+     ~ $ echo a b c >#'a
+     ~ $ echo $a
+     ("a" "b" "c")
+   #+END_SRC
+* 资源
+  * [[https://linuxtoy.org/archives/emacs-eshell.html][邪恶的eshell]]
+  * [[http://ergoemacs.org/emacs/eshell.html][Emacs: What's eshell? “eshell” vs “shell” Difference?]]
+  * [[http://www.masteringemacs.org/articles/2010/12/13/complete-guide-mastering-eshell/][complete-guide-mastering-eshell/]]

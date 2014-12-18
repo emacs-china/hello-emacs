@@ -1,0 +1,85 @@
+#+TITLE: Info
+#+AUTHOR: DarkSun
+#+EMAIL: lujun9972@gmail.com
+#+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
+
+* 基本操作
+  * SPC
+    下翻一页,可以越过章节
+  * DEL/BACKSPACE
+    上翻一页,可以越过章节
+  * PAGEUP
+    在章节内上翻一页
+  * PAGEDOWN
+    在章节内下翻一页
+  * b
+    跳转到本章节的beginning
+  * n
+    下一同等级的章节
+  * p
+    上一同等级的章节
+  * ]
+    下一章节
+  * [
+    上一章节
+  * ^
+    跳转到父章节
+  * TAB
+    下一个子章节链接处
+  * S-TAB
+    上一个子章节链接处
+  * m
+    选择指定的子章节
+  * ?
+    显示帮助列表
+  * f
+	进入指定的交叉引用链接,输入?则会在Completion buffer中显示所有的交叉引用链接
+  * i
+	在index中搜索指定的topic并进入该topic
+  * I
+	类似i,但是会创建一个虚拟的info node,显示所有的查询结果
+  * l
+	last的缩写,回归到上一个位置
+  * r
+	revist的缩写,与l命令相反,前进到下一个位置
+  * L
+	list的缩写,列出一个访问历史列表,可以在列表中选择之前访问过的node再次访问
+  * d
+	进入Directory节点,在Directory节点中列出了系统中所安装了的manual和其他info文档
+  * t
+	进入该manual的top节点,在top节点你可以浏览此manual的最高层级的menu
+  * q
+	退出info
+* 高级操作
+  * s
+	搜索指定字符串
+  * C-s / C-r
+	递增搜索字符串
+  * ,
+	重复上一次的i搜索
+  * M-x info-apropos
+	在系统中安装的所有Info文档中查找匹配字符串的index
+  * g
+	跳转到指定的node,但它不像m一样可以局部匹配. 如果要跳转的node在其他文件中,需要使用"(文件名)node名"的这种格式来指定. 另外节点名为*的话,表示整个文件,这会把整个文件的内容都显示出来
+  * 1 2 3 4 5 6 7 8 9
+	可以直接使用这9个数字来跳转到当前node menu的第N个item
+  * M-n
+	调用Emacs的clone-buffer命令克隆当前的info buffer
+  * C-u m / C-u g
+	类似m和g命令,但是会新建一个info buffer来显示在另一个窗口中
+* 配置信息
+  * Info-directory-list
+	从哪些目录中搜索Info文件的列表
+  * Info-additional-directory-list
+	类似Info-directory-list,但是这些目录不会显示在dir中
+  * Info-mode-hook
+	进入Info-mode调用的函数列表
+  * Info-use-header-line
+	是否显示header-line
+  * Info-hide-note-references
+	是否隐藏不需要的文本
+  * Info-scroll-prefer-subnodes
+  * Info-isearch-search
+	isearch是否能够跨越节点进行
+  * Info-enable-active-nodes
+	在选择到node时,是否执行相关的Lisp代码. 

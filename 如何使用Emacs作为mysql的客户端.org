@@ -1,0 +1,61 @@
+#+TITLE: 如何使用Emacs作为mysql的客户端
+#+AUTHOR: DarkSun
+#+EMAIL: lujun9972@gmail.com
+#+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
+
+* 配置.emacs
+  #+BEGIN_SRC emacs-lisp
+    (setq sql-mysql-options '("-C" "-f" "-t" "-n")) ; for windows
+    (setq sql-user "root")
+    (setq sql-password "")
+  #+END_SRC
+* 连接MySQL服务器
+  1. 执行M-x sql-mysql / 在菜单中选择SQL->start SQLi session
+  2. 根据提示输入用户，密码，mysql服务器地址，端口等信息。
+     如果觉得麻烦可以配置如下
+     #+BEGIN_SRC emacs-lisp
+       (setq sql-connection-alist
+       '((pool-a
+       (sql-product 'mysql)
+       (sql-server "1.2.3.4")
+       (sql-user "me")
+       (sql-password "mypassword")
+       (sql-database "thedb")
+       (sql-port 3306))
+       (pool-b
+       (sql-product 'mysql)
+       (sql-server "1.2.3.4")
+       (sql-user "me")
+       (sql-password "mypassword")
+       (sql-database "thedb")
+       (sql-port 3307))))
+     #+END_SRC
+  3. emacs会新建一个名为*SQL*的buffer
+* 连接sql文件与*SQL* buffer
+  1. 打开sql文件并进入sql-mode
+     #+BEGIN_EXAMPLE
+       直接打开sql文件
+       或者
+       打开一个文件后再执行M-x sql-mode
+     #+END_EXAMPLE
+  3. 设置产品类型为mysql
+     #+BEGIN_EXAMPLE
+       从带单中选择 SQL -> Product -> MySQL
+       或
+       执行M-x sql-set-product，然后输入mysql
+     #+END_EXAMPLE 
+  4. 连接sql文件与*SQL* buffer
+     #+BEGIN_EXAMPLE
+       使用菜单 SQL -> set SQLi buffer
+       或
+       执行命令M-x sql-set-sqli-buffer
+       
+       然后输入想要连接的那个connection buffer，默认为*SQL* buffer
+     #+END_EXAMPLE
+
+* 使用emacs作为mysql的客户端
+** 在*SQL* Buffer中执行sql语句:
+   直接输入SQL语句，以“;”结尾，按下回车键自动执行
+** 在sql文件buffer中执行sql语句
+   输入SQL语句，按C-c C-c执行当前段落中的所有语句，
+   或者选择要执行的语句按下C-c C-b

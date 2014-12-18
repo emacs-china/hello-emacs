@@ -1,0 +1,61 @@
+#+TITLE: mobileOrg-手机用的org神器
+#+AUTHOR: DarkSun
+#+EMAIL: lujun9972@gmail.com
+#+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
+
+* 什么是MobileOrg
+  emacs下的org-mode是一款时间管理很好的工具。然而美中不住的是，emacs只能在电脑上使用，而无法在手机上使用。现在这个年代，带着手机到处跑的人很多，带着电脑到处跑的人真的很难找。于是大神们（Richard Moreland和Matt Jones）顺应民意开发出了MobileOrg，意为手机上的Org。从此我们就可以在外出时使用手机进行时间管理，然后回到家将手机上的信息记录同步到电脑上。
+* 准备工作
+** DropBox
+   MobileOrg通过DropBox与电脑上的org进行同步,因此首先你必须在电脑端和手机端都安装一个DropBox,,我们这里假设你已经安装好了DropBox,有一个DropBox用户并设置同步目录为"E:/DropBox"
+** MD5签名工具
+   MobileOrg使用MD5计算各个org的签名值,在与电脑Org进行同步时,MobileOrg只同步签名值改变的文件.linux下一般都自带了名为"md5"的签名程序.使用windows的同学可以在http://www.pc-tools.net/files/win32/freeware/md5sums-1.2.zip 下载MD5签名工具.我们假设已经下载了该工具并把它放在"D:\bin"目录中
+** emacs配置
+   为了让MobileOrg与电脑端Org进行同步,还需要在电脑端对emacs进行一些必要的配置,这样电脑端的Org才知道需要同步哪些文件
+   * org-mobile-directory
+	 这个变量配置电脑端DropBox的同步目录的地址,需要同步的org文件会被emacs放到这个目录中,以便与MObileOrg进行同步
+	 需要注意的是,这些Org如果包含中文的话,需要将文件的编码转换为UTF-8的格式,否则在MobileOrg上会显示为乱码
+	 #+BEGIN_SRC elisp
+       (setq org-mobile-directory "E:/Dropbox/org")
+	 #+END_SRC
+   * org-mobile-files
+	 这个变量告诉电脑端Org需要与MobileOrg同步哪些Org,默认情况下它的值跟变量org-agenda-files的值一样的
+	 #+BEGIN_SRC elisp
+       (setq org-mobile-files (list "e:/我的GTD/office.org"
+                        "e:/我的GTD/home.org"
+                        ))
+       
+	 #+END_SRC
+   * org-directory
+	 这个变量告诉电脑端Org,若org-mobile-files中配置的是相对路径,则表示的是相对于org-directory所代表的目录来说的
+	 #+BEGIN_SRC elisp
+       (setq org-directory "E:/我的GTD")
+	 #+END_SRC
+   * org-mobile-inbox-for-pull
+	 当要把MobileOrg所做的修改同步到电脑端Org时,电脑端Org会先把MobileOrg的修改动作记录到该变量指定的文件中,然后再根据该文件中所记录的操作对电脑端Org进行修改
+	 #+BEGIN_SRC elisp
+       (setq org-mobile-inbox-for-pull "E:/我的GTD/inbox.org")
+	 #+END_SRC
+   * org-mobile-checksum-binary
+	 上面提到了MobileOrg只会同步签名值改变了的文件,这个变量配置了计算签名值的程序所在的地址(可以同时配置多个地址),电脑端Org会使用第一个可用的程序计算签名
+	 #+BEGIN_SRC elisp
+       (defcustom org-mobile-checksum-binary (or (executable-find "d:/bin/md5sums.exe"))
+        "Executable used for computing checksums of agenda files."
+        :group 'org-mobile
+        :type 'string)
+	 #+END_SRC
+** MobieOrg的安装与配置
+   * MobileOrg在android的"play商场"和IOS的appstore都可以免费找到,按照一般的程序安装即可.
+   * 安装完后第一次打开MobileOrg,会让你选择同步的方式,我这里选择通过DropBox同步,
+   * 然后选择需要同步的Org文件放在哪个目录下,这里我们的目录是"org"(与org-mobile-directory配置的目录对应)
+   * 其他详细设置可用在Settings中继续设置
+* 开始使用
+** 第一步,将电脑端的Org同步到MobileOrg中去
+   * 电脑端Org的同步方式不是单纯的将Org拷贝到前面配置的DropBox就可以了,事实上它需要作很多其他的动作,比如计算签名信息,生成一些必须的文件等等.
+   * 我们可用通过emacs的Org菜单有一个MobileOrg的子菜单,选择"Push files and views"功能,电脑端Org会自动将org-mobile-files定义的Org文件进行一些处理后,拷贝到org-mobile-directory定义的同步目录中去.
+   * 在手机上点击MobileOrg的Synchronize图标,MobileOrg开始同步电脑端的Org文件,同步完后MobileOrg就会显示出同步的Org文件的内容,同时会生成一个Agenda
+** 第二步,然后就可用用在手机上用MobileOrg进行时间管理操作了.
+   * 在MobileOrg的右上角可用按出菜单项,对Org进行各种操作.
+   * 长按各个记录条目可用对记录进行修改操作
+** 第三步,将MobileOrg的操作同步到电脑端Org中去
+   在emacs的Org菜单的MobileOrg子菜单项中,点击"Get Captured and Flagged",emacs就会根据MobileOrg的操作记录同步修改电脑端的Org文件

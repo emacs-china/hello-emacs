@@ -1,0 +1,67 @@
+#+TITLE: emacs-Deft
+#+AUTHOR: DarkSun
+#+EMAIL: lujun9972@gmail.com
+#+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
+
+* Deft介绍
+  Deft是一款写作和管理纯文本格式笔记的工具。 通过它可以快速的查到或新建笔记。 Deft的下载地址是[[http://jblevins.org/projects/deft/deft.el][Deft]]。 也可以通过[[http://jblevins.org/git/deft.git][浏览]]或者拷贝git仓库：
+  #+begin_src sh
+     git clone git://jblevins.org/git/deft.git 
+  #+end_src
+* Deft操作
+** 进入/退出Deft
+   使用命令M-x Deft进入Deft界面。 Deft的界面就是一个建议的文件浏览器，列出了指定的Deft目录中所有符合条件的文本文件信息（按最近修改时间从新到旧排列）。 文件信息包括文件标题，文件简介和最近修改时间。默认情况下，Deft以文件第一行为标题，第二行为简介内容。
+   
+   使用C-c C-q退出Deft.
+** 搜索和过滤
+   搜索和过滤是Deft的最主要的操作。 你只需要在Deft界面直接输入要搜索的字符串，Deft会随着你的输入自动搜索文件标题的内容，并不断将不符合条件的文件过滤出去。
+
+   若想打开第一个匹配的文件，只需要直接按<RET>即可。 如果没有匹配的文件，则Deft会以输入的字符串为标题新建一个文件，以便你写新的笔记。若你想自定义文件名，则使用C-RET代替RET。
+
+   Deft还提供了其他一些搜索命令：
+   * C-c C-c
+	 用来清空搜索关键字。
+   * C-c C-g
+	 用来刷新搜索结果。
+   * C-c C-l
+	 使用minibuffer编辑搜索关键字，在这里可以使用M-p和M-n来遍历之前搜索过的关键字。
+   * C-c C-t
+	 切换搜索方式为渐进式搜索/正则搜索，默认Deft使用渐进搜索
+** 文件操作
+   * C-p / C-n
+	 定位到上一个/下一个文件处
+   * RET
+	 打开/新建文件
+   * C-c C-r
+	 文件重命名
+   * C-c C-d
+	 删除文件
+   * C-c C-n
+	 快速创建文件
+   * C-c C-m
+	 创建文件，但会提示出入文件名
+* 配置Deft
+  * 设置匹配的文件后缀名
+	#+begin_src elisp
+      (setq deft-extension "org")
+	#+end_src
+  * 设置从哪个目录下查找匹配的文件
+	#+begin_src elisp
+      (setq deft-directory "~/我的笔记")
+	#+end_src
+  * 设置编辑文件时默认的major-mode
+	#+begin_src elisp
+      (setq deft-text-mode 'org-mode)
+	#+end_src
+  * 设置使用文件名作为标题
+	#+begin_src elisp
+      (setq deft-use-filename-as-title t)
+	#+end_src
+  * 设置默认使用正则搜索
+	#+begin_src elisp
+      (setq deft-incremental-search nil)
+	#+end_src
+  * 变量deft-parse-title-function
+	Deft使用该变量定义的函数接受文件第一行内容作为参数，并将结果作为标题显示出来。
+	默认为`deft-strip-title`，删除参数中符合变量`deft-strip-title-regexp`的文本。
+	

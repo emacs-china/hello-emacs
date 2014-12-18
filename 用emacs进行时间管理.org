@@ -1,0 +1,58 @@
+#+TITLE:用emacs进行时间管理
+#+AUTHOR: DarkSun
+#+EMAIL: lujun9972@gmail.com
+#+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
+
+* What:什么是Emacs
+** 什么是Emacs
+   * 文本编辑器--本职工作
+   * 文件管理工具--dired-mode
+   * 时间管理工具--org-mode
+   * [[http://www.emacser.com][等等]] --不同的mode赋以不同的功能
+** Emacs展示
+   * 图形界面展示
+   * Org菜单展示(大部分时间管理的功能都能在这找到)
+* Why:为什么用Emacs进行时间管理
+** 现有时间管理软件的不足
+   * 到了没有安装这个软件的地方就无法进行时间管理了
+   * 功能繁多,许多功能用不上
+** Emacs进行时间管理的优点
+   * 跨平台的,离线的
+   * 基于纯文本的-可读性好
+   * *方便的时间统计功能*
+   * 可定制性强
+   * 大量的功能扩展
+* where:在哪里获得Emacs
+  * [[http://www.gnu.org/prep/ftp.html][Emacs下载地址]]
+  * [[http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html][Emacs手册说明]]
+* How:如何用Emacs进行时间管理
+** 任务与子任务
+   * 一个一级标题对应的就是一个任务
+   * 一个二级标题对应的是一级标题的子任务
+   * 三级标题,四级标题分别是二级标题,三级标题的子任务;依次类推
+** 情景模式--TAG标签  :tag:
+   * 在标题后面用 :tag:标注任务的情景
+   * C-c C-q 可以编辑TAG
+** 任务排序--A,B,C级
+   * 在标题前用[#A] [#B] [#C]标注优先级
+   * 用Shift+上下键调整优先级
+** 任务安排 
+   * C-c C-s 规划日程
+   * C-c C-d 设置期限
+** 任务状态--TODO,DONE
+   * 在标题前直接加上任务状态
+   * C-c C-t 可以在TODO,DONE,无 三种状态之间切换
+   * C-S-Enter 可以直接新建TODO状态的任务
+** 记录与分析时间
+*** 记录时间
+   	* C-c C-x c-i 开始计时
+   	* C-c C-x C-o 结束计时
+*** 分析时间
+	* C-c C-x C-r 创建今日的时间统计表格
+	* C-c a 进入agenda view
+	  * 使用C-c [添加该任务文件到agenda中(Org->File List Agenda)
+	  * R 创建时间统计表格
+** 导出
+   * C-c C-e
+	 * m 导出为freemind脑图
+	 * b 导出为html并浏览

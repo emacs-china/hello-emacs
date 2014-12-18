@@ -1,0 +1,69 @@
+#+TITLE: eww
+#+AUTHOR: DarkSun
+#+OPTIONS: ^:{}
+
+* 简介
+  EWW,全称the Emacs Web Wowser,是Emacs24.4开始自带的一款web浏览器. 要使用EWW,需要有libxml2的支持.
+
+  在ubuntu下,可以使用`sudo apt-get install libxml2`来安装
+
+  在windows下,可以去http://ncu.dl.sourceforge.net/project/ezwinports/libxml2-2.7.8-w32-bin.zip 下载libxml2
+* 基本操作
+  * 浏览网页
+
+    要浏览网页很简单,只需要执行M-x eww,然后输入网址,回车就行了. 若输入的不像是URL或者主机名,则eww会自动搜索关键字,至于使用哪个搜索引擎,则由变量`eww-search-prefix`来决定. 默认是https://duckduckgo.com
+
+    若想浏览本地页面,则有两种方法:
+
+    一种是执行M-x eww,在输入网址时使用file://xxx 的url
+
+    另一种是执行M-x eww-open-file,然后像find-file一样选择要打开的本地文件就行.
+
+  * eww-mode的操作
+
+    | 按键 | 函数                             | 作用                                                                             |
+    |------+----------------------------------+----------------------------------------------------------------------------------|
+    | q    | eww-quit                         | 退出eww                                                                          |
+    | g    | eww-reload                       | 重载该页面                                                                       |
+    | w    | eww-copy-page-url                | 拷贝当前URL到kill ring                                                           |
+    | d    | eww-download                     | 下载光标所在的URL,下载的目录存在变量`eww-download-directory`中,默认为~/Downloads |
+    | l    | eww-back-url                     | 回退上一个URL                                                                    |
+    | r    | eww-forward-url                  | 前进到下一个URL                                                                  |
+    | H    | eww-list-histories               | 显示浏览历史                                                                     |
+    | b    | eww-add-bookmark                 | 加书签                                                                           |
+    | B    | eww-list-bookmarks               | 显示书签列表                                                                     |
+    | &    | eww-browse-with-external-browser | 使用外部浏览器打开当前浏览的URL,外部浏览器由变量`shr-external-browser`决定       |
+    | v    | eww-view-source                  | 查看页面源代码                                                                   |
+    | C    | eww-cookie-list                  | 列示Cookie                                                                       |
+    |      |                                  |                                                                                  |
+
+* 配置
+  * eww-search-prefix
+
+	若输入給eww的字符串不像是URL或主机名,则会使用eww-search-prefix作为搜索引擎.
+
+  * eww-download-directory
+
+	配置eww的下载目录
+
+  * shr-external-browser
+
+	该变量指定了eww使用的外部浏览器
+
+  * eww-use-external-browser-for-content-type
+
+	当打开指定类型的content时,自动使用外部浏览器打开.
+
+  * eww-header-line-format
+
+	该变量指示了eww buffer的head line以什么格式来显示
+
+	它是一个格式字符串,其中%t表示website的标题,%u表示访问的URL
+
+  * shr-max-image-proportion
+
+	该值为一个不超过1的浮点数,表示当显示图片时,图片的大小不能超过整个eww window的shr-max-imag-proportion倍
+
+  * shr-blocked-images
+
+	该变量为一个正则表达式,若图片的URL匹配该表达式,则该图片被屏蔽.

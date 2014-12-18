@@ -1,0 +1,52 @@
+#+TITLE: newsticker
+#+AUTHOR: DarkSun
+#+EMAIL: lujun9972@gmail.com
+#+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
+
+* 简介
+  newsticker是一个RSS阅读器,它支持以下几种格式
+  * RSS 0.91
+  * RSS 0.92
+  * RSS 1.0
+  * RSS 2.0
+  * Atom 0.3
+  * Atom 1.0
+  
+  newsticker-mode支持imenu,这使得你可以使用菜单来定位. 该功能可以使用以下配置信息实现
+  #+begin_src elisp
+    (add-hook 'newsticker-mode-hook 'imenu-add-menubar-index) 
+  #+end_src
+
+* 使用
+  * newsticker-show-news
+    显示出所有可用的headline. 在headline上按鼠标中间或回车就会调用`browse-url`来打开链接.
+  * newsticker-start-ticker
+	使得headline在echo area滚动
+  * newsticker-stopticker
+	headline停止在echo area上滚动
+  * newsticker-start
+	开始周期性地下载headline
+  * newsticker-stop
+	停止周期性地下载headline,同时也会调用newsticker-stop-ticker
+* 配置
+  * newsticker-url-list
+	定义了feed的地址列表,元素格式为(LABEL URL &START-TIME INTERVAL WGET-ARGUMENTS)
+	例如
+	#+begin_src elisp
+      (add-to-list 'newsticker-url-list '(("MantistBt" "http://10.8.6.167/mantisbt/issues_rss.php?username=lujw&key=a88ade4f7cc4ced3706d36b3465e4005&project_id=1" nil nil nil)))
+	#+end_src
+  * newsticker-retrieval-method
+	定义了从feed获取headline的方式,既可以使用Emacs内建的下载功能(设置为'intern)也可以使用外部工具(设置为'extern)例如wget(由变量`newsticker-wget-name`来决定)来实现
+  * newsticker-retrieval-interval
+	定义了获取headline的时间间隔,以秒为单位
+  * newsticker-keep-obsolete-items
+	当未读的headline从feed中删除时,是否还保留在Newsticker缓存中
+  * newsticker-auto-mark-filter-list
+	自动标记headline为immortal的或者是old的
+  * newsticker-new-item-functions
+	获取新headline时自动调用的函数列表,可用通过函数`newsticker-download-images`和`newsticker-download-enclosures`自动下载图片或相关附件
+  * newsticker-ticker-interval 和 newsticker-scroll-smoothly
+	决定了headline在echo area显示时的时间间隔和切换方式
+  * newsticker-frontend
+    newsticker提供了treeview和plainview两种显示界面. 改变量决定了使用哪种显示界面. 可用为`newsticker-plainview`或`newsticker-treeview`
+	

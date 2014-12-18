@@ -1,0 +1,108 @@
+#+TITLE: ERC
+#+AUTHOR: DarkSun
+#+EMAIL: lujun9972@gmail.com
+#+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
+
+* 开启ERC
+  * 开启命令为M-x erc
+  * 初始化文件为~/.emacs.d/.ercrc.el
+* ERC通用命令
+  * C-c C-a
+    跳转到行的开头或提示符的结尾
+  * C-c C-b
+    切换到指定的ERC buffer
+  * C-c C-c
+    是否解析消息中的control sequences
+  * C-c C-d
+    交互地输入用户行动,然后发送给IRC
+  * C-c C-e
+    是否自动回复CTCP(比如version和ping)
+  * C-c C-f
+    发送消息时是否使用流量控制
+  * C-c TAB
+    为当前频道打开invite-only-mode
+  * C-c C-j
+    加入一个频道
+  * C-c C-k
+    以交互方式打开一个erc-og-mathes buffer
+  * C-c C-l
+    如果log功能打开了,添加当前buffer内容到log文件中
+  * C-c C-n
+    为当前频道运行命令"/names #channel"
+  * C-c C-p
+    离开当前频道,并且可以输入原因
+  * C-c C-q
+    输入原因后,断开与当前server的连接
+  * C-c C-t
+    设置当前频道的主题
+  * C-c C-u
+    删除当前输入行
+* Modules
+  可以通过加载modules的方法来为ERC添加功能,方法是编辑变量erc-modules,然后执行erc-update-modules命令
+  Modules的说明如下:
+  * autoaway
+    自动设置离开状态
+  * autojoin
+    自动加入频道
+  * bbdb
+    与Big Brother Database整合
+  * button
+    让URL,昵称和其他文本变成可以点击的按钮
+  * capab-identify
+    标记出服务器上不明用户
+  * completion(aka pcomplete)
+    补全昵称和命令
+  * fill
+    为超长的文本行自动断行
+  * identd
+    在端口8113上启动一个identd服务
+  * irccontros
+    高亮或者删除IRC的控制字符
+  * log
+    保存buffer到log中
+  * match
+    高亮像pals,fools这些关键字
+  * menu
+    在ERC buffer中显示菜单
+  * netsplit
+    探测netsplits
+  * noncommands
+    如果执行的命令不是有效的IRC命令则不显示出来
+  * notify
+    当某人的在线状态改变时,发出提醒
+  * notifications
+    当收到私聊消息或昵称被提到时,发出提醒
+  * page
+    处理IRC发出的CTCP PAGE请求
+  * readonly
+    让已经显示的文本行变为只读状态
+  * replace
+    替换消息中的文本
+  * ring
+    启用输入历史
+  * scrolltobottom
+    跳转到buffer的底部
+  * servers
+    自动标示到Nickserv中
+  * smiley
+    转换笑脸符号为漂亮的图标显示
+  * sound
+    当收到CTCP SOUND请求时播放声音
+  * spelling
+    检查消息中的拼写错误
+  * stamp
+    为消息添加时间戳
+  * track
+    在mode-line中显示频道的激活状态
+  * truncate
+    截断buffer到指定的大小
+  * unmorse
+    在消息中翻译莫斯码
+* IRC命令
+  * /join #频道
+    加入频道
+  * /msg NickServ register 密码
+    注册昵称
+  * /query <nick>
+    与某人私聊
+  * 
