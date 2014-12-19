@@ -7,7 +7,7 @@
   emacs下的org-mode是一款时间管理很好的工具。然而美中不足的是，emacs只能在电脑上使用，而无法在手机上使用。现在这个年代，带着手机到处跑的人很多，带着电脑到处跑的人真的很难找。于是大神们（Richard Moreland和Matt Jones）顺应民意开发出了MobileOrg，意为手机上的Org。从此我们就可以在外出时使用手机进行时间管理，然后回到家将手机上的信息记录同步到电脑上。
 * 准备工作
 ** DropBox
-   MobileOrg通过DropBox与电脑上的org进行同步,因此首先你必须在电脑端和手机端都安装一个DropBox,,我们这里假设你已经安装好了DropBox,有一个DropBox用户并设置同步目录为"E:/DropBox"
+   MobileOrg通过“云盘”（例如dropbox）与电脑上的org进行同步,因此首先你必须在电脑端和手机端都安装一个云盘客户端,我们这里假设你已经安装好了DropBox,有一个DropBox用户并设置同步目录为"E:/DropBox"
 ** MD5签名工具
    MobileOrg使用MD5计算各个org的签名值,在与电脑Org进行同步时,MobileOrg只同步签名值改变的文件.linux下一般都自带了名为"md5"的签名程序.使用windows的同学可以在http://www.pc-tools.net/files/win32/freeware/md5sums-1.2.zip 下载MD5签名工具.我们假设已经下载了该工具并把它放在"D:\bin"目录中
 ** emacs配置
