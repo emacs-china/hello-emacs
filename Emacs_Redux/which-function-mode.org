@@ -1,0 +1,37 @@
+#+TITLE: which-function-mode
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+每个开发者应该偶尔会遇到这么一种情况吧:你正在查看一个类或方法的定义代码,这时候你想看看这个类/方法的名称是什么,但是很有可能这个类/方法的名称并同时也没有显示在编辑区中.
+当然,你可以往上拖动滚动条然后查看一下类/方法的名称,但其实有一个更加简便的方法,那就是使用Emacs内建的which-function-mode.
+
+当开启了which-function-mode后,你会在buffer modeline的中间位置看到光标所在处的代码所表示的定义的名称.
+
+开启which-function-mode的方式很简单:
+#+BEGIN_SRC emacs-lisp
+  (which-function-mode) 
+#+END_SRC
+这样就会对所有支持which-function-mode的major mode都开启该功能了.
+
+若你只想在特定的几个major mode下开启该功能,可以这样做:
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'which-func-modes 'ruby-mode)      
+  (add-to-list 'which-func-modes 'emacs-lisp-mode)
+#+END_SRC
+
+默认情况下,当which-function-mode不能检测到定义的名称时,会显示`???`. 但你也可以通过下面的语句来更改这个显示方式:
+#+BEGIN_SRC emacs-lisp
+  (setq which-func-unknown "n/a")
+#+END_SRC
+
+那么,如果你希望把定义的名称显示在buffer的header-line而不是modeline该怎么办呢? 下面的代码能做到这一点(由Sebastian Wiesner提供)
+#+BEGIN_SRC emacs-lisp
+  ;; Show the current function name in the header line                                
+  (which-function-mode)                                                               
+  (setq-default header-line-format                                                    
+                '((which-func-mode ("" which-func-format " "))))                      
+  (setq mode-line-misc-info                                                           
+        ;; We remove Which Function Mode from the mode line, because it's mostly
+        ;; invisible here anyway.                                               
+        (assq-delete-all 'which-func-mode mode-line-misc-info))      
+#+END_SRC

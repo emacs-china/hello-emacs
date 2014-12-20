@@ -1,0 +1,74 @@
+#+TITLE: 快速定位Emacs_Lisp源代码
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+使用Emacs的过程中,经常会要查看各种库,函数或变量定义的源代码. 一般的方法是使用C-h f(describe-function), C-h v (describe-variable) 和 C-h k (describe-key) 这些命令来跳转到源代码的位置. 
+
+现在让我们试着优化这一流程
+
+* find-func
+
+  find-func是Emacs内建的一个库, 它提供了很多有用的命令来帮助我们快速定位源代码的位置. 下面简单介绍一下:
+
+  * find-library命令
+
+    可以使用M-x find-library定位库的源代码. 假设你想要定位到ido的源代码处,可以执行:
+    #+BEGIN_EXAMPLE
+    M-x find-library RET ido RET
+    #+END_EXAMPLE
+
+    推荐将该命令绑定到快捷键C-h C-l
+    #+BEGIN_SRC emacs-lisp
+      (define-key 'help-command (kbd "C-l") 'find-library)
+    #+END_SRC
+
+  * find-function命令
+
+    使用M-x find-function来定位到某个函数的源代码处. 例如
+    #+BEGIN_EXAMPLE
+    M-x find-function RET find-function RET
+    #+END_EXAMPLE
+    
+    推荐将该函数绑定到C-h C-f
+    #+BEGIN_SRC emacs-lisp
+      (define-key 'help-command (kbd "C-f") 'find-function)
+    #+END_SRC
+
+  * find-function-on-key
+
+    可以使用M-x find-function-on-key来查找快捷键所代表的命令的源代码. 下面的例子展示了如何查找绑定到C-a快捷键的命令(beginning-of-line)的源代码:
+    #+BEGIN_EXAMPLE
+    M-x find-function-on-key RET C-a
+    #+END_EXAMPLE
+    
+    推荐将该命令绑定到C-h C-k
+    #+BEGIN_SRC emacs-lisp
+      (define-key 'help-command (kbd "C-k") 'find-function-on-key)
+    #+END_SRC
+
+  * find-variable
+
+    可以使用M-x find-variable来查找定义变量的源代码.
+    #+BEGIN_EXAMPLE
+    M-x find-variable RET large-file-warning-threshold RET
+    #+END_EXAMPLE
+    
+    推荐将该命令绑定到C-h C-v
+    #+BEGIN_SRC emacs-lisp
+      (define-key 'help-command (kbd "C-v") 'find-variable)
+    #+END_SRC
+
+  除了上面所列函数,find-func库还提供了其他有用的命令,比如find-function-at-point和find-variable-at-point.
+
+  若你不喜欢上面推荐的快捷键,可以考虑直接使用find-function-setup-keys代替. 它默认定义了C-x F,C-x V,C-x K等快捷键.
+
+* elisp-slime-nav
+
+  另一个很酷的浏览Elisp源代码(和文档)的库是第三方的elisp-slime-nav. 安装这个库后,可以用下面的代码启用它:
+  #+BEGIN_SRC emacs-lisp
+    (require 'elisp-slime-nav)                           
+    (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
+      (add-hook hook 'elisp-slime-nav-mode))    
+  #+END_SRC
+
+  一旦启用了elisp-slime-nav-mode,就可以使用`M-.`来跳转到光标所在函数或变量的定义处. 然后还可以使用`M-,`跳回来. 还可以使用C-c C-d(或者C-c C-d d)来查看光标所在的object的文档描述.

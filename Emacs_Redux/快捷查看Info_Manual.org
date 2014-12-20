@@ -1,0 +1,24 @@
+#+TITLE: Quckly_Open_an_Info_Manual
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+每个用过Emacs的人都知道Emacs自带了很多info文档. 大多数人都知道使用C-h i(M-x info)来查看内建的这些文档,甚至有些人还知道可以使用C-h r (M-x info-emacs-manual)来直接查看Emacs manual.
+
+然而,如果你知道想要查看的手册名称,这里有一个鲜为人知的命令:info-display-manual. 该命令会在minibuffer中提示你输入要查看的手册(可以使用自动补全功能哦)
+
+为了让你更直观的感受到该命令相对info命令的有点,下面举个例子,用两种命令分别来查看Emacs Lisp Manual.
+
+当使用info命令时,你需要输入
+#+BEGIN_EXAMPLE
+M-x info RET m elisp RET
+#+END_EXAMPLE
+
+而使用info-emacs-manual,则只需要输入
+#+BEGIN_EXAMPLE
+M-x info-emacs-manual RET elisp RET
+#+END_EXAMPLE
+
+如果你认为这个命令很好用,我推荐为它分配一个快捷键
+#+BEGIN_SRC emacs-lisp
+  (define-key 'help-command (kbd "C-i") 'info-display-manual)
+#+END_SRC

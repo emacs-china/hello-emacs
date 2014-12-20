@@ -1,0 +1,19 @@
+#+TITLE: focus-hooks
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+Emacs24.4新增加了两个focus hook:focus-in-hook和focus-out-hook. 
+
+focus-in-hook顾名思义就是当frame获取到了焦点时所触发的动作. 而focus-out-hook则在frame失去焦点时会触发动作.
+
+因此,若我们希望做到,当Emacs Frame是和iqu焦点后就自动保存当前buffer,可以用下面的代码来实现
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'focus-out-hook 'save-buffer)
+#+END_SRC
+
+当然,更近一步,你可以保存所有的buffer
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'focus-out-hook (lambda () (save-some-buffers t)))
+#+END_SRC
+
+我相信,你们还能够为这两个新hook找到其他一些更有用的使用方式的.

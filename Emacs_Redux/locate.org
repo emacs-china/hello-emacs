@@ -1,0 +1,16 @@
+#+TITLE: locate
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+locate是一款使用很普遍的unix命令,它允许你在一个预生成的数据库中搜索文件的路径.
+
+然而可能很少人知道Emacs也提供了对locate命令的封装. 使用M-x locate,然后输入要搜索的字符串,就会将从locate数据库中的搜索结果展现出来.
+
+展现locate结果的buffer处于locate-mode下,该mode提供了很多类似dired-mode的快捷键.
+
+通过更改变量`locate-command`的值,你可以按照需要更改Emacs执行locate命令时所执行的命令. 例如在OSX下,你可能需要使用mdfind命令而不是locate命令.
+#+BEGIN_SRC emacs-lisp
+  (setq locate-command "mdfind")
+#+END_SRC
+
+显然你可以将`locate-command`的值设为任何命令,只要该命令接受一个字符串参数然后返回一列文件路径即可.

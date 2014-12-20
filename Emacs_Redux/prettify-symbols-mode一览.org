@@ -1,0 +1,43 @@
+#+TITLE: prettify-symbols-mode一览
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+Emacs24.4中出现了一个新的minor mode,名为prettify-symbols-mode. 该mode的用处是可以将各种标识/符号的文本展示用更美观的字符(可自定义)代替(例如可以用unicode中的各种数学符号的代替ascii形式的符号名称)
+
+使用prettify-symbols-mode的一个经典例子是,使用希腊字母 λ (small lambda)来代替各种Lisp方言中的lambda关键字. 
+
+通过在在各major-mode中初始化`prettify-symbols-alist`变量或`major-mode名称--prettify-symbols-alist`变量,向其中定义映射规则,prettify-symbols-mode可以做到这一点.
+
+要实现上面的例子,只需要定义lisp--prettify-symbols-alist即可:
+#+BEGIN_SRC emacs-lisp
+  (defconst lisp--prettify-symbols-alist
+    '(("lambda"  . ?λ)))     
+#+END_SRC
+上面代码的意思是,在lisp-mode中,只有lambda会被替代为字符λ. 当然你还可以为不同的major-mode定义更多的映射关系.
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'emacs-lisp-mode-hook                           
+              (lambda ()                                    
+                (push '(">=" . ?≥) prettify-symbols-alist)))
+#+END_SRC
+
+经过这样设置之后,假设有一段Emacs Lisp代码
+#+BEGIN_SRC emacs-lisp
+  (lambda (x y)            
+    (if (>= x y)           
+        (something)        
+        (something-else))) 
+#+END_SRC
+在执行M-x  prettify-symbols-mode后,会显示为
+#+BEGIN_SRC emacs-lisp
+  (λ (x y)               
+    (if (≥ x y)          
+        (something)      
+      (something-else))) 
+#+END_SRC
+
+可以通过(add-hook 'some-mode-hook 'prettify-symbols-mode)来为特定的mode开启prettify-symbols-mode. 若想全局启用prettify-symbols-mode,则只需要添加下面代码到你的配置文件中即可:
+#+BEGIN_SRC emacs-lisp
+  (global-prettify-symbols-mode 1)
+#+END_SRC
+
+顺带一提,符号美化是无止境的. 一个极端的例子就是vim的插件haskell-conceal. 该插件为hashell代码引入个各种数学符号. 使用prettify-symbols-mode,我们也能达到类似的效果,但是请合理地使用它的能力.

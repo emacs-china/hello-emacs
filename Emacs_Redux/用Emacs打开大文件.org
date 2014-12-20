@@ -1,0 +1,18 @@
+#+TITLE: 用Emacs打开大文件
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+我想每个人在用Emacs打开一个较大的文件时,都会收到一个警告:"File foo.bar is large (XX.XM), really open?"
+
+默认情况下,Emacs打开打超过10MB的文件时都会显示该警告信息,这让人很烦,何况现代的计算机打开一个比这大的多的文件也并会让Emacs变慢什么.
+
+幸运的是,可以通过设置`large-file-warning-threshold`的值,来改变产生警告的阀值. 推荐把它修改为100MB左右:
+#+BEGIN_SRC emacs-lisp
+  ;; 只有当打开的文件超过100MB时,才产生警告 
+  (setq large-file-warning-threshold 100000000)
+
+#+END_SRC
+
+当然你也可以把该变量设为nil,这表示不管打开的文件有多大,永远不要产生这种警告.
+
+PS. 我们确实也不推荐在Emacs中直接打开一个超级巨大的文件(例如1GB). 若你真的需要打开一个如此巨大的文件,推荐你使用[[https://github.com/m00natic/vlfi][vlfi]]这个package.

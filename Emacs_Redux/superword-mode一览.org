@@ -1,0 +1,72 @@
+#+TITLE: superword-mode一览
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+Emacs24.4开始提供了一个新的minor mode:subword-mode. 它会改变基于word的命令的行为模式.
+
+一般情况下,Emacs会以下划线`_`和横杠`-`作为单词与单词之间的分隔符. 所有的基于单词的命令:forward-word,backward-word,kill-word等,都是基于这个前提来操作的.
+
+下面是一些例子(竖线|表示光标的位置):
+#+BEGIN_SRC emacs-lisp
+  ;; 带-的单词
+  |some-word
+  ;; 按一次M-f (forward-word)
+  some|-word                                                 
+                                                             
+  ;; 再按一次 M-f
+  some-word|                                                 
+                                                             
+  ;; 按一次 M-b (backward-word)
+  some-|word                                                 
+                                                             
+  ;; 带_的单词
+  |some_word                                                 
+                                                             
+  ;; 按一次 M-f
+  some|_word                                                 
+                                                             
+  ;; 再按一次 M-f
+  some_word|                                                 
+                                                             
+  ;; 按一次 M-b
+  some_|word                                                 
+                                                             
+  ;; 驼峰试的单词 (没有启动subword-mode)
+  |someWord                                                  
+                                                             
+  ;; 按一次 M-f
+  someWord|                                                  
+                                                             
+  ;; 驼峰试的单词 (启动了subword-mode)
+  |someWord                                                  
+                                                             
+  ;; 按一次 M-f
+  some|Word    
+#+END_SRC
+
+个人认为,在开启了subword-mode后,Emacs对单词跳转的把握已经相当到位了. 尤其当进行Ruby和Lisp编程时,提供在复杂变量名的中间快速定位的能力非常有用. 但也不是所有人都喜欢这种方式. 
+
+当开启了superword-mode后,上面所有的例子,都当成是一个单词来处理. 例如:
+#+BEGIN_SRC emacs-lisp
+;; 带-的单词
+|some-word              
+                        
+;; 按一次M-f       
+some-word|              
+                        
+;; 带_的单词
+|some_word              
+                        
+;; 按一次M-f
+some_word|              
+                        
+;; 驼峰式的单词
+|someWord               
+                        
+;; 按下M-f
+someWord|      
+#+END_SRC
+
+需要注意的是,你不能同时开启superword-mode和subword-mode. 开启一个的同时会关闭另一个.
+
+个人认为,superword-mode作为一个一直开启的mode,意义不大. 但在做一些特殊编辑时,会特别有用.

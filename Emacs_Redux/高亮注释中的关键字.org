@@ -1,0 +1,29 @@
+#+TITLE: 高亮注释中的关键字
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+写代码时,经常会在注释中注明一些有待未来完成的事项.例如
+#+BEGIN_SRC emacs-lisp
+  ;; REFACTOR: Decouple and clean up this crap.
+
+  ;; crappy code omitted
+
+#+END_SRC
+
+正常情况下,除非使用了类似[[https://github.com/lewang/fic-mode/blob/master/fic-mode.el][fic-mode]] 这样的mode,否则Emacs不会去高亮注释中的REFACTOR这类关键字. 
+
+有一个简单的办法可以做到这一点:
+#+BEGIN_SRC emacs-lisp
+  (defun font-lock-comment-annotations ()
+    "Highlight a bunch of well known comment annotations.
+
+  This functions should be added to the hooks of major modes for programming."
+    (font-lock-add-keywords
+     nil '(("\\<\\(FIX\\(ME\\)?\\|TODO\\|OPTIMIZE\\|HACK\\|REFACTOR\\):"
+            1 font-lock-warning-face t))))
+
+  (add-hook 'prog-mode-hook 'font-lock-comment-annotations)
+
+#+END_SRC
+
+当然,这种方法并不完美,它会高亮这个代码中的关键字,而不仅仅是注释中的.

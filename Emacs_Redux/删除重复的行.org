@@ -1,0 +1,42 @@
+#+TITLE: 删除重复的行
+#+AUTHOR: Administrator
+#+OPTIONS: ^:{}
+
+Emacs24.4开始有了一个新的命令:delete-duplicate-lines
+
+M-x delete-duplicate-lines会删除选中region中的重复行. 举个例子,假设选中的region为:
+#+BEGIN_EXAMPLE
+               test 
+               dup  
+               dup  
+               one  
+  12345678910  two  
+               one  
+               three
+               one  
+               test 
+               five 
+#+END_EXAMPLE
+则,在执行M-x delete-duplicate-lines后,region的内容变为:
+#+BEGIN_EXAMPLE
+          test 
+          dup  
+  123456  one  
+          two  
+          three
+          five 
+#+END_EXAMPLE
+
+默认情况下若存在多个重复行,则从上到下第一次出现的行会保留下来. 若想保留的是最后一次出现的行,则使用C-u M-x delete-duplicate-lines.  这样的话,region会变为:
+#+BEGIN_EXAMPLE
+          dup  
+          two  
+  123456  three
+          one  
+          test 
+          five 
+#+END_EXAMPLE
+
+注意到:与UNIX的uniq命令不同的是,在判断重复行时,并不要求重复行是相互毗邻的,若要实现类似uniq的效果,可以使用C-u C-u M-x delete-duplicate-lines.
+
+若要保留重复的空白行,则需要使用C-u C-u C-u M-x delete-duplicate-lines

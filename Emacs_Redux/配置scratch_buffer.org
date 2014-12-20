@@ -1,0 +1,31 @@
+#+TITLE: 配置scratch_buffer
+#+AUTHOR: lujun9972
+#+OPTIONS: ^:{}
+
+相信大家对*scratch* buffer应该都挺熟悉了,毕竟每次启动Emacs,都会显示这个buffer. 若设置inhibit-startup-screen为t,则它会是你打开Emacs后看到的第一个buffer(除非你修改了initial-buffer-choice,这样的话,它所指的buffer会成为地一个显示的buffer)
+
+*scratch* buffer可以很方便的用来临时记录一些便贴,或做一些Emacs Lisp的实验, 然而很多人可能并不常写Emacs Lisp,这样的话,*scratch* buffer对他们的价值就不是那么高了.
+
+很少人知道的是,我们可以配置*scratch* buffer的major-mode(默认为lisp-interaction-mode).
+
+如果你是个Ruby开发人员,可以通过下面代码来让*scratch* buffer默认使用ruby-mode
+#+BEGIN_SRC emacs-lisp
+(setq initial-major-mode 'ruby-mode)
+#+END_SRC
+
+当然,你也可以更改*scratch* buffer的初始内容,默认情况下初始内容为:
+#+BEGIN_SRC emacs-lisp
+;; This buffer is for notes you don't want to save, and for Lisp evaluation.
+;; If you want to create a file, visit that file with C-x C-f,              
+;; then enter the text in that file's own buffer. 
+#+END_SRC
+
+而若你设置了*scratch* buffer默认为ruby-mode,则可以将初始内容修改为:
+#+BEGIN_SRC emacs-lisp
+  (setq initial-scratch-message "\                                     
+  # This buffer is for notes you don't want to save, and for Ruby code.
+  # If you want to create a file, visit that file with C-x C-f,        
+  # then enter the text in that file's own buffer.")    
+#+END_SRC
+
+当然,你也可以直接将initial-scratch-message设置为nil,则初始内容为空.
