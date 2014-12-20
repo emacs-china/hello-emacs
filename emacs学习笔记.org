@@ -1,0 +1,1825 @@
+#+TITLE: Emacs学习笔记
+#+OPTIONS: ^:{}
+* 基本概念
+  * Region与Active Region
+
+	Region = 最后Mark的位置到当前光标位置之间的内容
+
+	变量`mark-active`决定了Region是否是Active的
+
+	Active Region其实跟Text Selection的概念是一样的
+
+	在transient-mark-mode下,会高亮Active Region
+	
+  * 
+* 基本操作
+** 各种组合键形式
+   1. 最常用的命令都被绑定为"C-n"的形式
+   2. 次常用的命令被绑定为"M-n"(也就是"ESC n")的形式
+   3. 其他常用命令被绑定为"C-x something"的形式（例如，文件操作类命令）
+   4. 某些特殊命令被绑定为"C-c something"的形式，这类命令通常都与某些特殊的编辑模式有关
+** 定位=移动+搜索
+   1. C-f             ：向右移动一个字符
+   2. C-b             ：向左移动一个字符
+   3. C-p             ：上一行
+   4. C-n             ：下一行，如果是在缓冲区的最后一行，则等于给缓冲区增加一个新行
+   5. M-f             ：向右移动一个单词
+   6. M-b             ：向左移动一个单词
+   7. C-a             ：把光标移到一行的开始
+   8. C-e             ：把光标移到一行的结束
+   9. M-a             ：把光标左移一个句子
+   10. M-e             ：把光标右移一个句子
+   11. M-{             ：把光标上移一个段落
+   12. C-向上箭头      :把光标上移一个段落
+   13. M-}             ：把光标下移一个段落
+   14. C-向下箭头      :把光标下移一个段落
+   15. C-x ]           ：把光标移动到下一页，须有分页符(也可以由page-delimiter变量定义)
+   16. C-x [           ：把光标移动到上一下，须有分页符(也可以由page-delimiter变量定义)
+   17. C-v             ：翻到下一屏幕
+   18. M-v             ：翻到上一屏幕
+   19. M->             ：翻到缓冲区末尾
+   20. M-<             ：翻到缓冲区头
+   21. M-g g(goto-line)   ：移动到第n行，从文件头开始计数
+   22. M-x goto-char   ：移动到文件第n个字符，从文件头开始计数
+   23. C-M-f / C-M-左方向键           :下一个s-expression
+   24. C-M-b / C-M-右方向键           :上一个s-expression
+   25. C-M-d / C-M-下方向键           :进入一个s-expression
+   26. C-M-u / C-M-上方向键           :跳出一个s-expression
+** 编辑
+*** 一般编辑命令
+    1. M-n command      /     C-u n command(默认为4次)：重复执行一个命令多次
+    2. C-x u            ：撤销操作
+    3. C-d              ：删除光标所在位置处的字符
+    4. M-d              ：删除一个单词
+    5. C-k              ：删除一行
+    6. ESC - C-k        ：删除从行首到光标位置之间的东西
+    7. M-k              ：删除一个句子
+    8. C-x DEL          ：删除光标前面的句子
+    9. C-y              ：从killing-ring里将文本复制出来
+    10. M-y             ：在killing-ring里面向前遍历，一般与C-y一起用
+    11. C-t             ：transpose-chars 交换两个字符的位置
+    12. M-t             ：transpose-words 交换两个单词的位置
+    13. C-x C-t         ：transpose-lines 交换两个文本行的位置
+    14.                 ：transpose-sentences 交换两个句子的位置
+    15.                 ：transpose-paragraphs 交换两个段落的位置
+    16. M-c             ：将光标到单词结尾的字母改成Caption格式
+    17. M-l             ：将光标到单词结尾的字母改成lower格式
+    18. M-u             ：将光标到单词结尾的字母改成Upper格式
+    19. M-- M-c             ：将光标到单词开头的字母改成Caption格式
+    20. M-- M-l             ：将光标到单词开头的字母改成lower格式
+    21. M-- M-u             ：将光标到单词开头的字母改成Upper格式
+    22. 重载文件             ：M-x revert-buffer
+    23. 命令的重复执行
+	* 按C-x ESC ESC则会把最后一次输入的复杂命令调出来，也可以用M-p和M-n遍历前面/后面的命令
+	* C-x ESC ESC 这种快捷操作方式对在辅助输入区内有补充性输入内容的一切命令都有效，这也就是所谓的复杂命令
+*** 文本块编辑
+    1. 定义文本块
+       * 自由定义文本块
+
+	     把光标移到文本块的一段，按C-@或C-SPACE组合键设置一个文本标记；然后移动光标，文本标记和光标当前位置的文本就构成了一个文本块
+       * 定义一段为文本块           ：M-h
+       * 定义整个缓冲区为文本块      ：C-x h
+       * 定义当前页面为文本块        ：C-x C-p
+    2. 检查文本块标记是否设置正确
+       由于GNU Emacs的文本标记是不可以见的，可以按下C-x C-x（命令名是exchange-point-and-mark）组合键，它的作用是互换插入点和文本标记的位置，如果光标移到了应该有文本标记的位置，就说明文本块已经正确地标记出来了。
+       使用C-x u撤销回来的文本，仍然带有文本块标记
+    3. 删除文本块                   ：C-w
+    4. 复制文本块                   ：M-w
+*** 查询、替换操作
+    默认情况下，Emacs的查找操作是不区分大小写的。但是若输入的单词里有一个以上的大写字母，Emacs就会区分大小写
+    1. 递增查找
+       * 先敲入C-s组合键，再输入想查找的文本。如果找到想找到的东西，按下回车键退出这次查找，光标将停留在文件的当前位置。如果想继续查找，再次按下C-s
+       * 向前查找则使用C-r组合键，再次按下C-r组合键则继续查找
+       * C-s C-w可以把从光标位置到下一个标点符号或空格符之间的文本都复制到查找字符串中去
+       * C-s C-y可以把光标位置到行尾之间的文本都复制到查找字符串里
+       * C-s M-y可以把删除环里的文本复制到查找字符串里去，还可以用M-p组合键来查看删除环上一个条目
+    2. 简单查找
+       * 先按下C-s RETURN，然后输入查找的字符串，按下回车，Emacs就开始查找了。再次按下C-s会继续查找下一个
+       * 同理，C-r RETURN，向前查找
+    3. 单词查找
+       * 单词查找是一种非递增性的查找，它不会受换行符、空格和 *标点符号* 的影响，但要求查找字符串必须与文件里的单词完整地匹配
+       * 按下C-s RETURN C-w,输入查找字符串，再按下回车
+       * 同理C-r RETURN C-w，向前查找
+       * 就三种基本的查找操作而言，单词查找是唯一能够在将要查找的短语跨越两个文本行的情况系啊，找到该短语的查找操作
+    4. 正则表达式查找
+       * ESC C-s RETURN / M-x re-search-forward   ：向后查找正则表达式
+       * ESC C-r RETURN / M-x re-search-backward  ：向前查找正则表达式
+       * ESC C-s / M-x re-search-forward   ：向后递增查找正则表达式
+       * ESC C-r / M-x re-search-backward  ：向前递增查找正则表达式
+       * M-x replace-regexp                ：无条件对一个正则表达式做全局性替换
+    5. 基本替换操作
+       * M-x replace-string RETURN，再输入查找字符串，RETURN，再输入替换字符串，RETURN。
+       * Emacs从光标处开始，把文件后面所有的字符串进行替换
+    6. 询问-替换操作
+       * M-% 或者Search菜单选择Query Replace操作。输入查找字符串后RETURN，输入替换字符串后RETURN
+       * 在查询状态中：按C-r进入递归编辑状态。C-w删除此处内容并进入递归编辑状态。ESC C-c退出递归编辑状态，继续完成询问-替换操作。C-]退出递归编辑状态和询问-替换操作
+       * 在查询状态中：按,替换并显示替换情况（再按空格或y才移动到下一个位置）。按!对后面的文件内容全部进行替换
+*** 递归编辑
+    1. 有时在进行询问-替换操作的时候，会看到还有其他一些地方需要修改。Emacs允许一次询问-替换操作的过程中再开始一次递归编辑
+    2. 要想在询问-查询操作的过程中开始一次递归编辑，需要按下C-r。进入递归编辑状态的时候，状态条上将会多出一对方括号[]
+    3. 按下ESC C-c命令让Emacs退出递归编辑，并重新开始继续执行询问-替换操作
+    4. 如果想在退出递归编辑的同时也取消查询操作，按下C-]
+    5. 可以随时，而不仅仅在询问-替换操作的时候，开始一次递归编辑。M-x recursive-edit会进入递归编辑状态；而ESC C-c会退出递归编辑状态，返回此前的工作中
+*** 单词简写模式
+    1. 单词简写模式(word abbreviation mode)可为特殊的单词和短语定义一些简写形式。Emacs会密切关注内容，一旦输入了一个简写单词，并按下空格或标点符号就会立刻自动展开为对应的短语
+    2. 要撤销最近简写词定义，M-x unexpand-abbrev RETURN
+    3. Emacs会根据简写词被定义时的编辑模式对它们进行分类。全局性简写词可以用在任何一种编辑模式里；而局部性简写词则只能用在定义时所在的编辑模式里。即简写词的作用范围是 *编辑模式* ，而非文件或编辑缓冲区
+    4. 为一次编辑工作定义临时的简写词汇
+       * M-x abbrev-mode 进入简写词模式，Abbrev字样出现在状态行上
+       * 输入简写词后按下C-x a i g(add-inverse-global定义全局性的简写词) / C-x a i l(add-inverse-local定义局部性简写词)
+       * 输入该简写词的扩展短语后回车
+    5. 为多次编辑工作定义永久性的简写词汇
+       * M-x write-abbrev-file保存简写词记录文件
+       * M-x read-abbrev-file 读取简写词记录文件
+       * M-x edit-abbrevs 对简写词表进行编辑
+       * M-x list-abbrevs 查看简写词表
+    6. 禁用简写词汇
+       * M-x kill-all-abbrevs       ：在本次编辑中临时禁用简写词汇
+       * 删除简写词汇表文件           ：永久禁用简写词汇
+** 缓冲区、窗口与窗格操作
+*** 缓冲区
+    1. 进去指定名字的缓冲区 / 新建一个新缓冲区           ：C-x b 
+    2. 删除缓冲区                                     ：C-x k / M-x kill-buffer
+    3. 删除多个缓冲区                                  ：M-x kill-some-buffers
+    4. 重命名缓冲区                                    ：M-x rename-buffer
+    5. 把当前缓冲区设置为在只读/可写之间切换              ：C-x C-q
+       状态栏左边会出现两个百分号(%%),他们表示这个编辑缓冲区是只读的
+    6. 编辑缓冲区相关的操作
+       * 列示编辑缓冲区                                ：C-x C-b
+       * 下一行                                       ：C-n / 空格
+       * 上一行                                       ：C-p
+       * 为编辑缓冲区加删除标记                         ：k /d
+       * 去除操作标记                                  ：u
+       * 去除上一行的操作标记                           ：DEL
+       * 为编辑缓冲区加存盘标记                         ：s
+       * 执行为缓冲区加的标记                           ：x
+       * 为缓冲区状态修改为未修改状态                    ：~ 
+       * 缓冲区权限在只读 / 读写间切换                   ：%
+       * 把缓冲区满屏显示                               ：1
+       * 把缓冲区显示在第二个窗口中                      ：2
+       * 把缓冲区内容显示在当前窗口中                    ：f
+       * 把缓冲区内容显示在另一窗口中                    ：o
+       * 给编辑缓冲区加上待显示标志                      ：m    ，按v后才执行
+       * 退出编辑缓冲区清单                             ：q
+*** 窗口    
+    1. 水平分割窗口                                    ：C-x 2
+       如果想用水平窗口同时对两个文件进行编辑，可以在启动Emacs时同时给出这两个文件的名字
+    2. 垂直分割窗口                                    ：C-x 3
+       * 将文本向左移动（好看右边的文本）                 ：C-x <
+       * 将文本向右移动（好看左边的文本）                 ：C-x >
+    3. 在窗口之间移动                                   ：C-x o
+       Emacs在窗口间，顺时针移动
+    4. 删除窗口                                        ：C-x 0
+    5. 只保留唯一窗口                                   ：C-x 1
+    6. 删除特定缓冲区的全部窗口                          ：M-x delete-windows-on RETURN 缓冲区名字 RETURN
+    7. 调整窗口的大小尺寸
+       * 加高当前工作的窗口，按下C-x ^ ，Emacs将会加高当前窗口，它下方的窗口将被相应地压低
+       * 加宽当前窗口，按下C-x } ，Emacs将加宽这个窗口，它右方的窗口将相应地变窄
+       * 压低窗口，按下M-x shrink-window
+       * 缩窄窗口，使用C-x {可以压缩一列；使用C-x - / shrink-window-if-larger-than-buffer 让窗口收缩到编辑缓冲区那么小
+       * 使窗口尺寸编程通钢的大小C-x +
+    8. 对其他窗口进行操作
+       * 卷动下一窗口的内容                             ：ESC C-v
+       * 有几个“其他窗口命令”其实是一些中间插有“4”的普通命令
+       * 在另一个窗口打开文件                            ：C-x 4 f
+       * 在另一个窗口里选择编辑缓冲区                     ：C-x 4 b
+    9. 比较两个窗口中的文件
+       * 可以用M-x compare-windows命令来比较两个窗口中的文件
+       * compare-windows只会找出它们之间的第一个不同
+       * compare-windows比较的两个窗口为顺时针方向的两个窗口
+*** 书签
+    书签操作所有的函数名都是以bookmark开头，或以C-x r开头
+    1. 设置书签                         ：C-x r m
+       书签名中可以有空格                
+    2. 移动到书签指示的位置               ：C-x r b
+    3. 对书签进行重命名                  ：M-x bookmark-rename
+    4. 删除书签                         ：M-x bookmark-delete
+       用删除书签指示文件的方法是删不掉书签的
+    5. 对书签清单进行编辑操作             ：C-x r l
+       * 给书签加上待删除标记             ：d
+       * 对书签重命名                    ：r
+       * 保存清单里的全部书签             ：s
+       * 显示光标位置上的书签             ：f
+       * 给书签加上待显示标记             ：m
+       * 显示加油待显示标记的书签         ：v
+       * 切换显示/不显示书签关联文件的路径 ：t
+       * 显示书签关联文件的存放位置       ：w
+       * 删除加油删除标记的书签           ：x
+       * 去掉上一行书签上的待操作标记      ：DEL
+       * 退出书签清单                    ：q
+    6. 把书签文件内容插入到光标位置上      ：M-x bookmark-insert
+    7. 保存书签文件                      ：M-x bookmark-write
+    8. 加载书签文件                      ：M-x bookmark-load
+*** 窗格操作
+    窗格操作大多以C-x 5开头
+    1. 在另一个窗格里查找文件             ：C-x 5 f
+    2. 新窗格                           ：C-x 5 2
+    3. 在新窗格中打开编辑缓冲区           ：C-x 5 b
+    4. 窗格间切换                       ：C-x 5 o
+    5. 删除一个窗格                      ：C-x 5 0
+    6. 以只读方式打开一个窗格             ：C-x 5 r
+    7. 将窗格缩小为一个图标               ：C-z
+** 文件操作
+   1. C-x C-f         ：打开一个文件
+      若打开的是FTP上的文件，可以采用ange-ftp模式，如果同时满足下面3个条件，Emacs就会启动ange-ftp模式：
+      * 文件名以一个斜线（/）开头
+      * /后紧跟username@systemname
+      * 系统名后面是一个冒号（:）,然后是子目录名或文件名，例如/sas@10.8.6.10:/tmp
+      * *注意开头的/和系统名与文件路径名之间的:*
+   2. C-x C-v         ：打开一个文件来代替现有的文件
+   3. C-x i           ：把一个文件插入另一个文件中
+   4. C-x C-s         ：当前缓冲区文件存盘
+   5. C-x s           ：多个缓冲区文件存盘
+   6. C-x C-w         ：另存为
+   7. 从自动保存文件恢复文本         ：M-x recover-file
+** 启动参数
+* 高级编辑
+** 缩进
+   1. TAB与SPACE互转
+      选中要转换的文本块后,
+      * M-x untabify               :把制表符转换为空格
+      * M-x tabify                 :把空格转换为制表符
+   2. 缩进前导字符串
+      * 所谓缩进前导字符串指由Emacs自动放到每行输入文本开头的一个字符串。
+      * 设置前导字符的方法是:
+        1. 在行首输入前导字符串
+        2. 输入C-x . / M-x set-fill-prefix 设置前导字符
+        3. 若要停止前导字符，则设置一个新的前导字符，该前导字符应为空
+   3. 文本缩进模式
+      * 进入文件缩进模式：M-x indented-text-mode
+      * 如果自动换行模式没有启用，那么文本缩进模式是无法工作的
+      * 开启文本缩进模式后，到达文本行末时，Emacs会自动对下一行进行缩进，使它与前一行匹配。
+   4. 对现有的文本块进行缩进
+      * 进入文本缩进模式M-x indented-text-mode
+      * 移动到准备缩进的文本块的末尾，设置文本块标记
+      * 移动到准备缩进的文本块的开头设置好缩进距离，用空格或制表位来设置首行
+      * 按下ESC C-\ / M-x indent-region 。Emacs将按第一行的格式对整个文本块进行缩进
+      * 按下M-q组合键对文本块进行段落重排
+   5. 把文本分拆成两行，并呈台阶装排序               :ESC C-o / M-x split-line
+   6. 文本居中
+      * 进入text-mode
+      * 文本居中
+	输入要居中的文本，按M-s
+      * 段落居中
+	光标放于要居中的段落中，按M-S / M-x center-paragraph
+      * 文本块居中
+	把要居中的文本块定义好，按M-x center-region
+** 矩形编辑
+   * 定义矩形区域与定义文本块的方法是一样的，他们之间的区别体现在设定文本区域之后发出的编辑命令，这些命令将告诉Emacs打算对文本块进行操作还是打算对矩阵进行操作
+   * 定义矩阵右下角时，需要将光标移动到矩阵右下角再右移动一个字符。因为文本块上的字符时文本块的一部分，但光标位置上的字符却不是文本块的一部分。
+   * 矩阵没有相应的删除环,只能把最近一次删除的矩形恢复回来.
+   * 删除矩阵到矩形删除缓冲区             
+     
+     C-x r k / M-x kill-rectangle
+
+   * 替换矩阵
+
+	 C-x r t / M-x string-rectangle
+
+   * 在矩阵前插入字符串列
+
+	 M-x string-insert-rectangle. 它跟string-rectangle类似但是不会替换选中的矩阵内容
+
+   * 粘贴矩阵                           
+   
+     C-x r y / M-x yank-rectangle
+
+   * 插入矩阵                           
+
+     C-x r o / M-x open-rectangle
+
+   * 清空矩阵                           
+
+     C-x r c / M-x clear-rectangle
+
+   * 删除矩阵                           
+
+     C-x r d / M-x delete-rectangle
+
+   * 为每一行插入一个数字序列
+
+	 C-x r N / rectangle-number-lines
+
+	 默认为从1开始累加, 使用C-u N 则表示从N开始累加
+
+   * cua-mode
+	 
+	 在cua-mode下,按Ctrl-Enter可用切换进入列编辑模式
+** 绘制简单的图像
+   1. 图像模式
+      * 进入图像模式的命令是M-x edit-picture
+      * 退出图像模式的命令是C-c C-c
+   2. 在图像模式里划线
+      1) 设定方向
+	 * C-c ^        :上
+	 * C-c '        :右上
+	 * C-c >        :右
+	 * C-c \        :右下
+	 * C-c .        :下
+	 * C-c /        :左下
+	 * C-c <        :左
+	 * C-c `        :左上
+      2) 设定好绘画方向后，重复按下任何键都会沿该方向画一条字符线。
+      3) 插入新行用C-o
+      4) 图像模式下的字符删除命令为C-c C-d,它会删除字符并将该行的其余文本左移.而其他删除只是替换为空格
+      5) 刚进入图像模式，默认的方向是:右
+      6) 为防止插入模式下所输的字符会弄乱其他部分,图像模式将会明确地变为改写模式
+      7) 在图像模式里按回车会移动到下一行的开始,但不会插入一个空白行,因为Emacs假定不想改变各行之间的相对关系
+   3. 图像模式中移动鼠标
+      * 沿着默认绘制方向前进           :C-c C-f
+      * 沿着默认绘制方向后退           :C-c C-b
+   4. 在图像模式里使用矩形编辑命令
+      * 在图像模式里,可以同时把多个矩形区域分别保存在不同的寄存器中.
+      * 清除一个矩形区域并保存到某寄存器中          :C-c C-w 寄存器名
+      * 删除一个矩形区域并保存到某寄存器中          :C-u C-c C-w 寄存器名
+      * 插入保存起来的矩形区域                     :C-c C-x 寄存器名
+      * 清除矩形区域                             :C-c C-k (只能保存一个矩形区域的内容)
+      * 恢复C-c C-k清除的区域                    :C-c C-y
+* 配置Emacs
+*** 加载LISP包
+    1. 执行Elisp代码
+       * 在某条语句后面按C-x C-e (eval-last-sexp)可以执行那条语句 
+       * M-x eval-buffer 可以执行当前buffer内的Elisp代码 
+       * 选中一个region后, M-x eval-region可以执行这个region内的代码 
+    2. 安装插件
+       Emacs的插件一般都是一个以el为后缀名的文件, 把这个文件下载下来后放到一个目录, 比如~/emacs/lisps, 然后执行下面这两条语句:
+       #+BEGIN_SRC elisp
+       (add-to-list 'load-path "~/emacs/lisps")
+       (require 'pluginname) 
+       #+END_SRC
+    3. autoload函数
+       * autoload函数，告诉Emacs在遇到没有见过的命令时应该到什么地方去查它。这就在函数和实现函数的程序包之间建立起一个关联关系；这样当这个函数在第一次被调用时，Emacs就会自动加载相应程序包来载入该函数的代码。
+       * autoload函数的格式为：(autoload '函数名 "源文件名称")
+*** 定制按键
+    1. 通过向键位映射图添加定义项的方法，能创造出自己的按键绑定。有五个函数可完成这个操作
+       * (define-key 键位映射图 "键序列" 'Emacs命令)
+	     * 对于按多次键的组合键命令中，供C-x使用的键位映射图是Ctl-x-map，ESC使用的键位映射图是esc-map
+		 * 使用函数(current-global-map)获取当前使用的global-map
+		 * 使用函数(current-local-map)获取当前使用的local-map
+		 * 默认major-mode的map格式为major-map-map
+       * define-key第一个参数map一般为mode后面直接加”-map” 
+       * (global-set-key "键序列" 'Emacs命令)
+       * (local-set-key "键序列" 'Emacs命令)
+	   * (global-unset-key "键序列")
+	   * (local-unset-key "键序列")
+	   * 若你想让所有调用ori_function的键序列都执行new_function,则可用在键序列位置用[remap 'org_function]代替,emacs命令处用'new_function代替
+    2. 键序列中
+       * kbd是Emacs的宏,可以把快捷键转换为Emacs的内部键序列表示,例如
+	     #+BEGIN_SRC elisp
+           (global-set-key (kbd "C-j" 'goto-line)
+	     #+END_SRC
+       *如果对于比较复杂的快捷键, 比如Control x F3, 改怎么写呢? 按C-h k(describe-key), 然后再按下Control x F3, Emacs会出现一个”C-x “, 这个就是写到kbd宏里面的内容.
+       * C-x用\C-x代替
+       * ESC用\e代替
+*** 简单的颜色定制
+    #+BEGIN_SRC elisp
+    (set-background-color "black") ;; 使用黑色背景
+    (set-foreground-color "white") ;; 使用白色前景
+    (set-face-foreground 'region "red")  ;; 区域前景颜色设为红色
+    (set-face-background 'region "blue") ;; 区域背景色设为蓝色
+    #+END_SRC
+*** 变量说明
+      * kill-ring-max
+	设置删除环的尺寸            
+      * auti-save-interval
+	设置Emacs对文件自动保存的频率
+      * case-fold-search
+	查找操作是否区分字母大小写  
+      * case-replace
+	是否改变被替换字符串的大小写
+      * window-min-height / window-min-width
+	窗口大小的上下限           
+      * shell-file-name
+	替换用于执行命令的shell    
+      * sentence-end
+	设置句子的定义              
+      * auto-mode-alist
+	设定文件后缀与主编辑模式的关联管理
+      * default-major-mode
+	设置默认的主编辑模式        
+      * c-macro-preprocessor
+	设置C预处理器命令          
+      * completion-auto-help
+        设置自动补全时,是否打开*Completions*窗口
+      * completion-ignored-extensions
+	它是一个由文件后缀构成的列表,Emacs在补足文件名时将不把以它们为后缀的文件名列出来
+* 专题说明
+** Emacs工作环境
+*** 执行UNIX命令
+    1. 执行一条UNIX命令              
+       * 运行ESC !后输入命令，会新建一个缓冲区用于存放执行命令的结果
+       * C-u ESC ! 命令，会把输出结果放到当前编辑缓冲区内
+       * 
+    2. 将文本块作为UNIX命令的输入
+       * 定义要作为输入的文本块C-@
+       * 运行M-x shell-command-on-region / ESC |
+       * 输入要执行的shell命令
+    3. 进入shell模式
+       * 通过M-x shell进入shell模式
+       * 对一些shell下的特殊按键，需要在按键前加C-c，例如C-c C-c / C-c C-z
+       * 通过M-p / M-n遍历输过的命令
+       * 若上一个命令输出过长，想删除上一个命令的输出，可以按C-c C-o / comint-kill-output
+       * Emacs会根据cd、popd和pushd等命令来改变默认目录的表示方法，即查找文件的默认目录永远和当前目录一样
+       * shell是怎样知道启动哪个shell的呢
+	 它首先查看的是变量explicit-shell-file-name；接着查看ESHELL的环境变量，最后查看SHELL的环境变量
+       * shell的初始化
+	 Emacs启动一个交互shell是，它会在shell正常的启动文件之后，再额外运行一个名叫~/.emacs_shell名称 的初始化文件。其中的"shell名称"是打算在Emacs中使用的shell的名字
+       * 若要输入密码一类不能显示出来的字符时，用M-x send-invisible
+       * 移动到前一个命令          ：C-c C-p
+       * 移动到后一条命令          ：C-c C-n
+*** 文件和目录操作
+    1. 进入Dired模式（directory editing mode 目录编辑模式）
+       * 使用C-x C-f命令时，指定一个目录名 / C-x d 再输入目录名,产生的结果类似于ls
+       * C-x C-d给出一个简单的目录文件清单，类似ls -F，后面有一个标志表示文件类型
+       * C-u C-x C-d给出一个详细的目录文件清单，类似ls -l
+    2. Dired模式的普通操作
+       * 切换按文件名排序/时间排序               ：s
+       * 移动到文件清单下一个文件                ：SPACE / C-n / n
+       * 移动到文件清单上一个文件                ：DEL / C-p / p
+       * 快速查看文件                          ：v
+	 在查看状态，文件内容只能看，不能改，按下C-c 或 q，将返回目录的文件清单窗口，可以用s键开始一次递增查找，按=键，Emacs会告诉光标在哪一行
+       * 编辑某个文件                          ：f / e
+       * 为文件加删除标识                       ：d
+       * 为所有自动保存文件加上待删除标记         ：# （自动保存文件的文件名，其首尾各有一个#字符）
+       * 为所有自动保存文件去掉待删除标记         ：C-u # （自动保存文件的文件名，其首尾各有一个#字符）
+       * 为所有备份文件加上待删除标记            ：~ （备份文件的文件名以~字符结尾）
+       * 为所有备份文件去除待删除标记            ：C-u ~
+       * 为所有可执行文件加上 *待操作* 标记      ：*
+       * 为所有可执行文件去除 *待操作* 标记      ：C-u *
+       * 为所有目录加上 *待操作* 标记           ：/
+       * 为所有目录去除 *待操作* 标记           ：C-u /
+       * 去掉文件的待删除标记                   ：u
+       * 去掉上一个文件的待删除标记              ：DEL
+       * 执行标记操作                          ：x
+       * 立刻删除某个文件                       ：D （大写字母表示立即操作）
+       * 拷贝文件                              ：C （可以在C之前加上数字，表示拷贝多少个文件）
+       * 文件重命名 / 移动文件                  ：R （与UNIX的mv命令一样）
+       * 文件压缩 / 解压缩                      ：Z （调用compress）
+       * 对文件进行比较                         ：=  （调用diff）
+       * 文件与备份文件做比较                    ：M-=
+       * 在文件上执行UNIX命令                    ：! (若要传入的参数不止一个文件名，则可以在命令行中用*来代替该文件名称)
+       * 刷新Dired视图                          ：g
+       * 新建目录                               ：+ / M-x dired-create-directory
+       * 对文件内容进行查询-替换
+	 先把想包括在查询-替换的文件都选上，然后按下Q键（M-x dired-do-query-replace），接下来先后输入查找字符串和替换字符串。
+	 如果在这次查询-替换操作的过程中另外开始了一次递归编辑，这次查询-替换操作就将到此为止，只能重新回到Dired编辑缓冲区里才能再次继续这个查询-替换操作
+       * 改变文件的组权限                        ：G / M-x dired-do-chgrp
+       * 在画面上删除光标所在哪一行（不删除文件）   ：k
+       * 在另一个窗口打开文件                     ：o（光标移动到新窗口） / C-o（光标不移动到新窗口）
+       * 打印文件                               ：P
+       * 移动到上一个目录                        ：>
+       * 移动到上一个目录                        ：<
+    3. Dired模式的文件组操作
+	* 给文件加上待操作标记                   ：m （对一组文件加了待操作标记后，Emacs会认为此后的操作都是以这些加操作标记的文件为对象的）
+	* 去掉星号带操作标记                     ：M-DEL / M-x dired-unmark-all-files / Mark标记菜单->Unmark All
+	* 用正则表达式给一组文件加操作标志         ：%m 正则表达式
+	* 用正则表达式给一组文件加删除标志         ：%d 正则表达式
+	* 
+*** 打印文件
+    1. 打印编辑缓冲区
+       M-x print-buffer（类似pr|lpr）
+    2. 打印文本块
+       M-x print-region（类似pr|lpr）
+    3. 打印编辑缓冲区，但不带页码
+       M-x lpr-buffer （类似lpr）
+    4. 打印文本块，但不带页码
+       M-x lpr-region （类似于lpr）
+    5. 在Dired里，把默认的打印命令放到辅助输入区里，在按回车键执行它之前还可对它进行修改
+       M-x dired-do-print
+    6. 打印具有文本属性的编辑缓冲区
+       M-x ps-print-buffer-with-faces
+*** 用Emacs查询UNIX在线文档
+    1. M-x man
+    2. M-x manual-entry RETURN UNIX命令 ERTURN
+       manual-entry的好处是，可以随心所欲地前后翻阅使用手册页
+*** 时间管理工具
+    1. 显示时间                    ：M-x display-time
+    2. 显示日历                    ：M-x calendar
+       * 默认情况下，星期从星期日开始的。要修改开始星期几，修改calendar-week-start值：M-x set-variable calendar-week-start RETURN 1 RETURN
+       * 移动到后一天               ：C-f
+       * 移动到前一天               ：C-b
+       * 移动到下一星期的同一天      ：C-n
+       * 移动到前一星期的同一天      ：C-p
+       * 以月份为单位前后移动        ：ESC } / ESC {
+       * 以年为单位前后移动          ：C-x ] / C-x [
+       * 前卷三个月                 ：C-v
+       * 后卷三个月                 ：M-v
+       * 移动到星期的开始 / 结尾     ：C-a / C-e
+       * 移动到月份的开始 / 结尾     ：M-a / M-e
+       * 移动到年的开始   / 结尾     ：ESC < / ESC >
+       * 直接到达某个特定的日期       ：g d
+       * 把指定月份放在日历画面的中间  ：o
+       * 前卷一个月                  ：C-x <
+       * 后卷一个月                  ：C-x >
+       * 查看节假日                  ：a / M-x list-calendar-holidays /M-x holidays
+       * 查看指定日期是不是节假日      ：h
+       * 搞亮显示节假日               ：x
+    3. 日记功能（日常安排，不是一般的日记，calendar的一部分）
+       * 日记文件名字必须是.diary,并且放在自己的主目录中，把自己打算记住的日期插入到这个文件里
+       * 若不想Emacs在日历上把某条目显露出来，在某个日记条目前加上&字符
+       * 插入一条一次性的日记条目                    ：i d
+       * 插入以周为循环的日记条目                    ：i w
+       * 插入以月为循环的日记条目                    ：i m
+       * 插入以年为循环的日记条目                    ：i y / i a 
+       * 插入以n天循环的日记条目                     ：i c
+       * 插入以日期block为循环的日记条目             ：i b
+       * 突出显示日记条目                           ：m
+       * 显示指定日期的日记条目                      ：d
+       * 显示.diary文件的内容                       ：s
+       * 计算某个日期段的天数                        ：M-=
+       * 显示3个月期间的月相情况                      ：M （calendar-phases-of-moon）
+       * 根据给定的经度和维度显示指定日期的日出和日落时间：S （calendar-sunrise-sunset）
+       * 设置时间块block                             ：C-@ / C-SPACE
+** GUI
+   1. 打开文本GUI
+      按下F10或者"ESC `"
+** 获取帮助
+*** EMACS的自动补足功能
+    1. Emacs的自动补足项包括
+       * 命令
+       * 文件名
+       * 编辑缓冲区名
+       * Emacs变量名
+    2. Emacs的补足键包括
+       * TAB    :尽可能补足
+       * SPACE  :补足这个名称直到下一个标点符号
+       * ?      :以此前输入的字符为依据,可用选择列在*Completions*里
+*** 帮助键(通常是C-h)
+    1. C-h c                 	     :这个按键组合将允许哪个命令
+    2. C-h l                         :最近输入的1000个字符是什么
+    3. C-h v                         :这个变量的含义是什么,有哪些可取值
+    4. C-h t                 	     :Tutorial教程
+    5. C-h k                 	     :Describe Key按键解释
+    6. C-h f                 	     :Describe Function函数解释
+    7. M-x describe-face     	     :查看face的文档
+    8. C-h m                 	     :查看当前mode的文档
+    9. C-h w                 	     :查看某个命令对应的快捷方式
+    10. C-h b                 	     :查看当前buffer所有的快捷键列表
+    11. C-h s                        :这个缓冲区里使用哪个语法表
+    12. <待查看的快捷键序列>C-h        :查看当前buffer中以某个快捷序列开头的快捷键列表
+    13. M-x find-function     	     :查看函数代码
+    14. M-x find-variable    	     :查看变量的代码
+    15. M-x find-face-definition     :查看face的代码
+    16. C-h a / M-x command-apropos  :查看关键字所涉及的命令
+    17. M-x apropos                  :查看关键字所涉及的函数和变量
+    18. M-x super-apropos            :查看关键字所涉及的文档
+    19. C-h i / M-x info             :启动文档查看器info程序,进入info模式
+    20. C-h C-f                      :info下的C-h f
+    21. C-h C-k                      :info下的C-h k
+** auto-fill mode自动换行模式
+   这种副模式把什么地方断行的工作交给Emacs去决定。Emacs会在句子接近行尾的时候等待你输入一个空格，然后它会把下一个单词转到下一行。
+	 
+** 拼写检查
+   1. M-x ispell-buffer              ：检查整个缓冲区
+   2. ESC $ / M-x ispell-word        ：检查单词
+   3. ESC TAB / ispell-complete-word ：会把单词的各种补足形式列出来
+   4. M-x ispell-kill-ispell         ：杀死ispell进程
+** Emacs中的宏
+   1. 定义宏　　　　　　　　　　：C-x (
+      * 在录制宏的过程中，如果在某个地方按下了C-u C-x q，就表示插入一个递归编辑，在递归编辑期间录入的任何东西都不会录制到宏中去，可以输入任何东西，但结束时，必须用ESC C-c推出递归编辑状态。
+      * 在录制宏的过程中，可以在想让宏暂停执行的地方按下C-x q。当宏执行到这里时，Emacs会给出询问
+	y 表示继续执行这个宏，执行完毕进入下一次循环
+	n 表示停止执行这个宏，但进入下一次循环
+	C-r 开始一次递归编辑
+	C-l 把光标所在的文本行放到画面中央
+	C-g 取消整个宏的执行
+   2. 结束宏的录制            ：C-x )
+   3. 取消宏录制              ：C-g
+   4. 执行宏                 ：C-x e
+      任何时候只能有一个活动的宏，如果又定义了另外一个宏，那么新定义的宏就成了活动的宏，而以前的宏被覆盖.
+   5. 向现有的宏里增加编辑命令  :C-u C-x (
+      虽然不能对宏进行编辑，但是可以用C-u C-x (组合键在宏的尾部加ixie编辑命令。这个命令先执行完已经录制好了的宏，然后等待添加更多的击键动作，按C-x )结束宏的录制。
+   6. 命名并保存宏           ：M-x name-last-kbd-macro
+   7. 执行被命名的宏         ：M-x 宏名字
+   8. 插入表示宏的代码到文件中
+      * 用C-x C-f打开保存宏代码的文件
+      * M-x insert-kbd-macro RETURN 宏名字 RETURN
+      * 保存该文件
+      * 可以把宏保存到.emacs中，这样宏就会自动加载进来了
+   9. 加载宏文件            ：M-x load-file
+** Emacs下的版本控制
+   1. VC命令汇总
+      * C-x v v  / M-x vc-next-action               ：前进到下一个合乎逻辑的版本控制状态
+      * C-x v d  / M-x vc-directory                 ：列出某个子目录下所有的已注册版本
+      * C-x v =  / M-x vc-diff                      ：生成一份版本差异报告
+        * 可以加前缀C-u，那么会提示输入一个文件名和两个修订号，比较该文件的两个修订号之间的而区别
+	* 如果输入文件名时输入的是目录名称，则VC把该目录力全部已注册文件的指定版本之间的差异全部报告出来
+	* VC输出的差异报告，可以通过patch转换为一个补丁包
+      * C-x v u  / M-x vc-revert-buffer             ：丢弃修改
+      * C-x v ~  / M-x vc-version-other-window      ：在另一窗口打开指定修订版
+      * C-x v l  / M-x vc-print-log                 ：显失某文件的修订日志
+      * C-x v i  / M-x vc-register                  ：把文件注册到版本控制系统
+      * C-x v h  / M-x vc-insert-headers            ：给文件加上供版本控制系统使用的标题块
+      * C-x v r  / M-x vc-retrieve-snapshot         ：签出一个已命名的项目快照
+      * C-x v s  / M-x vc-create-snapshot           ：创建一个项目快照，并命名
+      * C-x v c  / M-x vc-cancel-version            ：丢弃一个已保存起来的修订版
+      * C-x v a  / M-x vc-update-change-log         ：刷新一个GNU格式的changeLog文件
+      * M-x vc-rename-file                          ：重命名版本受控文件
+      * M-x vc-clear-context                        ：强制让VC清空当前文件的版本控制状态的缓存信息
+   2. VC的变量设置
+      * vc-default-back-end           :VC缺省使用的版本控制系统
+      * vc-display-status             :是否显示版本信息
+      * vc-header-alist               :设置版本header的格式
+      * vc-keep-workfiles             :设置签入时是否保留工作版本的文件
+      * vc-mistrust-permissions       :是否根据文件的权限来判断版本控制状态
+      * vc-suppress-confirm           :设置丢弃操作时是否进行确认
+      * vc-initial-comment            :初始注释
+      * diff-switches                 :在生成修改报告的时候,把这个变量传递到UNIX的diff命令
+      * vc-consult-headers            :是否从版本控制字符串出获取文件的状态和版本信息,而不再看主控文件
+** Html-helper-mode
+   1. 把标签加到文本块的两端，而不是光标位置上             ：C-u HTML标签的键盘命令
+   2. 自动补全                                         ：ESC TAB 
+   3. 特殊字符的输入                                    ：C-c 特殊字符
+   4. HTML段落分隔符                                   ：M-RETURN
+   5. 逻辑样式strong                                   ：C-c C-s s
+   6. 超链接                                           ：C-c C-a l
+** cc-mode
+   1. 移动命令
+      * 移动到当前语句的开头                 ：M-a
+      * 移动到当前语句的结尾                 ：M-e
+      * 段落重排                            ：M-q
+      * 移动到当前函数的开头                 ：ESC C-a
+      * 移动到当前函数的结尾                 ：ESC C-e
+      * 选中整个函数为文本块                 ：ESC C-h / M-x c-mark-function
+      * 对整个函数进行缩进                   ：C-c C-q
+      * 移动到当前预处理器条件的开始位置       ：C-c C-u
+      * 移动到上一个预处理器条件              ：C-c C-p
+      * 移动到下一个预处理器条件              ：C-c C-n
+   2. 基本缩进命令
+      * 对文本块进行缩进                     ：ESC C-\ / M-x indent-region
+      * 光标移到当前行的第一个非空白字符上     ：M-m     / M-x back-to-identation 
+      * 把当前行合并到上一行去                ：ESC ^   / M-x delete-indentation
+      * 选择一个缩进样式                     ：M-x c-set-style
+   3. 注释命令                              ：M-;
+   4. 自动开始新行
+      * 可以使用C-c C-a / M-x c-toggle-auto-state来启用 / 禁用它
+      * 启用了自动开始新行功能后，只要输入;{}或者特定情况下的,:Emacs就会自动加上一个换行符并对新行进行缩进
+      * 启用了之后，状态行从C改为C/a
+   5. 饥饿的删除键
+      * 可以使用C-c C-d / M-x c-toggle-hungry-state启动 / 禁用它
+      * 饥饿的删除键将使DEL键具备删除光标左边全部空格的能力
+      * 启用后，状态行从C改为C/h
+   6. 同时启用 / 禁用 自动开始新行与饥饿的删除键  ：C-c C-t / M-x c-toggle-auto-hungry-state
+   7. 查看C预处理器处理之后的代码               
+      * 先定义一个文本块
+      * C-c C-e / M-x c-macro-expand
+      * 文本块会送到实际的C语言预处理器中处理，结果放到一个名为*Macroexpansion*窗口中
+   8. etags
+      * 设定TAGS文件地址                    ：M-x visit-tags-table RETURN
+      * 查找TAG                            ：M-. (当前窗口跳转) / C-x 4 . （另一窗口跳转）
+      * 查找其他同名的函数                   ：M-, / M-x tags-loop-continue
+      * 正则表达似乎查找TAG                  ：M-x tags-search
+      * 对TAGS中所有文件进行询问-替换         ：M-x tags-query-replace
+      * 显示所有符合正则表达式的TAG列表        ：M-x tags-apropos
+      * 显示所有TAG                         ：M-x list-tags
+** complier-mode
+   1. 执行编译
+      * M-x compile
+      * 首先会输入一个编译命令，一旦输入，这个编译命令在本次Emacs回话过程中都有效
+      * 输入编译命令之后，Emacs会自动把未存盘的编辑缓冲区保存起来
+      * 在编译执行阶段，状态行上显示Compiling:run
+      * 编译结束则显示exit字样
+      * 编译结果显示在*compilation*编辑缓冲区内
+   2. 移动到下一条出错信息并访问与之对应的源代码 ：C-x ・ （这里时C-x 反引号）
+   3. 移动到下一条 / 上一条出错信息            ：M-n / M-p
+   4. 访问当前出错信息的源代码                 ：C-c C-c
+   5. 下卷屏幕显示                           ：SPACE
+   6. 上卷屏幕显示                            ：DEL
+** 大纲模式(M-x outline-mode)
+   1. 移动
+      * 移动到下一个标题或子标题                  :C-c C-n
+      * 移动到上一个标题或子标题                  :C-c C-p
+      * 移动到同级的下一个标题                    :C-c C-f
+      * 移动到同级的上一个标题                    :C-c C-b
+      * 移动到上一层标题                         :C-c C-u
+   2. 文本的隐藏和显示
+      * 隐藏正文                                :C-c C-t / M-x hide-body
+      * 查看所有文本                             :C-c C-a / M-x show-all
+      * 隐藏某标题下的所有子标题和文本             :C-c C-d / M-x hide-subtree
+      * 显示某标题下的所有子标题和文本             :C-c C-s / M-x show-subtree
+      * 把紧跟在某标题下的文本隐藏起来             :M-x hide-entry
+      * 把紧跟在某标题下的文本显示出来             :M-x show-entry
+   3. 大纲的编辑
+      * 如果想把隐藏着的文本移动到另外一个编辑缓冲区内,这两个编辑缓冲区就必须都在大纲模式下
+       	如果试图把大纲里的隐藏文本移动到另外一个不在大纲模式下的编辑缓冲区里,就会看到来自大纲的文本有所改变
+      * 在隐藏文本的情况下,千万不要在省略号上输入,因为输入的内容将会插入到隐藏文本里
+   4. 大纲的副模式(M-x outline-minor-mode)
+      * 在大纲副模式下,必须给大纲命令都加上C-c C-o前缀,以便跟主模式里的C-c命令发生冲突.
+** ido-mode
+*** 启动ido-mode
+	添加如下配置
+	 #+BEGIN_SRC elisp
+       (setq ido-enable-flex-matching t)
+       (setq ido-use-filename-at-point 'guess)
+       (setq ido-everywhere t)          
+       (ido-mode 1)                     
+	 #+END_SRC
+*** 操作
+	 输入部分名称,就会自动筛选匹配的文件/buffer. 
+
+     若候选项是由多个单词用空格分隔组成的,则可用直接输入每个单词的首字母缩写,也能匹配该候选项.
+	 例如输入`cgf`能够匹配"*Customize Group: Foobar *"
+
+	 使用<-和->在待选项中切换选择. 
+
+     使用向上,下键切换上次/下次的文件/buffer
+
+	 直接使用C-f 和C-b 切换文件/buffer选择模式
+
+	 按回车直接选择第一个匹配项
+	 
+	 其他命令
+	 #+CAPTION:一般命令
+     | Keybinding  | Description                                                                      | Available In                   |
+     | C-b         | 使用原switch-buffer界面                                                          | Buffers                        |
+     | C-k         | kill第一个匹配的buffer/ 删除第一个匹配的file                                     | Buffers  / Files               |
+     | C-f         | 使用原find-file界面                                                              | Files                          |
+     | C-d         | 打开当前目录的dired mode                                                         | Dirs / Files                   |
+     | C-a         | 切换是否显示ignore的文件(see ido-ignore-files)                                   | Files / Buffers                |
+     | C-c         | 切换匹配时是否忽略大小写(see ido-case-fold)                                      | Dirs / Files / Buffers         |
+     | TAB         | 自动补全                                                                         | Dirs / Files / Buffers         |
+     | C-p         | 严格从首部进行匹配,而不是任何部分匹配都可以.                                     | Files                          |
+     | C-s / C-r   | 选择下一个/上一个匹配项                                                          | All                            |
+     | C-t         | 却换是否使用Emacs正则表达式来匹配                                                | All                            |
+     | Backspace   | Deletes characters as usual or goes up one directory if it makes sense to do so. | All (but functionality varies) |
+     | C-SPC / C-@ | Restricts the completion list to anything that matches your current input.       | All                            |
+     | //          | 直接跳到根目录,若在windows下则为driver目录                                       | Files                          |
+     | ~/          | 直接跳到HOME目录                                                                 | Files / Dirs                   |
+     | M-d         | Searches for the input in all sub-directories to the directory you’re in.       | Files                          |
+     | C-k         | Kills the currently focused buffer or deletes the file depending on the mode.    | Files / Buffers                |
+     | M-m         | Creates a new sub-directory to the directory you’re in                          | Files                          |
+	 
+	 当用ido-find-file打开一个文件时,会把该文件所在目录的所有文件信息缓存起来,该缓存起来的目录被称为Work Directory. work Directory会被记录在ido-work-directory-list变量中.
+
+	 *当在当前目录下查找不到符合条件的文件时,在等待一段时间后,ido会自动从work directory list中搜索符合条件的文件*
+
+	 #+CAPTION:Work Directory Commands
+     | 键绑定    | 描述                                                  |
+     |-----------+-------------------------------------------------------|
+     | M-n / M-p | 切换到下一个/上一个work directory                     |
+     | M-k       | 从list中删除当前work directory                        |
+     | M-s       | 在所有的work directory list中搜索匹配当前输入的文件名 |
+	 
+*** 配置
+**** 匹配方式的设置
+	  * ido-enable-flex-matching 
+	  
+		设为t,则表示,若输入的字符串不能与任何匹配项相匹配,则会把输入的字符串拆分成带顺序的字符序列来看待,即任何按顺序匹配输入字符的匹配项会作匹配.
+
+	  * ido-enable-regexp
+
+		是否启用正则匹配, *若启用了该选择,则会禁止ido的自动补全功能*
+
+	  * 变量`ido-use-filename-at-point`
+
+		根据光标所在值猜测默认要打开的文件名的方法,nil表示不猜测
+		#+BEGIN_SRC elisp
+		 (setq ido-use-filename-at-point 'guess)
+		#+END_SRC
+
+	  * ido-case-fold
+
+		匹配时是否忽略大小写
+
+	  * ido-enable-dot-prefix
+
+		若为非nil,则若输入的第一个字符为`.`,这个`.`被用来匹配那个以`.`开头的隐藏文件.
+
+	  * 
+
+**** 设置显示可选项的顺序
+
+	  变量`ido-file-extensions-order`
+	  #+BEGIN_SRC elisp
+        ;; 空格表示没有扩展名的文件,t表示所有未列出扩展名的其他文件的以默认方法排序
+        (setq ido-file-extensions-order '(".org" ".txt" ".py" ".emacs" ".xml" ".el" ".ini" ".cfg" ".cnf" "" t))  
+	  #+END_SRC
+
+	  給ido-make-buffer-list-hook添加排序函数,例如
+	  #+BEGIN_SRC emacs-lisp
+        (add-hook 'ido-make-buffer-list-hook 'ido-summary-buffers-to-end)
+	  #+END_SRC
+
+**** 设置隐藏某些可选项
+
+      | Variable Name                          | Description                                                                                                                                             |
+      |----------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------|
+      | ido-ignore-buffers                     | Takes a list of buffers to ignore in C-x b                                                                                                              |
+      | ido-ignore-directories                 | Takes a list of directories to ignore in C-x d and C-x C-f                                                                                              |
+      | ido-ignore-files                       | Takes a list of files to ignore in C-x C-f                                                                                                              |
+      | ido-ignore-extensions                  | 是否忽略变量`completion-ignored-extensions`中的文件                                                                                                     |
+      | completion-ignored-extensions          | Completion ignores file names ending in any string in this list.It ignores directory names if they match any string in this list which ends in a slash. |
+      | ido-ignore-unc-host-regexps            |                                                                                                                                                         |
+      | ido-work-directory-list-ignore-regexps | 符合该列表的目录不放入work directory中                                                                                                                  |
+      | ido-auto-merge-delay-time              | 当在当前目录下查找不到符合条件的文件时,在等待一段时间后,ido会自动从work directory list中搜索符合条件的文件,该等待的时间由该变量决定,单位为秒            |
+      | ido-show-dot-for-dired                 | 匹配列表是否显示当前目录,若该值为非nil,则总是把`.`作为文件匹配项的第一位.                                                                                                    |
+
+**** Working Directory相关配置项
+	  
+	  * ido-max-work-directory-list
+
+		该变量指定了最多可以缓存多少个working directory
+
+	  * ido-max-dir-file-cache
+
+		该变量指定了每个working directory最多能够缓存多少个文件?
+
+**** 高亮face配置
+
+	  * ido-use-faces
+
+		是否使用ido face来显示
+	  
+	  * ido-only-match face
+
+		当匹配项列表中只有唯一一个匹配项时,使用该face
+
+	  * ido-first-match face
+
+	  * ido-subdir face
+
+**** 其他选项
+	  * 变量`ido-use-url-at-point`
+	  
+		类似变量`ido-use-filename-at-point`,但是把光标所在的值作为是url
+
+	  * 变量`ido-create-new-buffer`
+
+		当用C-x b输入一个新buffer时,默认情况下ido会提示你再按一次回车确认新建buffer.
+
+		该变量的可选值为
+		* 'alway
+		  不提示,直接新建
+		* 'prompt
+		  提示用户确认
+		* 'never
+		  不新建
+
+	  * ido-confirm-unique-completion
+
+		若为非nil,则即使是只有一个匹配项,在打开时也需要确认.
+
+	  * ido-cannot-complete-command
+
+		若ido-complete不能补全时,会运行该变量所表示的函数名.
+
+	  * ido-max-file-prompt-width
+
+		提示符的最大长度,若为正整数,表示最多显示N个字符,若为浮点数,表示frame width的比例
+
+	  * ido-max-window-height
+
+	  * ido-record-commands
+
+		是否记录曾经的历史记录
+
+	  * ido-minibuffer-setup-hook
+
+		ido被激活,进入minibuffer时执行该hook
+
+	  * ido-max-prospects
+
+		该选项指明了一次列出多少个匹配项,0表示全部列出,若有超出的匹配项,用...代替
+
+	  * ido-everywhere
+
+		若为非nil,则Elisp中所有使用read-buffer和read-file-name函数的部分,都使用ido-read-buffer和ido-read-file-name来代替
+
+*** 修改键绑定
+	使用`ido-setup-hook`来进行,例如
+	#+BEGIN_SRC emacs-lisp
+      (add-hook 'ido-setup-hook 'ido-my-keys)
+
+      (defun ido-my-keys ()
+        "Add my keybindings for Ido."
+        (define-key ido-completion-map " " 'ido-next-match))
+	#+END_SRC
+** magit
+*** git-status
+	* 按s键stage当前文件
+	* 按S键stage所有tracked文件
+	* 按u键unstage当前文件
+	* 按U键Unstage当前文件
+	* 按c键编辑commit message
+	* C-c Cc commit
+*** git-push
+	* 按P P键push
+*** git-pull
+	* 按F F键pull
+*** git-log
+	* 按Enter键查看当前提交的diff
+** html-mode
+   * 如何删除tag
+
+	 将光标放到要删除的tag上,按C-c C-d,则会把开始和结束标签都删掉. *需要注意的是,如果HTML tag不匹配的话,可能会删错开始/结束tag*
+
+   * 如何将光标跳转到tag的开始标签或结束标签处
+
+	 C-c C-f(sgml-skip-tag-forward) / C-c C-b (sgml-skip-tag-backward)
+
+   * 如何预览编辑html的效果
+
+	 * C-c C-v(browse-url-of-buffer)可用预览该网页
+
+	 * C-c Tab(sgml-tags-invisible)可用隐藏掉tag标签,再按一次恢复. 这类似于以文本方式预览
+
+   * 如何插入tag
+	 
+     | Tag           | hotkey              | command  name        |
+     | <h1>          | 【Ctrl+c 1】        | html-headline-1      |
+     | <h2>          | 【Ctrl+c 2】        | html-headline-2      |
+     | <p>           | 【Ctrl+c Enter ↵】  | html-paragraph       |
+     | <hr>          | 【Ctrl+c Ctrl+c -】 | html-horizontal-rule |
+     | <ul>          | 【Ctrl+c Ctrl+c u】 | html-unordered-list  |
+     | <li>          | 【Ctrl+c Ctrl+c l】 | html-list-item       |
+     | <a>           | C-c C-c h           | html-href-anchor     |
+     | <img>         | C-c C-c i           | html-image           |
+     | 交互式插入tag | C-c C-o             | sgml-tag             |
+     | 交互式插入属性 | C-c C-a             | sgml-attributes      |
+     |                |                     |                      |
+
+   * 如何插入闭合tag
+
+	 C-c / (sgml-close-tag)
+
+   * 
+** abbrev-mode
+*** 配置
+	#+BEGIN_SRC elisp
+      ;; sample use of emacs abbreviation feature
+      
+      (define-abbrev-table 'global-abbrev-table '(
+      
+          ;; math/unicode symbols
+          ("8in" "∈")
+          ("8nin" "∉")
+          ("8inf" "∞")
+          ("8luv" "♥")
+          ("8smly" "☺")
+      
+          ;; email
+          ("8me" "someone@example.com")
+      
+          ;; computing tech
+          ("8wp" "Wikipedia")
+          ("8ms" "Microsoft")
+          ("8g" "Google")
+          ("8it" "IntelliType")
+          ("8msw" "Microsoft Windows")
+          ("8win" "Windows")
+          ("8ie" "Internet Explorer")
+          ("8ahk" "AutoHotkey")
+      
+          ;; normal english words
+          ("8alt" "alternative")
+          ("8char" "character")
+          ("8def" "definition")
+          ("8bg" "background")
+          ("8kb" "keyboard")
+          ("8ex" "example")
+          ("8kbd" "keybinding")
+          ("8env" "environment")
+          ("8var" "variable")
+          ("8ev" "environment variable")
+          ("8cp" "computer")
+      
+          ;; signature
+          ("8xl" "Xah Lee")
+      
+          ;; url
+          ("8uxl" "http://xahlee.info/")
+      
+          ;; emacs regex
+          ("8d" "\\([0-9]+?\\)")
+          ("8str" "\\([^\"]+?\\)\"")
+      
+          ;; shell commands
+          ("8ditto" "ditto -ck --sequesterRsrc --keepParent src dest")
+          ("8im" "convert -quality 85% ")
+      
+          ("8f0" "find . -type f -size 0 -exec rm {} ';'")
+          ("8rsync" "rsync -z -r -v -t --exclude=\"*~\" --exclude=\".DS_Store\" --exclude=\".bash_history\" --exclude=\"**/xx_xahlee_info/*\"  --exclude=\"*/_curves_robert_yates/*.png\" --exclude=\"logs/*\"  --exclude=\"xlogs/*\" --delete --rsh=\"ssh -l xah\" ~/web/ xah@example.com:~/")
+          ))
+      
+      ;; stop asking whether to save newly added abbrev when quitting emacs
+      (setq save-abbrevs nil)
+      
+      ;; turn on abbrev mode globally
+      (setq-default abbrev-mode t)
+      
+	#+END_SRC
+*** 
+** 关于括号
+   1. 如何自动插入双括号
+
+	  开启`electric-pair-mode`这个minor mode后,插入左括号会自动补全右括号, 而删除一方括号不会删除另一个.
+	  #+BEGIN_SRC elisp
+        (electric-pair-mode 1)
+	  #+END_SRC
+
+	  默认补全的括号与各个major-mode的syntax table有关(可用通过describe-syntax查看). 要定义自己的括号列表可用编辑`electric-pair-pairs`
+	  #+BEGIN_SRC elisp
+        (setq electric-pair-pairs '(
+                                    (?\" . ?\")
+                                    (?\{ . ?\})
+                                    ) )
+	  #+END_SRC
+   
+	  此外也可以定义自己的括号补全函数
+	  #+BEGIN_SRC elisp
+        (if (region-active-p)
+            (let (
+                  (p1 (region-beginning))
+                  (p2 (region-end))
+                  )
+              (goto-char p2)
+              (insert rightBracket)
+              (goto-char p1)
+              (insert leftBracket)
+              (goto-char (+ p2 2))
+              )
+          (progn
+            (insert leftBracket rightBracket)
+            (backward-char 1) ) )
+        )
+        
+        (defun insert-pair-paren () (interactive) (insert-bracket-pair "(" ")") )
+        (defun insert-pair-bracket () (interactive) (insert-bracket-pair "[" "]") )
+        (defun insert-pair-brace () (interactive) (insert-bracket-pair "{" "}") )
+        
+        (defun insert-pair-double-straight-quote () (interactive) (insert-bracket-pair "\"" "\"") )
+        (defun insert-pair-single-straight-quote () (interactive) (insert-bracket-pair "'" "'") )
+        
+        (defun insert-pair-single-angle-quote‹› () (interactive) (insert-bracket-pair "‹" "›") )
+        (defun insert-pair-double-angle-quote«» () (interactive) (insert-bracket-pair "«" "»") )
+        (defun insert-pair-double-curly-quote“” () (interactive) (insert-bracket-pair "“" "”") )
+        (defun insert-pair-single-curly-quote‘’ () (interactive) (insert-bracket-pair "‘" "’") )
+        
+        (defun insert-pair-corner-bracket「」 () (interactive) (insert-bracket-pair "「" "」") )
+        (defun insert-pair-white-corner-bracket『』 () (interactive) (insert-bracket-pair "『" "』") )
+        (defun insert-pair-angle-bracket〈〉 () (interactive) (insert-bracket-pair "〈" "〉") )
+        (defun insert-pair-double-angle-bracket《》 () (interactive) (insert-bracket-pair "《" "》") )
+        (defun insert-pair-white-lenticular-bracket〖〗 () (interactive) (insert-bracket-pair "〖" "〗") )
+        (defun insert-pair-black-lenticular-bracket【】 () (interactive) (insert-bracket-pair "【" "】") )
+        (defun insert-pair-tortoise-shell-bracket〔〕 () (interactive) (insert-bracket-pair "〔" "〕") )
+        
+	  #+END_SRC
+
+   2. 如何删除一个括号自动删除另一个匹配括号
+
+	  需要安装名为`autopairs`的package
+
+   3. 如何高亮括号
+
+	  开启show-paren-mode
+	  #+BEGIN_SRC elisp
+        (show-paren-mode 1)
+	  #+END_SRC
+
+	  show-paren-mode有两种高亮括号的方式:
+	  #+BEGIN_SRC elisp
+        (setq show-paren-style 'parenthesis) ; 只高亮括号
+        (setq show-paren-style 'expression) ; 高亮整个括号内的内容
+	  #+END_SRC
+
+   4. 在嵌套括号中翱翔
+	  
+	  Emacs提供了多个命令在嵌套括号表达式中定位:
+          | Key             | Command          | Purpose                                                                   |
+          | 【Ctrl+Alt+←】 | backward-sexp    | Move to previous sibling (move to the (beginning of) previous sexp unit)  |
+          | 【Ctrl+Alt+→】 | forward-sexp     | Move to next sibling (move to the (end of) next sexp unit)                |
+          | 【Ctrl+Alt+↑】 | backward-up-list | Move to parent (move to the (beginning of) outer paren pair)              |
+          | 【Ctrl+Alt+↓】 | down-list        | Move to first child (move into the (beginning of) first inner paren pair) |
+
+** 关于正则表达式
+** re-builder
+   re-builder是一个可用让你交互式创建正则表达式的工具. 当你在re-builder中修改正则表达式时,会动态的在buffer中用高亮显示出正则表达式的匹配范围.
+
+   re-builder支持多种格式的正则(但不支持PCRE).
+   * 启动re-builder
+	 
+	 M-x re-builder
+
+   * 设置正则格式
+
+	 通过设置变量`reb-re-syntax`可用设置re-builder解析的正则表达式的语法类型.
+	 | Syntax  | Description                                                                                                                                   |
+	 |---------+-----------------------------------------------------------------------------------------------------------------------------------------------|
+	 | read    | default. Similar to string but requires “double escaping” of backslashes like you would be required to do in elisp. 例如"\\(bar\\)",缺点是太多\了 |
+	 | string  | recommended. Similar to read but you don’t have the issue of backslash plague that haunts the default settings. 例如"\(bar\)",推荐这种方法             |
+	 | sregex  | A symbolic regular expression engine that uses s-expressions instead of strings.                                                              |
+	 | lisp-re | Yet another regular expression engine that uses s-expressions                                                                                 |
+	 | rx      | A third, and far more advanced, s-expression regexp engine. Use this and not sregex or lisp-re if you want to use a lisp-style regexp engine. |
+
+   * 操作命令
+	 * 更改re-builder的正则解析语法类型
+
+	   C-c TAB
+
+	 * 在匹配正则的内容中高亮显示捕获的分组
+
+	   C-c C-e会进入sub-expression mode,随后输入数字0-9表示高亮捕获的哪个分组,q表示退出该mode
+
+	 * 切换大小写敏感
+
+	   C-c C-i
+
+	 * 在匹配的内容中遍历
+
+	   C-c C-s表示下一个匹配的内容
+
+	   C-c C-w表示上一个匹配的内容
+
+	 * 保存创建的正则表达式
+
+	   C-c C-w
+
+	 * 更改target-buffer
+
+	   C-c C-b,更改target-buffer后,在RE-Builder中创建的正则匹配到target buffer中的内容
+
+	 * 退出re-builder
+	   
+	   C-c C-q
+** 关于窗口操作
+   1. 更改窗口大小的那些操作
+      | Command                             | Key          | Purpose                             |
+      | enlarge-window                      | 【Ctrl+x ^】 | increase height                     |
+      | shrink-window                       | ◇           | decrease height                     |
+      | enlarge-window-horizontally         | 【Ctrl+x }】 | increase width                      |
+      | shrink-window-horizontally          | 【Ctrl+x {】 | decrease width                      |
+      | shrink-window-if-larger-than-buffer | 【Ctrl+x -】 | shrink a window to fit its content. |
+      | balance-windows                     | 【Ctrl+x +】 | make all windows same width/height  |
+   2. 回退窗口配置
+
+	  在开启win-mode的情况下,可用用C-c 左方向键(winner-undo)来回退窗口配置, 也可以用C-c 右方向键(winner-redo)来重复窗口配置
+   3. 保存/恢复窗口配置信息
+
+	  使用命令`window-configuration-to-register(C-x r w)`将窗口配置信息保存到Register中
+
+	  使用命令`jump-to-register(C-x r j)`将窗口配置信息从Register中还原
+	  
+	  *重启Emacs后Register中的保存的配置信息会丢失,即使已经开始了desktop-save-mode,若要在不同session间保存Split-window Config,需要使用revive.el Package*
+   4. Make Screen Flow Side-by-Side for Widescreen
+
+	  你可以用两个side-by-side的buffer显示同一份文档,其中左边buffer的最底端链接的是右边buffer的最顶端. 当光标从左边buffer的最低端往下时,它出现在右边buffer的最顶端.
+
+	  1. M-x split-window-horizontally
+
+	  2. M-x follow-mode
+
+   5. 如何实现快速窗口跳转
+
+	  开启winmove-default-keybindings就能用shift+方向键在不同window中跳转了.
+	  #+BEGIN_SRC elisp
+        ;; use Shift+arrow_keys to move cursor around split panes
+        (windmove-default-keybindings)
+        
+        ;; when cursor is on edge, move to the other side, as in a toroidal space
+        (setq windmove-wrap-around t )
+        
+	  #+END_SRC
+** 文本作图
+   * artist-mode
+	 
+	 * 鼠标左键画
+
+	 * 鼠标右键擦
+
+	 * 鼠标中键切换矩形,椭圆等其他工具
+
+   * picture-mode
+
+   * describe-mode
+** dired
+   1. dired操作
+      | 操作 | 说明           |
+      |------+----------------|
+      | +    | 新建目录       |
+      | % m  | 根据正则mark   |
+      | U    | 取消所有的mark |
+      | `^`  | 上一层目录     |
+      | M-!  | 执行shell      |
+   2. 删除/复制非空目录
+	  
+	  添加如下配置信息
+	  #+BEGIN_SRC elisp
+        (setq dired-recursive-copies 'always) ; “always” means no asking
+        (setq dired-recursive-deletes 'top) ; “top” means ask once
+	  #+END_SRC
+   3. 如何实现类似totalcommand那样的从一个窗口的目录复制到隔壁窗口的目录
+
+	  添加如下配置信息
+	  #+BEGIN_SRC elisp
+        (setq dired-dwim-target t)
+	  #+END_SRC
+
+	  现在在一个窗口中用C复制或R移动命令时,默认的目的路径为隔壁的窗口目录
+   4. 如何只使用一个buffer打开文件
+
+	  添加如下配置信息
+	  #+BEGIN_SRC elisp
+        (require 'dired )
+        (define-key dired-mode-map (kbd "<return>") 'dired-find-alternate-file) ; was dired-advertised-find-file
+        (define-key dired-mode-map (kbd "^") (lambda () (interactive) (find-alternate-file "..")))  ; was dired-up-directory
+	  #+END_SRC
+
+	  这里命令`dired-find-alternate-file`在打开新文件的同时会关闭原buffer. 在dired中可用用a来触发该命令
+   5. 用外部程序打开文件
+
+	  #+BEGIN_SRC elisp
+        (defun xah-open-in-external-app (&optional file)
+          "Open the current file or dired marked files in external app.
+        
+        The app is chosen from your OS's preference."
+          (interactive)
+          (let ( doIt
+                 (myFileList
+                  (cond
+                   ((string-equal major-mode "dired-mode") (dired-get-marked-files))
+                   ((not file) (list (buffer-file-name)))
+                   (file (list file)))))
+            
+            (setq doIt (if (<= (length myFileList) 5)
+                           t
+                         (y-or-n-p "Open more than 5 files? ") ) )
+            
+            (when doIt
+              (cond
+               ((string-equal system-type "windows-nt")
+                (mapc (lambda (fPath) (w32-shell-execute "open" (replace-regexp-in-string "/" "\\" fPath t t)) ) myFileList))
+               ((string-equal system-type "darwin")
+                (mapc (lambda (fPath) (shell-command (format "open \"%s\"" fPath)) )  myFileList) )
+               ((string-equal system-type "gnu/linux")
+                (mapc (lambda (fPath) (let ((process-connection-type nil)) (start-process "" nil "xdg-open" fPath)) ) myFileList) ) ) ) ) )
+        
+	  #+END_SRC
+   6. 用文件管理器打开文件
+
+	  #+BEGIN_SRC elisp
+        (defun xah-open-in-desktop ()
+          "Show current file in desktop (OS's file manager)."
+          (interactive)
+          (cond
+           ((string-equal system-type "windows-nt")
+            (w32-shell-execute "explore" (replace-regexp-in-string "/" "\\" default-directory t t)))
+           ((string-equal system-type "darwin") (shell-command "open ."))
+           ((string-equal system-type "gnu/linux")
+            (let ((process-connection-type nil)) (start-process "" nil "xdg-open" "."))
+            ;; (shell-command "xdg-open .") ;; 2013-02-10 this sometimes froze emacs till the folder is closed.  with nautilus
+            ) ))
+        
+	  #+END_SRC
+   7. 如何对多个文件使用replace功能进行重命名?
+
+	  在dired中调用`wdired-change-to-wdired-mode`(菜单Immediate->Edit File Names或者C-c C-q),然后就像编辑文本文件一样,可用使用replace find等功能进行修改. 
+      
+      用C-c C-c提交修改,C-c ESC取消修改
+   8. 对目录中多个文件的内容进行查询/替换操作
+
+	  * 调用dired(如果要查找子目录的话用find-dired)
+
+	  * 标记要执行替换操作的文件
+
+	  * 按Q键执行命令`dired-do-query-replace-regexp`
+
+   9. 如何用dired展示find的结果
+
+	  使用find-dired命令.
+
+   10. 如何逐个地打开包含匹配内容的文件
+
+	   使用dired-do-search(默认快捷键为A),输入搜索的字符串则会打开第一个匹配的文件. 按下M-,(tags-loop-continue)则打开第二个匹配的文件...
+
+   11. 如何对多个目录中的多个文件进行处理
+
+	   用命令find-dired / find-name-dired,这两个命令依赖于外部命令find
+
+	   用命令find-lisp-find-dired / find-lisp-find-dired-subdirectories,这两个命令使用Emacs内部的find lisp library来查询,而不依赖于外部find命令. 这两个命令可用不等待find命令的返回结果,因此速度更快.
+	   另外需要注意的是,这两个命令接收的是Emacs正则表达式而不是通配符
+** WDired
+   使用WDired-mode可用像编辑普通文件一样修改Dired buffer
+
+   * 进入WDired-mode
+
+	 在dired buffer中按C-x C-q则会键入Wdired-mode
+
+   * 提交修改
+
+	 C-c C-c
+
+   * 取消修改
+
+	 C-c ESC
+
+   * 配置
+	 
+     * 变量`wdired-allow-to-change-permissions`
+
+       默认情况下,在WDired-mode下只能编辑文件名. 若要同时可用直接修改文件属性,则需要把变量`wdired-allow-to-change-permissions`为t
+
+	 * 变量`wdired-allow-to-redirect-links`
+
+	   是否可用修改链接
+
+	 * 变量`wdired-use-interactive-rename`
+
+	   若值为t,则每当你对文件进行改名时,都会提示你用C-c C-c提交修改
+
+	 * 变量`wdired-confirm-overwrite`
+
+	   若值为t,则当有文件要被覆盖时,做出提示
+
+	 * 变量`wdired-use-dired-vertical-movement`
+
+	   该变量指明了当光标在dired list中上下移动时,光标所处的位置. 若值为nil则跟编辑普通文件一样. 若值为'somtimes,则只有当光标处于文件名之前时,跳到文件名的第一个字符处. 值为t则表示Emacs每次都定位到文件名开始处
+
+
+** 与process交互--comint-mode
+   * 有两种基本的与process交互的方法
+	 * start-process创建异步process
+	 * call-process创建同步process
+   * comint-mode
+
+	 comint-mode提供基本的与进程交互的能力,命令历史的功能,input/output hooks.
+
+	 * make-comint 
+
+	 * make-comint-in-buffer
+
+   * 一个程序如何判断是否运行在emacs中?
+	 
+	 Emacs会设置变量EMACS和INSIDE_EMACS
+** 在正则替换时,使用函数格式化替换文本
+   
+   在replace string处,填写\,(function name)会将name用function函数处理后作为替换的字符串. 例如
+   #+BEGIN_SRC elisp
+     \,(upcase \1)                        ;将捕获的值转化为大些形式
+   #+END_SRC
+** 行操作
+   
+   * list-matching-lines
+	 
+	 列出当前文件内容中符合条件正则的文本行
+
+   * multi-occur
+
+	 列出所有buffer中符合条件正则的文本行
+
+   * delete-matching-lines
+
+	 删除当前文件内容中符合条件正则的文本行
+
+   * delete-non-matching-lines
+
+	 删除当前文件内容中不符合条件正则的文本行
+
+   * sort-lines
+
+   * sort-numeric-fields
+
+   * reverse-region
+
+   * highlight-lines-matching-regexp
+
+   * grep
+
+	 查询当前目录中多个文件中符合/不符合条件的文本行
+
+   * rgrep
+
+	 查询 *当前目录及子目录* 中多个文件中符合/不符合条件的文本行
+
+   * lgrep
+	 
+	 在文件名符合正则匹配的文件中查询内容
+
+   * grep-find
+
+	 用find命令先筛选文件名,再进行内容匹配
+
+** 排序命令
+   默认情况下Emacs排序时是大小写敏感的,要让Emacs排序时忽略大小写,需要设置变量`sort-fold-case`为t
+   * sort-lines
+
+	 按字典顺序对行进行排序
+   * sort-regexp-fields
+
+	 通过该命令,你可以只对一行的某个部分进行排序,而剩下的部分还保留原顺序.
+
+	 该命令首先提示你输入一个正则表达式用于标明哪些部分的内容参与排序,该正则表达式被称为record regexp,Emacs只对该正则表达式匹配的内容作顺序重排,而一行的其他内容不做变化
+
+	 然后提示你输入一个正则表达式用于说明根据哪些部分的内容进行排序,该正则表达式被称为key regexp,若该表达式为空,默认为\&,表示record regexp所匹配的所有内容,可用以用\数字来表示record regexp中的分组
+   * sort-columns
+
+	 根据选定列作为key来对行进行排序,所谓选定列是由mark和光标位置指定的列
+
+   * sort-fields
+
+	 所谓field是由空格或TAB分隔的单元.
+
+	 若直接用调用sort-fields,则表示根据第一个field来排序.
+
+	 可用使用使用C-u 数字参数来指定根据第几个field来排序(从1开始计算),若数字为负数,则从后往前数
+   * sort-numeric-fields
+
+	 类似sort-fields,但是排序时把指定的field当成数字来排序
+
+	 Emacs会自动推测指定field的进制,若field以0x开始表示是16进制,以0开头的表示是而进行,默认为十进制(由变量`sort-numeric-base`决定)
+   * sort-pages
+
+	 根据字段顺序对页进行排序,所谓页是由 *form feed character* 即^L
+   * sort-paragraphs
+
+	 根据字典顺序对段落进行排序. 
+	 
+	 段落的定义不同的mode下定义不同,但默认情况下是由一个或多个换行来划分的. 具体参见变量`paragraph-start`和`paragraph-separate`
+** 编码相关的操作
+   * 如何查看当前buffer的编码格式
+
+	 查看变量buffer-file-coding-system的值
+
+   * 如何转换当前buffer的编码格式
+
+	 M-x set-buffer-file-coding-system
+
+   * 
+
+** Register操作
+   * 拷贝到Register
+
+	 C-x r s(copy-to-register)
+
+   * 从Register复制
+
+	 C-x r i(insert-register)
+
+   * 将窗口配置信息保存到Register中
+
+	 C-x r w(window-configuration-to-register)
+
+   * 将窗口配置信息从Register中还原
+
+	 C-x r j(jump-to-register)
+
+   * Linux/Emacs Copy/Paste Problem
+
+     In Linux, if copy/paste doesn't work with other apps, you can add this:
+	 #+BEGIN_SRC elisp
+       ;; after copy Ctrl+c in X11 apps, you can paste by `yank' in emacs
+       (setq x-select-enable-clipboard t)
+       
+       ;; after mouse selection in X11, you can paste by `yank' in emacs
+       (setq x-select-enable-primary t)
+	 #+END_SRC
+
+   * 将光标位置计入Register
+
+	 C-x r SPC
+
+   * 根据Register中的位置跳转光标
+
+	 C-x r j
+** Hi-Lock mode
+   1. 相关命令
+      #+CAPTION:键绑定
+      | Key binding | Command Name                       | Description                                         |
+      | M-s h l     | highlight-lines-matching-regexp    | Highlights all lines matching a regular expression  |
+      | M-s h p     | highlight-phrase                   | Highlights everything matching a phrase             |
+      | M-s h r     | highlight-regexp                   | Highlights everything matching a regular expression |
+      | M-s h u     | unhighlight-regexp                 | Deletes the highlighter under point                 |
+      | M-s h w     | hi-lock-write-interactive-patterns | Inserts a list of Hi-Lock patterns into the buffer  |
+      | M-s h f     | hi-lock-find-patterns              | Searches for Hi-Lock patterns in the buffer to use. |
+   2. 保存高亮设置
+
+	  使用命令M-s h w会把当前的高亮设置用注释的方式写在当前文件的头部. 
+     
+      当Emacs进入hi-lock-mode后,会自动搜索文件头部的10000个字节(由变量`hi-lock-file-patterns-range`决定)找到高亮信息并执行高亮操作
+
+	  Emacs进入hi-lock-mode后,若搜索到有高亮设置信息,会提示你是否应用该高亮信息,若想自动应用该高亮信息在.emacs中添加如下配置项
+	  #+BEGIN_SRC elisp
+        (global-hi-lock-mode 1)
+        (setq hi-lock-file-patterns-policy #'(lambda (dummy) t)) 
+	  #+END_SRC
+   
+** ielm
+   ielm是一个Emacs自带的elisp REPL环境. 它继承自comint-mode,因此也就拥有了comint-mode的那些特性,比如命令历史,tab补全等等.
+   * 启动
+
+	 M-x ielm
+
+   * 绑定working buffer
+
+	 所谓working buffer就是一个特殊的buffer,你在ielm上执行的命令就好像是在该buffer上执行命令一样. 通过绑定working buffer,可用在ielm中修改buffer的buffer-local变量
+
+	 绑定方法为C-c C-b,然后选择要作为working buffer的buffer名称
+
+   * 启用auto complete
+	 
+	 默认情况下,ielm是不支持auto complete的. 可用将下面代码放入.emacs中
+	 #+BEGIN_SRC elisp
+       (defun ielm-auto-complete ()                               
+         "Enables `auto-complete' support in \\[ielm]."           
+         (setq ac-sources '(ac-source-functions                   
+                            ac-source-variables                   
+                            ac-source-features                    
+                            ac-source-symbols                     
+                            ac-source-words-in-same-mode-buffers))
+         (add-to-list 'ac-modes 'inferior-emacs-lisp-mode)        
+         (auto-complete-mode 1))                                  
+       (add-hook 'ielm-mode-hook 'ielm-auto-complete)             
+	 #+END_SRC
+
+** 网络工具封装
+| Command                              | Description                                                                                                                                                    |
+| ifconfig and ipconfig                | Runs ifconfig or ipconfig                                                                                                                                      |
+| iwconfig                             | Runs the iwconfig tool                                                                                                                                         |
+| netstat                              | Runs the netstat tool                                                                                                                                          |
+| arp                                  | Runs the arp tool                                                                                                                                              |
+| route                                | Runs the route tool                                                                                                                                            |
+| traceroute                           | Runs the traceroute tool                                                                                                                                       |
+| ping                                 | Runs ping, but on most systems it may run indefinitely; adjust ping-program-options.                                                                           |
+| nslookup-host                        | Runs nslookup in non-interactive mode.                                                                                                                         |
+| nslookup                             | Runs nslookup in interactive mode in Emacs as an inferior process                                                                                              |
+| dns-lookup-host                      | Look up the DNS information for an IP or host using host.                                                                                                      |
+| run-dig and dig                      | Invokes the dig in interactive mode as an inferior process                                                                                                     |
+| ftp                                  | Very simple wrapper around the commandline tool ftp. You are probably better off with TRAMP for all but low-level system administration.                       |
+| smbclient and  smbclient-list-shares | Runs smbclient as an inferior process or list a hosts’ shares.                                                                                                |
+| finger                               | Runs the finger tool                                                                                                                                           |
+| whois and  whois-reverse-lookup      | Runs the whois tool but tries to guess the correct WHOIS server. You may have to tweak whois-server-tld and whois-server-list or set whois-guess-server to nil |
+|                                      |                                                                                                                                                                |
+
+** occur mode
+   若只是需要在Emacs所打开的buffer中查询某字段,则occur命令一个对GNU grep的很好的替代.
+
+   * occur命令
+   
+     M-x occur会让你输入一个正则表达式,然后在 *当前buffer* 中进行内容匹配,在Occur Output buffer中显示匹配正则表达式的行,并对匹配部分进行加亮处理.
+
+     M-x multi-occur会让你选择要在哪些buffer中进行内容匹配
+
+     M-x multi-occur-in-matching-buffers会在buffer name符合某正则的buffer中进行内容匹配
+
+	 M-x occur-rename-buffer 对默认的*Occur* outputbuffer进行重命名,命名规则为*Occur:匹配的文件名列表,用/分隔*
+  
+   * occur-mode的子命令
+	 
+	 * r命令重命名*occur output* buffer
+
+	 * g命令重现做一次正则匹配查询
+
+	 * M-g M-n / M-g M-p 遍历*occur output* buffer中匹配行的原所在文件位置
+
+	 * C-c C-f 开启Next-Error-Follow minor mode
+
+	   在开启Next-Error-Follow minor mode后,可用使用M-n和M-p来代替M-g M-n / M-g M-p
+
+	 * q命令退出*occur output* buffer
+
+   * 让occur命令作用于某个major mode的所有buffer中
+	 #+BEGIN_SRC elisp
+       (eval-when-compile                                                    
+         (require 'cl))                                                      
+       
+       (defun get-buffers-matching-mode (mode)                               
+         "Returns a list of buffers where their major-mode is equal to MODE" 
+         (let ((buffer-mode-matches '()))                                    
+           (dolist (buf (buffer-list))                                        
+             (with-current-buffer buf                                         
+               (if (eq mode major-mode)                                       
+                   (add-to-list 'buffer-mode-matches buf))))                  
+           buffer-mode-matches))                                              
+       
+       (defun multi-occur-in-this-mode ()                                    
+         "Show all lines matching REGEXP in buffers with this major mode."   
+         (interactive)                                                       
+         (multi-occur                                                        
+          (get-buffers-matching-mode major-mode)                             
+          (car (occur-read-primary-args))))                                  
+       
+       ;; global key for `multi-occur-in-this-mode' - you should change this.
+       (global-set-key (kbd "C-<f2>") 'multi-occur-in-this-mode)             
+	 #+END_SRC
+** apropos相关命令
+   * apropos
+	 
+   * apropos-documentation
+
+   * apropos-command
+
+   * info-apropos
+
+	 在info手册中查找关键字
+   * apropos-library
+
+   * apropos-variable
+
+   * apropos-value
+	
+** 执行shell命令
+   * shell-command(M-!)
+
+	 若调用的shell命令输出不多,则直接输出在echo area,否则会输出到*Shell Command Output* buffer
+
+	 shell命令stderr输出默认被重定向到stdout输出到*Shell Command Output* buffer. 你也可以通过设定变量`shell-command-default-error-buffer`的值将stderr的输出重定向到指定的buffer
+
+	 若shell命令执行失败(返回值不会0),则会在mode-line显示shell命令的返回值
+
+	 默认情况下Emacs会同步等待shell命令执行完成,若要Emacs异步等待shell命令,在shell命令后加&表示后台运行
+
+	 若在执行该命令前用C-u传递了universal参数,则会将结果插入到当前buffer的光标处
+
+   * async-shell-command(M-&)
+
+	 异步处理shell命令,命令输出到*Async Shell Command* buffer
+
+	 若在执行该命令前用C-u传递了universal参数,则会将结果插入到当前buffer的光标处
+
+   * 变量`enable-recursive-minibuffer`
+
+	 该变量值为t,则当要在minibuffer中输入某个参数时,可用用M-!执行一个shell命令,则会将该shell命令的输出作为minibuffer的待输入参数.
+
+   * 变量`shell-command-default-error-buffer`
+
+	 你也可以通过设定变量`shell-command-default-error-buffer`的值将stderr的输出重定向到指定的buffer
+	 
+   * shell-command-on-region(M-|)
+
+	 将所选区域通过stdin传递到shell命令中,并在echo area或output buffer中显示命令的输出
+
+	 若在执行该命令前用C-u传递了universal参数,则会将结果替代该region
+
+   * 
+	 
+** 
+* NOTE
+  1. 文本标记是与编辑缓冲区而不是窗口关联的，每个编辑缓冲区职能有一个文本标记
+  2. 每个窗口都能记住自己的光标位置
+  3. 只有在特殊键所产生的字符代码是以一个特殊字符开头，并且至少有3个字符长时，才能在Emacs里对它们进行定制
+  4. 如何打开外部的info文件?
+
+	 C-u C-h i 用emacs info打开外部info文件
+  5. 如何让emacs显示超长行时在单词边界换行?
+
+	 启用visual-line-mode / global-visual-line-mode,具体来说有几个
+	 
+	 * Makes (long) lines wrap, at word boundaries, near the window edge. (controlled by var “truncate-lines” and “word-wrap”.)
+     * Makes up/down arrow keys move by a visual line. (controlled by the var line-move-visual.)
+     * Makes the kill-line command delete by a visual line, as opposed to a logical line.
+     * Turns off the display of little return arrow at the edge of window. (controlled by the var “fringe-indicator-alist”.)
+  6. 代码对齐
+
+	 假设有下面一些代码:
+	 #+BEGIN_EXAMPLE
+       a = 1;
+       bc = 2;
+       cde = 3;
+	 #+END_EXAMPLE
+	 要让它们在=处对齐,则可用先选中这几行,然后调用`align-regexp`,然后输入=,则排列结果为
+	 #+BEGIN_EXAMPLE
+       a   = 1;
+       bc  = 2;
+       cde = 3;
+	 #+END_EXAMPLE
+  7. 如何在text terminal下调用text-based menu?
+
+	 调用tmm-menubar(M-`)
+
+  8. 如何编辑需要root权限的文件
+
+	 在编辑文件路径前加上`/sudo::`. 例如
+	 #+BEGIN_EXAMPLE
+	 /sudo::/etc/bashrc
+	 #+END_EXAMPLE
+
+  9. 如何执行最后一个command
+
+	 M-x repeat-complex-command. 该命令执行最后一个命令的elisp code. 它会显示执行最后一个命令时实际上执行的elisp code.
+
+  10. 如何为文件分配Major Mode
+
+	  打开一个文件时,Emacs依据如下顺序来决定应该进入的Major Mode
+	  1. 查看buffer local的mode变量:
+
+		 第一行包含类似_*_ mode: xyz_*_,则emacs自动进入xyz-mode
+
+	  2. 查看第一行的#!标记后的解释器,根据变量interpreter-mode-alist寻找匹配mode
+
+	  3. 根据第一行的内容,在变量magic-mode-alist中寻找匹配的mode
+
+		 #+BEGIN_SRC elisp
+           (add-to-list 'magic-mode-alist '("<!DOCTYPE html .+DTD XHTML .+>" . nxml-mode) )
+		 #+END_SRC
+
+	  4. 根据文件名后缀,在量auto-mode-alist中寻找匹配的mode
+		 
+		 #+BEGIN_SRC elisp
+           ;; setup files ending in “.js” to open in js2-mode
+           (add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode))
+		 #+END_SRC
+
+  11. 如何让光标无法进入minibuffer的prompt部分
+
+	  minibuffer的prompt部分是不能被修改的,这样允许光标进入是没有意义的,可用加入如下配置信息达到阻止光标进入minibuffer的prompt部分.
+	  #+BEGIN_SRC elisp
+        ;; don't let the cursor go into minibuffer prompt
+        (setq minibuffer-prompt-properties (quote (read-only t point-entered minibuffer-avoid-prompt face minibuffer-prompt)))
+        
+	  #+END_SRC
+
+  12. 如何跨session保存光标位置
+
+	  你可以为每个打开的文件记录下光标所在的位置,这样下次你打开这个文件,光标会处于上次关闭时的位置.
+	  #+BEGIN_SRC elisp
+        ;; turn on save place so that when opening a file, the cursor will be at the last position.
+        (require 'saveplace)
+        (setq save-place-file (concat user-emacs-directory "saveplace.el") ) ; use standard emacs dir
+        (setq-default save-place t)
+        
+	  #+END_SRC
+
+  13. 配置frame的属性
+
+	  查看关于变量`default-frame-alist`的描述.
+	  #+BEGIN_SRC elisp
+        ;; 配置大小
+        (add-to-list 'default-frame-alist '(width . 100)) ; character
+        (add-to-list 'default-frame-alist '(height . 52)) ; lines
+        ;; 配置背景色
+        (add-to-list 'default-frame-alist '(background-color . "cornsilk"))
+        ;; 配置字体
+        (add-to-list 'default-frame-alist '(font . "DejaVu Sans Mono-10"))
+	  #+END_SRC
+
+	  也可以通过函数`set-frame-parameter`来配置
+
+  14. 切换等宽字体/变宽字体
+	  
+	  M-x variable-pitch-mode
+
+  15. 如何生成自己的Menu
+	  #+BEGIN_SRC elisp
+        ;; Creating a new menu pane in the menu bar to the right of “Tools” menu
+        (define-key-after
+          global-map
+          [menu-bar mymenu]
+          (cons "MyMenu" (make-sparse-keymap "hoot hoot"))
+          'tools )
+        
+        ;; Creating a menu item, under the menu by the id “[menu-bar mymenu]”
+        (define-key
+          global-map
+          [menu-bar mymenu nl]
+          '("Next Line" . next-line))
+        
+        ;; creating another menu item
+        (define-key
+          global-map
+          [menu-bar mymenu pl]
+          '("Previous Line" . previous-line))
+        
+        ;; code to remove the whole menu panel
+        ;; (global-unset-key [menu-bar mymenu])
+        
+	  #+END_SRC
+
+  16. 如何插入Unicode
+	  
+	  C-x 8 RET然后输入Unicode名称或者16进制代码,可用用C-x 8 C-h来查看其他的特殊字符
+
+  17. 如何让Emacs在启动时自动最大化
+
+	  在linux下可用带--maximized或--mm参数
+
+	  在windows下,把下列代码放入初始化文件中
+	  #+BEGIN_SRC elisp
+        (defun maximize-frame ()                                        
+          "Maximizes the active frame in Windows"                       
+          (interactive)                                                 
+          ;; Send a `WM_SYSCOMMAND' message to the active frame with the
+          ;; `SC_MAXIMIZE' parameter.                                   
+          (when (eq system-type 'windows-nt)                            
+            (w32-send-sys-command 61488)))                              
+        (add-hook 'window-setup-hook 'maximize-frame t)                 
+	  #+END_SRC
+
+  18. 如何在空格和tab之间相互转换
+
+	  使用tabify和untabify命令可用使文件的空格和tab相互转换,但是要注意的是,tabify和untabify在转换时 *也会转换字符串中的空格和tab*,这在编程时需要注意
+
+  19. 如何让emacs自动給script加上可执行权限
+
+	  Emacs若在文件的第一行找到#!声明,则认为该文件为script文件. 通过下面设置可用让Emacs自动給script文件加上可执行文件
+	  #+BEGIN_SRC elisp
+        (add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p)
+	  #+END_SRC
+
+  20. 如何强制标记某buffer为未编辑状态
+
+	  M-~(M-x not-modified)
+
+  21. 如何在替换操作中使用elisp代码处理被替换内容
+
+	  在替换的地方输入格式\,(Lisp代码),则会执行Lisp代码并将结果作为替换的内容
+
+	  Lisp代码中可用用\1...\N的方法替换分组内容. 默认分组内容是作为字符串看待的,若要作为数字看待,则用\#1...\#N
