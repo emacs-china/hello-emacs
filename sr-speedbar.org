@@ -1,0 +1,96 @@
+#+TITLE: sr-speedbar
+#+AUTHOR: DarkSun
+#+OPTIONS: ^:{}
+
+* 介绍
+  sr-speedbar可以让speedbar嵌入当前frame中,而不是以单独一个frame的形态游离在外. 这样可以方便地操作speedbar
+* 安装
+  将[[http://www.emacswiki.org/emacs/sr-speedbar.el][sr-speedbar.el]] 放入load-path中,然后添加下列代码到~/.emacs文件中
+  #+BEGIN_SRC emacs-lisp
+  (require 'sr-speedbar)
+  #+END_SRC
+
+  当在Emacs24.4上加载sr-speedbar时,可能会报找不到函数ad-advised-definition-p,这时需要加上
+  #+BEGIN_SRC emacs-lisp
+    (defalias 'ad-advised-definition-p #'ad-advice-p)
+  #+END_SRC
+
+* 使用
+  * sr-speedbar-open
+
+	打开sr-speedbar窗口
+
+  * sr-speedbar-close
+
+	关闭sr-speedbar窗口
+
+  * sr-speedbar-toggle
+
+	切换打开/关闭sr-speedbar窗口
+
+  * sr-speedbar-select-window
+
+	选中sr-speedbar窗口
+
+  * sr-speedbar-refresh-turn-on
+
+	开启自动刷新
+
+  * sr-speedbar-refresh-turn-off
+
+	关闭自动刷新
+
+  * sr-speedbar-refresh-toggle
+
+	切换开启/关闭自动刷新
+
+* 定制
+
+  * sr-speedbar-width-x
+	
+	图形界面下sr-speedbar窗口的宽度
+
+  * sr-speedbar-width-console
+	
+	console界面下,sr-speedbar窗口的宽度
+
+  * sr-speedbar-max-width
+	
+    允许存储的最大宽度,若设置sr-speedbar-width-x超过此宽度,则该值并不永久生效
+
+  * sr-speedbar-delete-windows
+
+    打开sr-speedbar时,是否移除其他的window
+
+  * sr-speedbar-skip-other-window-p
+
+    当使用命令`other-window`遍历window是,是否跳过‘sr-speedbar’ window
+
+  * sr-speedbar-auto-refresh
+
+	是否自动刷新sr-speedbar的内容
+
+  * sr-speedbar-right-side
+
+	nil表示sr-speedbar显示在左列, t表示显示在右列
+
+* QA
+
+  * 当在Emacs24上,点击speedbar中的一个文件后,总是会弹出一个新window来打开这个文件,而不是在之前编辑的那个窗口中打开这个文件.
+
+	设置`pop-up-windows'为nil可以解决这个问题
+
+  * 如何设置让speedbar中不显示图标
+
+	#+BEGIN_SRC emacs-lisp
+	(setq speedbar-use-images nil)
+	#+END_SRC
+
+  * 如何为speedbar设置自己的face
+
+	#+BEGIN_SRC emacs-lisp
+      (make-face 'speedbar-face)
+      (set-face-font 'speedbar-face "Inconsolata-12")
+      (setq speedbar-mode-hook '(lambda () (buffer-face-set 'speedbar-face)))
+	#+END_SRC
+
