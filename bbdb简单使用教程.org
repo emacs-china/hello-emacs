@@ -1,0 +1,133 @@
+#+TITLE: bbdb简单使用教程
+#+AUTHOR: DarkSun
+#+OPTIONS: ^:{}
+
+* 配置
+最简单的配置方法就是将下面的语句放入Emacs初始化文件中
+#+BEGIN_SRC emacs-lisp
+  (require 'bbdb)
+  (bbdb-initialize)
+#+END_SRC
+
+这里的`bbdb-initialize'会初始化bbdb,并开启最基本的查询/维护记录功能. 
+
+除了最基本的查询/维护记录功能外,bbdb还有一些与其他package联合使用的特性,要开启这些特性,则需要在调用`bbdb-initialize'时传入其他的参数.
+
+`bbdb-initialize'可以接收一系列的symbol作为参数,这些symbol决定了bbdb初始化时会开启与哪些package交互的特性. 这些symbol的说明如下表所示:
+#+NAME: bbdb-initialize参数说明
+| symbol  | meaning                                                               |
+|---------+-----------------------------------------------------------------------|
+| gnus    | Gnus mail/news reader. *should probably also pass the message symbol* |
+| mh-e    | MH-E mail reader.                                                     |
+| rmail   | Rmail mail reader.                                                    |
+| vm      | VM mail reader.                                                       |
+| mail    | Mail (M-x mail).                                                      |
+| message | Message mode.                                                         |
+| anniv   | Anniversaries in Emacs diary.                                         |
+| sc      | Supercite.                                                            |
+| pgp     | PGP support:                                                          |
+
+** 为其他package增加BBDB支持
+bbdb提供了一系列的`bbdb-insinuate-xxxx'函数来为xxxx package提供BBDB的支持. 这些函数为package增加了默认的快捷键,并且配置这些package当收到新message时,通知bbdb.
+
+例如:为了給gnus增加bbdb的支持,我们可以添加下面的语句到Emacs初始化文件中
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'gnus-startup-hook 'bbdb-insinuate-gnus)
+#+END_SRC
+* BBDB基础
+** BBDB数据库结构
+BBDB数据库由一系列的记录组成,每条记录对应一个联系人或组织. 每条记录由多种域组成,每种域对应联系人/组织的一个属性.
+
+BBDB内置支持一些类型的域:
+| type        | Description                              | Notes                                           |
+|-------------+------------------------------------------+-------------------------------------------------|
+| NAME        | 联系人的名称,若该记录表示一个组织,则为空         | 一条记录只能有一个该类型的域,一个域只能有一个值 |
+| orgnization | 联系人所在的组织,可以为空                     | 一条记录只能有一个该类型的域,一个域只能有一个值 |
+| AKA         | 联系人的别名                                | 一个域可以有多个值,以逗号分隔                  |
+| mail        | 联系人的email地址                           | 一个域可以有多个值,以逗号分隔                  |
+| Phone       | 联系人的电话                                | 一条记录可以有多个该类型的域,一个域只能有一个值 |
+| address     | 联系人的地址                                | 一条记录可以有多个该类型的域,一个域只能有一个值 |
+| Notes       | 其他说明                                   |  一条记录可以有多个该类型的域,一个域只能有一个值 |
+*** 自定义类型
+除了上面BBDB内置的域类型,我们还可以自定一些域类型. BBDB处理大多数自定义类型的域时,与Notes类型域一样,但是对有一些特殊名称的域类型,BBDB会进行特殊处理:
++ aka :: 用于存储指定记录的non-primary names
++ finger-host :: Address used in place of the listed net address for fingering the entity indicated by the record
++ gnus-score :: Gnus scoring adjustment for this person.
++ mail-alias :: Value used instead of name for completion
++ mail-name ::  Used for the storage of non-default names to be used in the reporting of new mail by Reportmail.
++ mark-char :: The field containing the character to be used for marking a given poster in the Gnus Summary Buffer
++ tex-name :: The value of this field is used in place of the name field when printing the database using bbdb-print
++ www :: This field contains the URL associated with the BBDB record.
+** BBDB相关命令
+*** 搜索记录
+**** bbdb
+  
+执行该命令后,输入一个正则表达式,则bbdb会列出任何域中的值符合该正则表达式的记录
+
+**** bbdb-search-name/bbdb-search-organization/bbdb-search-address/bbdb-search-mail/bbdb-search-notes/bbdb-search-phone
+
+执行该命令后,输入一个正则表达式,则bbdb会列出指定域中的值符合该正则表达式的记录
+
+**** bbdb-timestamp-older
+
+执行该命令后,输入一个`yyyy-mm-dd'格式的日期,则bbdb会列出在指定日期之前修改过的记录
+
+**** bbdb-timestamp-newer
+
+执行该命令后,输入一个`yyyy-mm-dd'格式的日期,则bbdb会列出在指定日期之后修改过的记录
+
+**** bbdb-creation-older
+
+执行该命令后,输入一个`yyyy-mm-dd'格式的日期,则bbdb会列出在指定日期之前创建的记录
+
+**** bbdb-creation-newer
+
+执行该命令后,输入一个`yyyy-mm-dd'格式的日期,则bbdb会列出在指定日期之后创建的记录
+
+**** bbdb-creation-no-change
+
+执行该命令后,bbdb会列出自创建以来,从未修改过的记录
+
+*** 增加记录
+**** bbdb-create
+
+执行该命令后,bbdb会以此提示输入各个内置域的相关信息,然后根据这些相关信息新建一条记录
+
+**** bbdb-snarf
+
+该命令可以根据一定规则将选中的字符串转换成bbdb格式的记录. 默认的转换规则由变量`bbdb-snarf-rule-default'决定. 详细参见`bbdb-snarf-rule-alist'
+
+** BBDB Mode使用说明
+使用BBDB的查询命令后,会弹出一个名为`*BBDB*'的buffer,该buffer处于bbdb mode下. 
+
+bbdb mode下拥有许多维护BBDB记录的各种命令,常用的命令有:
+
+*** e (bbdb-edit-field)
+
+修改记录中当前域的值
+
+*** ; (bbdb-edit-foo)
+
+若不带前置参数执行该命令,则修改`(car bbdb-edit-foo)'所表示的域(默认为notes)
+
+若代前置参数执行该命令,则修改`(cdr bbdb-edit-foo)'所表示的域(默认为current-fields)
+
+*** d / C-k (bbdb-delete-field-or-record)
+
+删除光标所在的域,若光标所处的域为bbdb记录的第一个行,则会提示删除整个记录.
+
+This may also be applied to multiple records at once by *.
+
+*** i (bbdb-insert-field)
+
+为当前记录添加新域,该新域的类型可以是BBDB的内置类型,也可以是新的用户自定义类型.
+
+*** C-x C-t (bbdb-transpose-fields)
+
+交换光标所在的field与上一行field的位置
+
+交换的field必须在同一条记录中,且具有相同的类型
+
+With non-zero numeric argument ARG, the previous field is moved past ARG fields. 
+
+With argument 0, the field indicated by point is interchanged with the one indicated by mark.
