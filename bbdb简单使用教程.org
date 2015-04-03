@@ -420,18 +420,173 @@ With non-zero numeric argument ARG, the previous field is moved past ARG fields.
 | bbdb-initialize-hook             | BBDB的初始化函数`bbdb-initialize'被调用之后        |                                        |                                                                   |
 | bbdb-canonicalize-mail-functioin | 当BBDB notice a message后                          | message中的corresponding email address | 该函数用于对message中的对应email地址作一次转换,转换后的结果才拿来与BBDB中的记录进行对比,或添加入BBDB. 若该函数返回nil,则BBDB认为该message中无email address |
 
-* hacks
+* 其他
 ** 函数
 *** (bbdb-display-records records )
 
 在bbdb buffer中显示records中的记录
+
+*** (bbdb-record-field RECORD FIELD)
+
+返回记录中的指定域的值. 域的说明为:
+| firstname    | Return the first name of RECORD                   |
+| lastname     | Return the last name of RECORD                    |
+| name         | Return the full name of RECORD (first name first) |
+| name-lf      | Return the full name of RECORD (last name first)  |
+| affix        | Return the list of affixes                        |
+| organization | Return the list of organizations                  |
+| aka          | Return the list of AKAs                           |
+| aka-all      | Return the list of AKAs plus mail-akas.           |
+| mail         | Return the list of email addresses                |
+| mail-aka     | Return the list of name parts in mail addresses   |
+| mail-canon   | Return the list of canonical mail addresses.      |
+| phone        | Return the list of phone numbers                  |
+| address      | Return the list of addresses                      |
+| xfields      | Return the list of all xfields                    |
+| 其他         | 指定label的xfields                                   |
+
+*** (bbdb-get-records PROMPT)
+
+若在*BBDB* buffer中,则返回光标所在的记录,若在其他buffer中,则询问用户想要返回哪个记录
+
+*** (bbdb-update-records ADDRESS-LIST &optional UPDATE-P SORT)
+
+返回匹配ADDRESS-LIST的BBDB记录列表
+
+其中ADDRESS-LIST是一个由email地址组成的列表
+
+
+参数UPDATE-P的可选值为:
+
++ nil :: 使用变量`bbdb/MUA-update-records-p'中的值, 若该值依然为nil,则`bbdb-update-records'返回nil
+
++ search :: 搜索匹配ADDRESS的记录
+
++ update :: 搜索匹配ADDRESS的记录,如有必要,会更新name和mail域
+
++ query :: 搜索匹配ADDRESS的记录,若记录不存在,提示用户是否创建新记录
+
++ create :: 搜索匹配ADDRESS的记录,若记录不存在,则创建新记录
+
++ t :: 搜索匹配ADDRESS的记录,若记录不存在,则创建新记录
+
++ 函数fn :: bbdb调用该函数,该函数需要返回search,update,query,create或t
+
+若参数SORT为非nil,则返回的记录列表中的记录会经过`bbdb-record-lessp'排序;若SORT为nil,则记录的顺序与参数ADDRESS-LIST中的邮件地址的顺序对应.
+
+*** (bbdb-get-mail-aliases)
+
+返回BBDB中使用的mail aliases列表
+
+*** (bbdb-search-read &optional FIELD)
+
+提示用户输入一个正则表达式re,并从BBDB数据库中搜索出指定的FIELD符合该re的记录
+
+*** (bbdb-search RECORDS &optional NAME-RE ORG-RE MAIL-RE XFIELD-RE PHONE-RE ADDRESS-RE)
+
+从RECORDS中搜索出符合指定域的指定正则表达式的记录. 其中
+
++ NAME-RE匹配FIRST_LAST,LAST_FIRST和AKA域
+
++ XFIELD-RE匹配xfiled notes域
+
++ XFIELD-RE也以格式为(LABEL . RE)表示label为xfield的正则表达式,其中若LABEL为`*'则表示任一个xfield
+
+*** (bbdb-display-records-with-layout RECORDS LAYOUT)
+
+使用LAYOUT形式来展示RECORDS,其中LAYOUT参见`bbdb-layout-alist'中的值
+
+*** (bbdb-pop-up-window &optional SELECT HORIZ-P)
+
+*** (bbdb-display-records RECORDS &optional LAYOUT APPEND SELECT HORIZ-P)
+
+使用LAYOUT形式来显示RECORDS
+
+若参数APPEND为非nil,则会在当前已经显示的记录后,再多显示这些RECORDS;若APPEND为nil,则会用RECORDS的显示结果代替已有的显示结果
+
+参数SELECT与参数HORIZ-P的意义参见`bbdb-pop-up-window'
+
+*** (bbdb-display-record RECORD LAYOUT NUMBER)
+
+在当前buffer的光标所在处,插入格式化好的RECORD表示文本.
+
+LAYOUT是`bbdb-layout-alist'中描述的layout符号,若为nil则表示`bbdb-layout'
+
+NUMBER is the number of RECORD among the displayed records.
+
+*** (bbdb-read-record &optional FIRST-AND-LAST)
+
+提示用户输入联系人信息,并创建一个新的BBDB联系人记录.
+
+*但该函数不会将新产生的BBDB记录存入数据库,也不会更新BBDB hashtable*
+
+*该函数会检查新输入的联系人是否和已存在的联系人记录相冲突*
+
+*** (bbdb-read-string PROMPT &optional INIT COLLECTION REQUIRE-MATCH)
+
+读取用户输入的字符串,会取出字符串中的空格和text properties
+
+参数PROMPT为提示说明
+
+参数INIT为预设值,当编辑已存在记录时常用到
+
+参数COLLECTION与REQUIRE-MATCH的意义与`completing-read'中的意义一致
+
+*** (bbdb-record-set-field RECORD FIELD VALUE &optional MERGE CHECK)
+
+设置RECORD中的FIELD域的值为VALUE. 
+
+该函数的返回值为VALUE
+
+若参数MERGE为非nil,则将参数VALUE合并到FIELD的当前值中
+
+若参数CHECK为非nil,则会检查FIELD是否能够存储VALUE
+
+*该函数会更新bbdb hashtable,但不会保存RECORD到bbdb数据库中*. 一般使用函数`bbdb-change-record'来保存RECORD到bbdb数据库中.
+
+其中参数FIELD的说明,参见`bbdb-record-field'中的FIELD说明
+
+*** (bbdb-change-record RECORD &optional NEED-TO-SORT NEW)
+
+该函数保存RECORD到BBDB数据库中,若参数RECORD中的值与BBDB数据库中的值相比发生了变化,则该函数返回RECORD,否则该函数返回nil
+
+当RECORD中的联系人名称发生改变,或RECORD为新建的联系人记录时,NEED-TO-SORT参数需要为t
+
+当RECORD为新建的联系人记录时,参数NEW需要为t. 若RECORD为新建联系人记录则该RECORD会自动更新入BBDB hashtable,否则需要手工更新BBDB hashtable
+
+*** (bbdb-current-record &optional FULL)
+
+返回光标所处的RECORD
+
+若参数FULL为非nil,则返回包含RECORD和显示格式(layout)的一个list
+#+BEGIN_SRC emacs-lisp
+  (bbdb-current-record t)
+  ;; ([nil "darksun" nil nil nil (["home" "(+86)15820984397"] ["work" "(0794)6593346"]) nil nil ((creation-date . "2015-03-30 09:46:57 +0000") (timestamp . "2015-03-30 13:17:00 +0000")) ["darksun" "darksun" nil nil "darksun" #<marker at 64 in bbdb>]] multi-line #<marker at 1 in *BBDB*>)
+  (bbdb-current-record)
+  ;; [nil "darksun" nil nil nil (["home" "(+86)15820984397"] ["work" "(0794)6593346"]) nil nil ((creation-date . "2015-03-30 09:46:57 +0000") (timestamp . "2015-03-30 13:17:00 +0000")) ["darksun" "darksun" nil nil "darksun" #<marker at 64 in bbdb>]]
+
+#+END_SRC
+
+*** (bbdb-current-field)
+
+返回光标所处的当前域
+#+BEGIN_SRC emacs-lisp
+  (bbdb-current-field)
+  ;; (name "darksun")
+#+END_SRC
+
+*** bbdb-record-set-xxx系列函数
+
+置record中指定field的值
 
 ** 变量
 *** bbdb-records
 
 该变量的值为当前bbdb buffer中的record列表
 
-*** 
+*** bbdb-search-invert
+
+若值为t,则会反转`bbdb-search'的搜索结果
 * FAQ
 
 ** 如何修改BBDB创建联系人的流程
@@ -440,12 +595,17 @@ With non-zero numeric argument ARG, the previous field is moved past ARG fields.
 
 下面是一个例子,它让`bbdb-create'新建联系人时,还会提示你输入生日信息:
 #+BEGIN_SRC emacs-lisp
-  ;; 该例子抄至sachachua的博客
-  ;; 该例子为bbdb v2的例子,有待改成bbdb v3
-  (defadvice bbdb-read-new-record (after wicked activate)
-    "Prompt for the birthdate as well."
-    (bbdb-record-putprop ad-return-value 'birthdate
-                         (bbdb-read-string "Birthdate (YYYY.MM.DD): ")))
+  (defun bbdb-read-record-advise-function(record)
+    "提示存储生日,QQ,微信号"
+    (bbdb-record-set-field record 'birthdate
+                           (bbdb-read-string "Birthdate (YYYY.MM.DD): "))
+    (bbdb-record-set-field record 'QQ
+                           (bbdb-read-string "QQ:"))
+    (bbdb-record-set-field record 'WeChat
+                           (bbdb-read-string "WeChat:"))
+    record)
+
+  (advice-add 'bbdb-read-record :filter-return #'bbdb-read-record-advise-function)
 
 #+END_SRC
 
