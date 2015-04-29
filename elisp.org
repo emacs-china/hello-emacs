@@ -1,7 +1,5 @@
 #+TITLE: elisp
-#+AUTHOR: Administrator
-#+CATEGORY: Emacs
-#+DATE: [2015-04-24 星期五 23:13]
+#+AUTHOR: DarkSun
 #+OPTIONS: ^:{}
 * 有三种方式可以加载文件：
   * load
