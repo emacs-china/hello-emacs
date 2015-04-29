@@ -1,0 +1,170 @@
+#+BLOG: DarkSun.1kapp.com
+#+POSTID: 17
+#+DATE: [2015-04-24 星期五 23:27]
+#+TITLE: org2blog--将org发布到wordpress
+#+AUTHOR: DarkSun
+#+CATEGORY: Emacs
+#+OPTIONS: ^:{}
+* 加载必要的库
+#+BEGIN_SRC emacs-lisp
+  (require 'org2blog-autoloads)
+#+END_SRC
+* 配置
+** 配置blog信息
+`org2blog/wp-blog-alist'定义了多个blog的信息.其中每个元素的car为一个表示blog的名称的字符串,每个元素的cdr为一个plist,为每个blog提供属性说明.
+
+#+BEGIN_SRC emacs-lisp
+    (setq org2blog/wp-blog-alist
+          `(("DarkSun.1kapp.com"
+             :url "http://darksun.1kapp.com/xmlrpc.php"
+             :username "lujun9972"
+             :default-categories ("Emacs")
+             :keep-new-lines t
+             :confirm t
+             :wp-code nil
+             :tags-as-categories nil)
+            ))
+
+#+END_SRC
+
+关于plist中的属性说明如下:
++ url :: blog中xmlrpc的url地址,必填
++ username :: 登陆blog的用户名,必填
++ password :: 登陆blog的密码
++ default-title :: 新建文章时的默认标题,默认值为`org2blog/wp-default-title'的值
++ default-categories :: 新建文章时默认所属的类别列表,默认值为`org2blog/wp-default-categories'的值
++ tags-as-categories :: 是否将文章tag作为文章的类别,默认值为`org2blog/wp-use-tags-as-categories'的值
++ confirm :: 发布文章时,是否需要用户确认,默认值为`org2blog/wp-confirm-post'的值
++ show :: 发布完文章后,是否使用浏览器访问该文章. 默认值为`org2blog/wp-show-post-in-browser'的值
++ keep-new-lines :: 是否删除文章中的空行. 默认值为`org2blog/wp-keep-new-lines'的值
++ wp-latex :: 是否将org文件中的LaTeX代码转换为WP的latex代码. 默认值为`org2blog/wp-use-wp-latex'的值
++ wp-code :: 是否将org中的<pre>...</pre>转换为WP的源代码块格式. 默认值为`org2blog/wp-use-sourcecode-shortcode'
++ track-posts :: 是否追踪已发布的文章,若允许追踪,则会在发布的org文件中增加`#+POSTID: '行,通过这种方法可以更新已发布的文章.
+** 配置post templates
+通过修改变量`org2blog/wp-buffer-template'和`org2blog/wp-buffer-format-function'的值可以自动以新建文章的内容模板.
+
+其中org2blog使用(funcall org2blog/wp-buffer-format-function org2blog/wp-buffer-template)的返回值作为新建的文章模板.
+#+BEGIN_SRC emacs-lisp
+  (setq org2blog/wp-buffer-template "#+TITLE: %s\n#+AUTHOR: %s\n#+DATE: %s\n#+OPTIONS: toc:nil num:nil todo:nil pri:nil tags:nil ^:nil\n#+CATEGORY: %s\n#+TAGS:\n#+DESCRIPTION:\n\n")
+
+  (defun org2blog/wp-format-buffer-with-author (buffer-template)
+    "Default buffer formatting function."
+    (format buffer-template
+            ;; TITLE
+            (or (plist-get (cdr org2blog/wp-blog) :default-title)
+                org2blog/wp-default-title
+                (read-string "请输入POST标题:"))
+            ;; AUTHOR
+            user-login-name
+            ;; DATE
+            (format-time-string "[%Y-%m-%d %a %H:%M]" (current-time))
+            ;; CATEGORY
+            (mapconcat
+             (lambda (cat) cat)
+             (or (plist-get (cdr org2blog/wp-blog) :default-categories)
+                 org2blog/wp-default-categories)
+             ", ")
+            ))
+
+  (setq org2blog/wp-buffer-format-function 'org2blog/wp-format-buffer-with-author)
+#+END_SRC
+* 使用方法
++ M-x org2blog/wp-login 会提示你要登陆哪个 blog
+
++ M-x org2blog/wp-logout 登出blog
+
++ M-x org2blog/wp-new-entry 会打开新buffer供你写作文章,并根据template预先填充好内容
+
+  - Tag/category的各个值之间需要使用`, '分隔开. 可以使用C-c t进行补全
+
+  - 可以在org的头部使用`#+DESCRIPTION: '来指定文章摘要
+
+  - 可以在org的头部使用`#+PERMALINK: '来指定文章的permalink
+
+  - 可以在org的头部使用`#+PARENT: '来指定文章的父级链接. 可以使用C-c t进行补全
+
+  - 可以在org的头部使用`#+TITLE: '来指定文章的标题
+
+  - 可以在org的头部使用`#+TAGS: '来指定文章的tag
+    
+  - 可以在org的头部使用`#+CATEGORY: '来指定文章的分类
+
+  - 可以在org的头部使用`#+DATE: '来指定文章的创建时间
+
++ M-x org2blog/wp-post-buffer 将文章保存成 draft
+
++ M-x org2blog/wp-post-buffer-and-publish 将文章发布到blog
+
++ M-x org2blog/wp-post-subtree 发布某个tree而不是整个org文件
+
+  - 这时会使用tree的tag来作为发布的文章tag
+
+  - 会使用tree中的同名property drawer来代替org头部定义的属性
+
+  - 默认使用POST_DATE property drawer的值被用于替代`#+DATE'属性,但若无该property drawer,则会使用SCHEDULED, DEADLINE的值
+
+  - 默认情况下,tree的headline会作为文章的标题,但可以通过设置`TITLE' property drawer来设置另一个文章标题
+
++ M-x org2blog/wp-delete-entry 或 M-x org2blog/wp-delete-page
+  
+  删除当前POSTID所表示的博文
+
++ C-u post-id M-x org2blog/wp-delete-entry 或 C-u post-id M-x org2blog/wp-delete-page
+  
+  删除指定post-id所表示的博文
+
+发布源代码可以使用 BEGIN_SRC END_SRC 块，或者冒号开头的行会被当作源代码。
+
+我使用的是 wp-syntax，所以发布源代码使用 BEGIN_HTML 在里面使用 pre 标签，这样出来的代码会加上格式高亮。
+#+BEGIN_EXAMPLE
+  ,#+BEGIN_HTML
+  <pre lang="lisp">
+  (setq a 1)
+  </pre>
+  ,#+END_HTML
+#+END_EXAMPLE
+* 关于org2blog mode
+
+使用`M-x org2blog/wp-mode'可以开启org2blog mode. 在该mode下有以下默认的快捷键:
++ C-c p :: 发布该buffer
++ C-c d :: 保存该buffer为草稿
++ C-c t :: 补全tag或parent page
+
+* FAQ
+** How do I split a post into an introductory paragraph and a full view.
+
+Just put in
+
+#+HTML: <!--more-->
+    
+
+at the location where you wish to split the post.
+** 如何从.netrc中抽取blog的password
+首先,`.netrc'的格式需要为:
+#+BEGIN_EXAMPLE
+  machine myblog login myusername password myrealpassword
+#+END_EXAMPLE
+
+然后使用类似下面的代码
+#+BEGIN_SRC emacs-lisp
+  (require 'auth-source) ;; or nothing if already in the load-path
+
+  (let (credentials)
+    ;; only required if your auth file is not already in the list of auth-sources
+    (add-to-list 'auth-sources "~/.netrc")
+    (setq credentials (auth-source-user-and-password "myblog"))
+    (setq org2blog/wp-blog-alist
+          `(("my-blog"
+             :url "http://username.server.com/xmlrpc.php"
+             :username ,(car credentials)
+             :password ,(cadr credentials)))))
+#+END_SRC
+** 如何设置网络访问的代理
+通过设置url-proxy-services来设置代理. 例如
+#+BEGIN_SRC elisp
+  (setq url-proxy-services '(("http" . "127.0.0.1:8087")))
+#+END_SRC
+* provide feature
+#+BEGIN_SRC emacs-lisp
+  (provide 'init-life-internet-org2blog)
+#+END_SRC
