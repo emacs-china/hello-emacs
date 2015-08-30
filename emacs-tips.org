@@ -1,1 +1,44 @@
-/home/lujun9972/我的笔记/emacs/emacs-tips.org
+#+TITLE: emacs-tips
+#+AUTHOR: DarkSun
+#+CATEGORY: emacs
+#+DATE: [2015-08-04 周二 14:28]
+#+OPTIONS: ^:{}
+
+* 保存文件时查看被修改的内容
+当使用`C-x s'保存多个文件时,若Emacs提示你是否保存某个文件,可以按`d'键查看buffer与磁盘文件内存之间的差别.
+
+* 如何使windows下的Emacs支持TLS
+去[[http://sourceforge.net/projects/ezwinports/files/][ezwinports]] 下载gnutls库,并释放到emacs安装目录下,重启Emacs即可.
+
+重启Emacs后执行 =M-: (gnutls-available-p)= ,结果应该为t,表示Emacs已经支持TLS了.
+
+* evil
+** evil-normal-state下,可以通过`-'或`|'快速分割窗口
+
+* ido
+** 如何在不使用第三方插件的情况下,将ido的排列方式改为一行一列候选项目
+默认情况下,ido将多个候选项排在一排显示,可以通过设置变量`ido-decorations'的第三个元素值或`ido-separator'为'\n'的方式,将ido的排列方式模拟成一行一列候选项的形式.
+* org
+** 在org中快速跳转
+org-mode提供了`org-goto'命令,可以快速定位
+#+BEGIN_SRC emacs-lisp
+  (define-key org-mode-map (kbd "s-u") #'org-goto)
+  (define-key org-mode-map (kbd "s-U") #'org-mark-ring-goto)
+#+END_SRC
+
+** 如何在org-table中插入`|'
+
+用`\vert{}'代替`|'
+
+** 如何在导出时,保持下划线不转义
+可以在一个org的开头,使用下面的设置来关闭下划线转义功能
+#+BEGIN_SRC org
+  ,#+OPTIONS: ^:nil
+#+END_SRC
+
+如果需要更方便的设置,可以设置为
+#+BEGIN_SRC org
+  ,#+OPTIONS: ^:{}
+#+END_SRC
+这样当写`a_{b}'时,{}中的b会被转义
+而直接写`a_b'则不会转义
