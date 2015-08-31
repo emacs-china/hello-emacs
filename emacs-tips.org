@@ -28,7 +28,7 @@ org-mode提供了`org-goto'命令,可以快速定位
 
 ** 如何在org-table中插入`|'
 
-用`\vert{}'代替`|'
+用 =\vert{}= (不带等号)代替 `|'
 
 ** 如何在导出时,保持下划线不转义
 可以在一个org的开头,使用下面的设置来关闭下划线转义功能
@@ -42,3 +42,43 @@ org-mode提供了`org-goto'命令,可以快速定位
 #+END_SRC
 这样当写`a_{b}'时,{}中的b会被转义
 而直接写`a_b'则不会转义
+
+* ispell
+** 如何让ispell跳过某段文本不做拼写检查
+默认情况下,ispell会检查整篇文本中的拼写是否正确. 但通过设置变量`ispell-skip-region-alist'的值,可以指定跳过某几段文本不做拼写检查.
+
+`ispell-skip-region-alist'中的元素格式可以是以下几种:
+
++ (REGEXP)
+
+  表示跳过匹配REGEXP的文本,不做拼写检查
+
++ (START-REGEXP . END-REGEXP)
+  
+  表示从匹配START-REGEXP的文本开始,一直到匹配END-REGEXP的文本结束,这这段文本,都不做拼写检查.
+
+  其中END-REGEXP可以是string,也可以是symbol
+
++ (START-REGEXP  END-REGEXP)
+  
+  表示从匹配START-REGEXP的文本开始,一直到匹配END-REGEXP的文本结束,这这段文本,都不做拼写检查.
+
+  其中END-REGEXP只是string
+
++ (START-REGEXP FUNCTION ARGS)
+
+  类似(START-REGEXP END-REGEXP)
+
+  但这里使用(apply FUNCTION ARGS)返回的值作为END-REGEXP
+
+下面是一段从Endless Parentheses中摘录下来的代码,用于设置ispell作用在org-mode中的配置
+#+BEGIN_SRC emacs-lisp
+  (defun endless/org-ispell ()
+    "Configure `ispell-skip-region-alist' for `org-mode'."
+    (make-local-variable 'ispell-skip-region-alist)
+    (add-to-list 'ispell-skip-region-alist '(org-property-drawer-re))
+    (add-to-list 'ispell-skip-region-alist '("~" "~"))
+    (add-to-list 'ispell-skip-region-alist '("=" "="))
+    (add-to-list 'ispell-skip-region-alist '("^#\\+BEGIN_SRC" . "^#\\+END_SRC")))
+  (add-hook 'org-mode-hook #'endless/org-ispell)
+#+END_SRC
