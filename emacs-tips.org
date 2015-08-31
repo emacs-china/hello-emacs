@@ -82,3 +82,7 @@ org-mode提供了`org-goto'命令,可以快速定位
     (add-to-list 'ispell-skip-region-alist '("^#\\+BEGIN_SRC" . "^#\\+END_SRC")))
   (add-hook 'org-mode-hook #'endless/org-ispell)
 #+END_SRC
+* ediff
+** 使用ediff对比同一文件中的不同文本块
+通过命令`M-x ediff-region-wordwise'或`M-x ediff-region-wordwise'可以对比任何文件(包括同一个文件)中的任意两个region的内容.
+
