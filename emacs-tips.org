@@ -86,3 +86,11 @@ org-mode提供了`org-goto'命令,可以快速定位
 ** 使用ediff对比同一文件中的不同文本块
 通过命令`M-x ediff-region-wordwise'或`M-x ediff-region-wordwise'可以对比任何文件(包括同一个文件)中的任意两个region的内容.
 
+* dired
+** dired显示文件大小时使用"human readable"的格式显示
+dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-listing-switches'的值,可以更改调用`ls'命令时的参数,从而改变文件列表的显示.
+
+默认该`dired-listing-switches'的值为"-al",我们可以为该值添加h选项,从而达到使用"human readable"格式显示文件大小的目的.
+#+BEGIN_SRC emacs-lisp
+  (setq dired-listing-switches "-alh")
+#+END_SRC
