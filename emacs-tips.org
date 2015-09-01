@@ -94,3 +94,16 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
 #+BEGIN_SRC emacs-lisp
   (setq dired-listing-switches "-alh")
 #+END_SRC
+* eshell
+** 如何让特定的命令不保存在eshell history中
+通过设置变量`eshell-input-filter'可以实现这一目的.
+
+`eshell-input-filter'的值应该是一个判断函数,该函数接受eshell input作为参数,若该函数返回nil值,则表示该eshell input不会被记录在history中,否则记录在history中.
+
+下面是一个从reddit中摘录的配置,用来设置所有以空格开头的eshell input都不记入history中
+#+BEGIN_SRC emacs-lisp
+  (setq eshell-input-filter
+        (lambda (str)
+          (not (or (string= "" str)
+                   (string-prefix-p " " str)))))
+#+END_SRC
