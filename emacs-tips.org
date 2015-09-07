@@ -43,6 +43,26 @@ org-mode提供了`org-goto'命令,可以快速定位
 这样当写`a_{b}'时,{}中的b会被转义
 而直接写`a_b'则不会转义
 
+** 如何在点击shell/elisp类型的link时,不要弹出确认窗口.
+默认情况下,调用`org-open-at-point'打开shell/elisp link时会弹出确认窗口,太麻烦.
+
+好在org提供了`org-confirm-shell-link-not-regexp'和`org-confirm-elisp-link-not-regexp'两个变量用于指定打开那些shell/elisp link时不用确认直接打开.
+
+例如,下面的代码表示所有的elisp link都不需要确认就直接打开,所有以mstsc开头的shell link也不需要确认就可以直接打开.
+#+BEGIN_SRC emacs-lisp
+  (setq org-confirm-elisp-link-not-regexp ".")
+  (setq org-confirm-shell-link-not-regexp "^mstsc")
+#+END_SRC
+调用`org-open-at-point'还可能打开新的org shell output buffer,可以加个advise忽略它
+#+BEGIN_SRC emacs-lisp
+  (defun org-open-at-point-without-shell-output-buffer-advise (ori_fn &rest args)
+    ""
+    (save-window-excursion
+      (apply ori_fn args)))
+
+  (advice-add 'org-open-at-point :around #'org-open-at-point-without-shell-output-buffer-advise)
+#+END_SRC
+
 * ispell
 ** 如何让ispell跳过某段文本不做拼写检查
 默认情况下,ispell会检查整篇文本中的拼写是否正确. 但通过设置变量`ispell-skip-region-alist'的值,可以指定跳过某几段文本不做拼写检查.
