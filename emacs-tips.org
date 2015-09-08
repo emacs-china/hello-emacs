@@ -198,3 +198,10 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
           (not (or (string= "" str)
                    (string-prefix-p " " str)))))
 #+END_SRC
+* vc
+** 解决windows下使用vc-git提交中文注释乱码的问题.
+只需要设置vc-git-commits-coding-system为'gbk即可
+#+BEGIN_SRC emacs-lisp
+  (when (member system-type '(ms-dos windows-nt))
+    (setq vc-git-commits-coding-system 'gbk))
+#+END_SRC
