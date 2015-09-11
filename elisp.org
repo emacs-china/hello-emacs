@@ -529,9 +529,6 @@
   * -map 一个按键映射（keymap）
   * 命名以空格开头的缓冲区是临时的,用户不需要关系的缓冲区
 * 获取参数的几种方法
-** 变量`argv`获取command-line 参数
-
-   当使用emacs --script xxx.el args时,为了获取command-line参数,可以在xxx.el中使用变量`argv`获取参数列表
 ** 变量`current-prefix-arg`获取universal-argument
    
    emacs命令可以使用C-u传递universal-argument.
@@ -2668,48 +2665,6 @@
 	使用&rest表示之后的参数为不定参数. 它是实际参数的一个列表.
 
 	若在实际调用函数时,没有为可选参数和剩余参数提供实际参数值,则这些参数值为nil.
-*** 函数描述字符串(docstring)
-	* 一般来说,函数描述字符串的第一行为对该函数作用的总结.
-   	* docstring的第一行最好独立的,因为apropos命令只显示第一行的文档
-   	* docstring中参数最好用大些字母
-   	* docstring以*开头的defvar变量被认为是用户选项（user option）
-	  * 用户选项可以通过命令set-variable交互设置
-	  * 可以使用edit-options命令编辑*scratch*
-   	* `符号名'生成一个链接
-   	* \\{major-mode-map}可以显示扩展成按键的说明
-   	* docstring最后那个的\[ command ]会被command的绑定键所代替
-   	* 如果不想要这种代替，需要用\=转义，当然，在Emacs的docstring中，真正的写法应该是
-      #+begin_src elisp
-       	"\\=\\{major-mode-map}"
-       	"\\=\\[command]"
-      #+end_src
-	* 将`\n(fn ARGLIST)`放在最后一行,会自动扩展为该函数的实际参数列表.
-	
-*** 交互模式声明
-	若一个函数带了交互模式声明,则它也就是一个命令了,即可以通过M-x(execute-command)来调用了.
-
-	交互模式声明的格式为(interactive code-string),其中:
-   	* 若interactive的参数以*开头，则意义是，如果当前buffer是只读的，则不执行该函数
-
-   	* interactive可以后接字符串,表示获得参数的方式
-	  * p 接收C-u的数字参数
-
-	   	也可以不用P参数,直接在代码中判断current-prefix-arg的值
-	  * r region的开始/结束位置
-	  * n 提示用户输入数字参数,n后面可用接着提示符
-	  * s 提示用户输入字符串参数
-	  * 若函数接收多个input,需要用\n来分隔
-
-   	* interactive可以后接一个form,form的求值结果应该是一个list,这个list的值作为参数的实参
-
-	  在form中一般会用到如下几个函数用于获取用户输入
-	  * read-string
-	  * read-file-name
-	  * read-directory-name
-	  * read-regexp
-	  * y-or-n-p
-	  * read-from-minibuffer
-	  * 使用变量`current-prefix-arg`来判断是否有universal-argument
 
 ** 命名函数
    使用fset/defalias将匿名函数与一个symbol想结合,就为这个匿名函数分配了一个名称.
@@ -2749,9 +2704,9 @@
 
 	 判断symbol是否可以作为函数使用
 
-   * (fmakeunbound symbol)
+   * (fmakunbound symbol)
 
-	 使symbol不再作为函数使用.
+	 删除函数,使symbol不再作为函数使用.
 *** declare form
 	declare form常用来为函数或宏添加一些关于属性的元标签. 它的语法是:
 	
@@ -2945,6 +2900,100 @@
 	 编译器会检查文件file中是否包含了function函数,且参数签名是否为arglist,若想让编译器不检查函数的参数签名,需要将arglist设置为t
 
 	 若参数fileony为非nil,表示只检查file存在,而不检查文件中是否定义了function.
+** 函数描述字符串(docstring)
+	* 一般来说,函数描述字符串的第一行为对该函数作用的总结.
+   	* docstring的第一行最好独立的,因为apropos命令只显示第一行的文档
+   	* docstring中参数最好用大些字母
+   	* docstring以*开头的defvar变量被认为是用户选项（user option）
+	  * 用户选项可以通过命令set-variable交互设置
+	  * 可以使用edit-options命令编辑*scratch*
+   	* `符号名'生成一个链接
+   	* \\{major-mode-map}可以显示扩展成按键的说明
+   	* docstring最后那个的\[ command ]会被command的绑定键所代替
+   	* 如果不想要这种代替，需要用\=转义，当然，在Emacs的docstring中，真正的写法应该是
+      #+begin_src elisp
+       	"\\=\\{major-mode-map}"
+       	"\\=\\[command]"
+      #+end_src
+	* 将`\n(fn ARGLIST)`放在最后一行,会自动扩展为该函数的实际参数列表.
+	
+** 交互模式声明
+	若一个函数带了交互模式声明,则它也就是一个命令了,即可以通过M-x(execute-command)来调用了.
+
+	交互模式声明的格式为(interactive code-string),其中:
+   	* 若interactive的参数以*开头，则意义是，如果当前buffer是只读的，则不执行该函数
+
+   	* interactive可以后接字符串,表示获得参数的方式
+	  * p 接收C-u的数字参数
+
+	   	也可以不用P参数,直接在代码中判断current-prefix-arg的值
+	  * r region的开始/结束位置
+	  * n 提示用户输入数字参数,n后面可用接着提示符
+	  * s 提示用户输入字符串参数
+	  * 若函数接收多个input,需要用\n来分隔
+
+   	* interactive可以后接一个form,form的求值结果应该是一个list,这个list的值作为参数的实参
+
+	  在form中一般会用到如下几个函数用于获取用户输入
+	  * read-string
+	  * read-file-name
+	  * read-directory-name
+	  * read-regexp
+	  * y-or-n-p
+	  * read-from-minibuffer
+	  * 使用变量`current-prefix-arg`来判断是否有universal-argument
+** declare-form
+使用`declare'宏能够为函数或宏增加元属性. 它的语法为:
+#+BEGIN_SRC emacs-lisp
+  (declare specs...)
+#+END_SRC
+
+其中spec的格式为`(property args...)'. 目前支持以下几种spec
++ (advertised-calling-convention SIGNATURE WHEN)
+
+  该spec的功能类似调用`set-advertised-calling-convention'函数
+  
+  其中,SIGNATURE为参数列表,指定了调用函数或宏的正确用法. WHEN为一个字符串指明了什么时候开始废除原函数用法.
+
++ (debug edebug-form-spec)
+  该spec只对宏有效. 当使用edebug调试宏时,使用edebug-form-spec. 参见[[info:elisp#Instrumenting%20Macro%20Calls][Instrumenting Macro Calls]]
+
++ (doc-string n)
+  指明第n个参数为documentation string
+
++ (indent indent-spec)
+  对当前函数或宏缩进时,根据indent-spec来缩进. 该功能通常用在宏中,但也对函数生效. 参见[[info:elisp#Indenting%20Macros][Indenting Macros]]
+
+  indent-spec可以是:
+  - nil 
+    使用标准缩进模式
+
+  - defun
+    将该宏看成是一个`def'结构: 这种结构中会将第二行看成是body的起始行
+
+  - an integer,number
+    The firstnumberarguments of the function aredistinguishedarguments; the rest are considered the body of the expression. 
+    A line in the expression is indented according to whether the first argument on it is distinguished or not.
+    If the argument is part of the body, the line is indented lisp-body-indent more columns than the open-parenthesis starting the containing expression. 
+    If the argument is distinguished and is either the first or second argument, it is indented twice that many extra columns. 
+    If the argument is distinguished and not the first or second argument, the line uses the standard pattern.
+
+  - 表示函数名称的symbol
+    该函数接收两个参数`pos'和`state',并且应该返回一个表示应该缩进到多少列的数字,或一个car表示缩进列的list. 其中
+
+    - pos :: 光标当前行缩进的起始位置(The position at which the line being indented begins.)
+
+    - state :: 函数`parse-partial-sexp'解析从光标当前位置到当前行行首之间内容的返回结果
+    
+               The difference between returning a number and returning a list is that a number says that all following lines at the same nesting level should be indented just like this one; a list says that following lines might call for different indentations. This makes a difference when the indentation is being computed byC-M-q; if the value is a number, C-M-qneed not recalculate indentation for the following lines until the end of the list
+    
+    
++ (obsolete current-name when)
+  该spec功能类似调用`make-obolete'函数
+
+  current-name为一个symbol,或string,或nil
+
+  when为一个字符串用来指定什么时候开始废弃该函数/宏
 ** 判断function是否安全
    使用unsafep来判断一个form是否是安全的
 
@@ -3132,21 +3181,44 @@
    * 宏的参数在传递給宏前并不会作计算处理,也就是说宏看到的是传递给它的原始参数. 而函数参数传递給函数时是已经经过计算的结果,也就是说函数看到的是参数的计算结果.
    * 宏的计算结果需要是一个S表达式(这个过程被称为宏扩展),Elisp会再计算这个返回的S表达式以算出最终结果.
 ** 定义宏
-   定义宏的格式与定义函数的格式一样,只是用defmacro替代defun
-   #+BEGIN_EXAMPLE
+定义宏的格式与定义函数的格式一样,只是用defmacro替代defun
+#+BEGIN_EXAMPLE
      (defmacro macro-name (参数列表...)
              [函数描述字符串]
              [declare-form]   
              [交互模式声明]
              函数体...)
-   #+END_EXAMPLE
+#+END_EXAMPLE
+
+destructuring-bind宏接受一个匹配模式,一个求值到列表的实参,以及一个表达式体，然后在求值表达式时将模式中的参数绑定到列表的对应元素上.例如
+#+BEGIN_SRC emacs-lisp :results drawer :exports both
+  (destructuring-bind (x (y) . z) '(a (b) c d)
+    (list x y z))
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+(a b (c d))
+:END:
+
+defmacro宏允许任意列表结构作为参数列表.当宏调用被展开时,宏调用中的各部分将会以类似destructuring-bind的方式被赋值到宏的参数上面
+例如,可以这样定义dolist宏
+#+BEGIN_SRC emacs-lisp
+  (defmacro our-dolist ((var list &optional result) &body body)
+    `(progn
+        (mapc #'(lambda (,var) ,@body)
+                 ,list)
+        (let ((,var nil))
+          ,result)))
+#+END_SRC
+
 ** 宏扩展
-   调用宏会将传递給宏的参数扩展成一个S表达式,这个过程称为宏扩展过程.
+调用宏会将传递給宏的参数扩展成一个S表达式,这个过程称为宏扩展过程.
 
-   * (macroexpand macro-form &optional environment)
++ (macroexpand macro-form &optional environment)
 
-	 递归扩展macro-form直到结果中不再为宏调用为止(不代表结果中就不包含宏了,只是第一个元素不为宏而已). 然后返回扩展结果.
-	 #+BEGIN_SRC emacs-lisp
+  递归扩展macro-form直到结果中不再为宏调用为止(不代表结果中就不包含宏了,只是第一个元素不为宏而已). 然后返回扩展结果.
+  #+BEGIN_SRC emacs-lisp
        (defmacro inc (var)
          (list 'setq var (list '1+ var)))
 
@@ -3156,14 +3228,14 @@
          (list 'progn (list 'inc var1) (list 'inc var2)))
 
        (macroexpand '(inc2 r s))               ; => (progn (inc r) (inc s))  ; `inc'并没有扩展
-	 #+END_SRC
+  #+END_SRC
 
-	 environment参数为一个包含宏定义的alist. macroexpand在扩展宏时会使用environment中的宏定义替代当前环境下的宏定义.
+  environment参数为一个包含宏定义的alist. macroexpand在扩展宏时会使用environment中的宏定义替代当前环境下的宏定义.
 
-   * (macroexpand-all macro-form &optional environment)
++ (macroexpand-all macro-form &optional environment)
 
-	 类似macroexpand,但会递归扩展直到结果中不再包含宏为止.
-	 #+BEGIN_SRC emacs-lisp
+  类似macroexpand,但会递归扩展直到结果中不再包含宏为止.
+  #+BEGIN_SRC emacs-lisp
        (defmacro inc (var)
          (list 'setq var (list '1+ var)))
 
@@ -3173,26 +3245,56 @@
          (list 'progn (list 'inc var1) (list 'inc var2)))
 
        (macroexpand-all '(inc r s))           ; => (progn (setq r (1+ r)) (setq s (1+ s))) inc也扩展了
-	 #+END_SRC
+  #+END_SRC
  
-   当对程序进行编译时,编译器在遇到宏调用时,会对宏进行扩展,因此:
-   * 要注意分清哪些操作应该放在宏扩展的过程中完成,哪些操作放在宏扩展后的结果中进行. 例如
-     #+BEGIN_SRC emacs-lisp
+当对程序进行编译时,编译器在遇到宏调用时,会对宏进行扩展,因此:
+
++ 要注意分清哪些操作应该放在宏扩展的过程中完成,哪些操作放在宏扩展后的结果中进行. 例如
+  #+BEGIN_SRC emacs-lisp
        (defmacro my-set-buffer-multibyte (arg)
          (if (fboundp 'set-buffer-multibyte)
              (set-buffer-multibyte arg)))      ;在编译期执行该操作其实是没有意义的,应该改为`(set-buffer-multibyte ,arg)
-     #+END_SRC
+  #+END_SRC
 
-   * 不要在宏中对宏参数进行eval操作. 因为这时候宏参数还并未绑定任何实际参数.
++ 不要在宏中对宏参数进行eval操作. 因为这时候宏参数还并未绑定任何实际参数.
 
-   * 由于编译器只对宏进行一次扩展,在其他使用宏的地方不再进行扩展动作,而在解释执行时会在每次宏调用时都对宏进行扩展. 因此宏扩展的过程,不能产生副作用,否则就会发生编译和解释执行结果不一致的情况. 例如:
-	 #+BEGIN_SRC emacs-lisp
++ 由于编译器只对宏进行一次扩展,在其他使用宏的地方不再进行扩展动作,而在解释执行时会在每次宏调用时都对宏进行扩展. 因此宏扩展的过程,不能产生副作用,否则就会发生编译和解释执行结果不一致的情况. 例如:
+  #+BEGIN_SRC emacs-lisp
        (defmacro empty-object ()
          (list 'quote (cons nil nil)))
 
        ;; 上面的宏在解释执行时,每次都会生成一个新的(nil).
        ;; 但在编译执行时,会在编译器生成一个(nil),然后每次都使用它
-	 #+END_SRC
+  #+END_SRC
+
++ 如果我们在主调函数编译以后，重定义那个宏. 由于对最初的宏调用的无迹可寻，所以函数里的展开式无法更新。该函数的行为将继续反映出宏的原来的定义
+
+  此外,如果在定义宏之前，就已经编译了宏的调用代码，也会发生类似的问题.
+
+  为了避免这类问题,我们需要
+
+  1. 在调用宏之前，先定义它。
+
+  2. 一旦重定义一个宏，就重新编译所有直接(或通过宏间接)调用它的函数(或宏)。
+     
+** 宏的工作模式
+下面是一个宏的模拟实现
+#+BEGIN_SRC emacs-lisp
+  (defmacro our-expander (name) `(get ,name 'expander))
+  (defmacro our-defmacro (name parms &body body)
+    (let ((g (gensym)))
+      `(progn
+          (setf (our-expander ',name)
+                #'(lambda (,g)
+                     (block ,name
+                       (destructuring-bind ,parms (cdr ,g)
+                         ,@body))))
+          ',name)))
+  (defun our-macroexpand-1 (expr)
+    (if (and (consp expr) (our-expander (car expr)))
+        (funcall (our-expander (car expr)) expr)
+      expr))
+#+END_SRC
 * 调试ELisp程序
   有以下几种调试Elisp程序的方法
   * 若运行程序时抛出异常,可以使用Emacs内置的debugger或edebug
@@ -5376,6 +5478,948 @@
 	 若参数prefix为非nil,则只列出以prefix为prefix key的key sequence
 
 	 默认绑定为`C-h b'
+
+* Major Mode and Minor Mode
+** Hooks
+Emacs中大多数的hook为"normal hooks",这表示该hook中的函数会被不带参数调用,且他们的返回值会被忽略. 以`-hook'结尾的hook都是"normal hook". 
+
+非`-hook'结尾的hook可能为"abnormal hook",这表示该hook中的函数会被带参数调用,或者他们的返回值会被使用. 一般这种`abormal hook'的名称是以`-functions'结尾的.
+
+以`-function'结尾的hook表示它的值为单个的函数,而不是函数列表,此时 *不能用`add-hook'来添加hook函数,而需要使用`add-function'代替*
+
+hook触发式,排在前面的hook函数优先被调用
+
+*** 调用Hook中的函数
++ (run-hooks &rest hookvars)
+  该函数依次调用hookvars中的hook函数. 每个hookvar都是一个 *符号*. 且每个hook都需为一个"normal hook"
+
+  若hookvar为buffer-local变量,则调用的hook函数以hookvar的buffer-local的值为准,但 *若此时hook值中有元素t,则表示全局的hook值中定义的函数也会被调用*
+
++ (run-hook-with-args hook &rest args)
+  该函数以参数args调用hook中的函数,此时hook为"abnormal hook"
+
++ (run-hook-with-args-until-failure hook &rest args)
+  以参数args依次调用abnormal hook中的函数,直到某个函数返回nil为止
+
+  该函数返回最后那次调用函数的返回值. 即若由于hook中某个函数返回nil而退出时也返回nil,否则返回非nil值
+
++ (run-hook-with-args-until-success hook &rest args)
+  以参数args依次调用abnormal hook中的函数,直到某个函数返回非nil为止
+  
+  该函数返回最后那次调用函数的返回值. 即若由于hook中某个函数返回非nil而退出时则返回该值,否则返回nil值
+
+*** 设置Hook变量
++ (add-hook hook function &optional append local)
+  为hook添加function为hook函数
+
+  若function已经存在(使用equal进行比较),则不再重复添加
+
+  若function的`permanent-local-hook'属性非nil,则 *`kill-all-local-variables'或更改major mode都不会将该函数从hook的当前值中被删除*
+
+  默认情况下,function会被放在hook的最前方优先调用,但`append'参数可以让function添加到hook的最后方,最后被调用
+
+  参数`local'表示将function加入buffer-local hook中,该标志会使hook变为buffer-local变量,并在buffer-local变量值中添加元素`t'(表示同时也执行该hook的global value)
+
++ (remove-hook hook function &optional local)
+  该函数从hook中移除function
+
+  若参数`local'为非nil,则表示将该hook变为buffer-local hook,然后移除function
+  
+** Major Modes
+每个Major Mode都需要有一个"mode hook". Major Mode在完成初始化过程的最后一个步骤都应该是调用"mode hook"
+
+每个Major Mode都需要一个以`-mode'结尾的命令用来进入该Major Mode
+
++ 命令(fundamental-mode)
+  fundamental-mode不包含任意的与该mode相关的函数定义和变量设置. 它 *甚至没有mode hook*
+
++ 配置项major-mode
+  该变量为buffer-local变量,其值为一个symbol,标识了当前处于哪个major mode. 其标准的默认值为`fundamental-mode'
+
+  若默认值为nil,则当Emacs使用命令(例如`switch-to-buffer')创建新buffer(??是创建吗??)时, *新buffer的major mode与之前buffer保持不变* 
+  但是作为一个特例,若前一个buffer的major-mode的`mode-class'属性为`special',则 *新buffer的Major Mode为Fundamental mode* (具体参见Major Mode Conventions)
+
+*** Major Mode Conventions
+定义Major Mode时,有很多惯例需要遵守,因此推荐使用`define-derived-mode'从一个现成的Major Mode中继承新Major Mode. 该宏会自动维护这些惯例.
+
+下面是一些常见的惯例
++ 进入Major Mode的命令以`-mode'结尾
+
+  且当不带参数调用时,该命令通过设置 *keymap,syntax table和buffer-local变量* 将当前buffer切换到新的Major Mode.
+
+  该命令不能修改buffer的内容
+
++ 为进入Major Mode的命令添写doc-string,简要描述一下该mode有哪些特殊命令
+
+  doc-string中可以使用`\[COMMAND]',`\[KEYMAP]'和`\<KEYMAP>'来自动显示用户自定义的键绑定.
+
++ 进入Major Mode的命令的第一个动作应该是调用`kill-all-local-variables'
+  
+  `kill-all-local-variables'会先触发`change-major-mode-hook',然后清理之前的Major Mode设置的buffer-local变量
+
++ Major Mode Command需要设置buffer-local变量`major-mode'的值为major mode command的symbol.
+
+  命令`describe-mode'会根据该变量输出帮助文档
+
++ Major Mode Command需要设置buffer-local变量`major-name'的值为该major mode的"pretty" name.
+
+  `major-name'通常为一个字符串,且它的值用来会显示在mode line上
+
++ 由于Emacs只有一个命名空间,因此所有与Major Mode相关的变量,常量和函数,应该以该major mode名称为前缀
+
++ 当Major Mode是用来编辑特定结构的文本或编程语言时,具备根据结构自动缩进文本是很有用的一项功能,因此这类major mode一般都会有缩进函数,并将其设置为变量`indent-line-function'的值. 同时也可能设置其他一些关于缩进的变量的值
+
++ Major Mode通常有其自己的keymap,该keymap的名字一般为`mode名称-mode-map'
+
+  Major Mode Command应该调用`use-local-map'函数来安装自己的keymap
+
++ Major Mode Keymap中的键绑定,一般以`C-c'+控制字符或数字或`{}<>:;'为前缀. 
+
+  `C-c'+标点符号是留给minor mode使用的.
+
+  `C-c'+普通字母留给用户使用的
+
+  major mode也可以重新绑定`M-n',`M-p'但应该表示某种向前向后移动的命令
+
++ 编辑文本的major mode不应该重定义<RET>为任何非换行的命令.
+
+  非编辑文本的major mode无此显示
+
++ Major mode不应该修改哪些会严重影响用户性能的配置项(例如是否开启Auto-Fill mode)
+
++ 若major mode有自己的syntax table,则该syntax table变量的名称规范为`mode名称-mode-syntax-table'
+
++ 若major mode希望支持某种编程语言的注释语法,则需要设置与注释语法相关的变量.
+
+  具体参见`comment-column',`comment-start-skip',`comment-start',`comment-end'
+
++ 若major mode有自己的缩写表,则需要存放到名为`MODENAME-mode-abbrev-table'的变量中.
+
+  If the major mode command defines any abbrevs itself, it should pass ‘t’for the SYSTEM-FLAG argument to ‘define-abbrev’. 详情参见[[info:elisp#Defining%20Abbrevs][Defining Abbrevs]]
+
++ major mode通过设置buffer-local变量`font-lock-defaults'来设置高亮
+
++ major mode中用到的每个face都应该尽可能的从已有的Emacs face中继承
+
++ major mode应该告诉Imenu如何找出buffer中的各个定义和章节的位置.
+
+  方法是通过设置`imeu-generic-expression',`imenu-prev-index-position-function',`imenu-extract-index-name-function',`imenu-create-index-function'. 具体参见[[info:elisp#Imenu][Imenu]]
+
++ major mode可以定义buffer local变量`eldoc-documentation-function'以便eldoc能支持该mode
+
++ major mode可以通过设置`completion-at-point-functions'来指定如何实现补全. 具体参见[[info:elisp#Completion%20in%20Buffers][Completion in Buffers]]
+
++ 在major mode command中使用`make-local-variable'来创建buffer-local变量.
+
+  *不要使用`make-variable-buffer-local'来创建buffer local变量* ,因为该函数会是的即使不是该mode的buffer中的变量也变成buffer-local变量.
+
++ 每个major mode都应该有一个名为`MODENAME-mode-hook'的normal hook.
+
+  major mode command的最后步骤应该是 *使用`run-mode-hooks'依次调用`change-major-mode-after-body-hook',`MODENAME-mode-hook'和`after-change-major-mode-hook'这三个hook*
+
++ 若major mode为子mode,则在major mode command开始时还需要调用父mode的major mode command
+
+  通过宏`define-derived-mode'定义的mode会自动完成这种设计,但若没有使用`define-derived-mode'宏,则需要手工调用`delay-mode-hooks'中的父mode command
+
++ 若从major mode切换成其他major mode,则会触发`change-major-mode-hook',可以进行一些特殊处理
+
++ 若该major mode仅用来管理由major mode自己产生的文本(而不是用户输入的内容),则该major command symbol的`mode-class'属性应该为`special',像下面所示:
+  #+BEGIN_SRC emacs-lisp
+   (put 'funny-mode 'mode-class 'special)
+  #+END_SRC
+
+  默认情况下,若`major-mode'的默认值为`nil',则新创建的buffer会继承当前buffer的major mode. 但对于属性`mode-class'为`special'的major mode来说, *新创建的buffer使用Fundamental Mode代替*,像Dired,Rmail,Buffer List这些Major Mode都开启了该特性
+
+  同时,在这些special major mode中调用`view-buffer'函数并不能启用`view-mode' minor mode,因为这类的mode通常都提供了他们自己的类似view-mode的键绑定
+
+  这类major mode,推荐使用`define-derived-mode'直接从`special-mode'中继承
+
++ 通过配置`auto-mode-alist'变量,可以让Emacs打开特定规则的文件名时自动选中Major Mode.
+
+  If you define the mode command to autoload, you should add this element in the same file that calls ‘autoload’.  
+
+  If you use an autoload cookie for the mode command, you can also use an autoload cookie for the form that adds the element (参见[[info:elisp#autoload%20cookie][autoload cookie]])
+
++ 定义mode的代码可能会被重复执行
+
+  因此在定义与mode相关的变量时,推荐使用`defvar'和`defcustom'
+
+
+*** How Emacs Chooses a Major Mode
+当Emacs打开文件时,会自动根据文件名称和文件内容选择合适的major mode
+
++ 命令(normal-mode &optional find-file)
+  
+  让Emacs为当前buffer选择合适的major-mode
+  
+  该函数先调用`set-auto-mode'函数,然后运行`hack-local-variables'来使file local变量生效. 参见[[info:emacs#Local%20Variables%20in%20Files][Local Variables in Files]] 和[[info:elisp#File Local Variables][File Local Variables]]
+
+  若参数`find-file'为非nil,则normal-mode假设是被`find-file'函数调用的,这种情况下,它会根据`enable-local-variables'的值来决定是否应用file local变量的值.
+  
+  若参数`find-file'为nil,则无条件应用file local变量值
+
+  该函数内部调用`set-auto-mode'来选择major mode,若选择失败,则根据`major-mode'的默认值来决定应用major mode
+
++ 函数(set-auto-mode &optional keep-mode-if-same)
+
+  该函数为当前buffer选择合适的major-mode,其选择的依据依次为
+
+  1. 根据`_*_'行或文件结尾处的`mode:' file local变量值.
+     
+     注意: *若`enable-local-variables'为nil,或文件名称匹配`inhibit-local-variables-regexps'中的元素,则Emacs不使用file local变量* 
+
+  2. 根据`interpreter-mode-alist'变量值和`#!'行推测
+
+  3. 根据`magic-mode-alist'变量值和buffer开头的内容推测
+
+  4. 根据`auto-mode-alist'变量值和文件名称推测
+
+  若参数keep-mode-if-same为非nil,则若该buffer已经处于合适的mode状态时,并不再此调用major mode coomand. *这样是为了防止用户自定义的buffer loal 变量值被重设*
+
++ (set-buffer-major-mode buffer)
+  设置指定buffer的major mode为`major-mode'的默认值.
+
+  若默认值为nil,则表示使用当前buffer的major mode.
+
+  作为特例,`*scratch' buffer的值会被设置为`initial-major-mode'
+
+  低层的原始创建buffer的函数不会调用该函数,但中层的创建buffer的函数(例如`switch-to-buffer'和`find-file-noselect')在创建buffer时会使用该函数
+
++ 配置项initial-major-mode
+
+  该值决定了初始的`*scratch*' buffer的major mode. 该变量的值应该为major mode command的symbol
+
++ 变量interpreter-mode-alist
+
+  该变量告诉Emacs如何根据`#!'行的内容判断major mode
+
+  它一个alist,其元素格式为`(REGEXP . MODE)' 表示`#!'行内容匹配REGEXP的其Major Mode为MODE
+
++ 变量majic-mode-alist
+
+  该变量告诉Emacs如何根据buffer内容判断major mode
+
+  该值为一个alist,其元素格式为`(REGEXP . FUNCTION)', 若buffer开头部分的内容匹配REGEXP,且FUNCTION为非nil,则Emacs会通过调用该FUNCTION切换Major Mode
+
+  若FUNCTION为nil,则通过变量`auto-mode-alist'判断Major Mode
+
++ 变量`majic-fallback-mode-alist'
+  该变量类似`magic-mode-alist',但 *只有在`auto-mode-alist'中没有相应配置时才生效*
+
++ 变量`auto-mode-alist'
+  该变量告诉Emacs如何根据文件名称判断major mode
+
+  该值为一个alist,其元素格式 *一般* 为`(REGEXP . MODE-FUNCTOIN)'表示文件名称匹配REGEXP的话,调用MODE-FUNCTION来选择Major Mode(若访问的文件是[[info:elisp#File%20Name%20Expansion][扩展过的文件名]] ,则文件名会先经过`file-name-sans-versions'过滤掉版本号或备份标志)
+
+  元素还可能为格式`(REGEXP FUNCTION t)',表示调用FUNCTION后,Emacs继续搜索`auto_mode-alist'并选择合适的Major Mode. 该功能在处理压缩的文件时特别有用.
+
+*** Mode Help
++ 命令(describe-mode &optional buffer)
+  
+  该命令显示指定buffer(默认为当前buffer)的major mode和minior mode的相关文档.
+
+  该函数使用`documentation'函数从major mode command和minior mode command中获取doc-string
+*** Derived Modes
+创建一个新的major mode的推荐方法是使用`define-derived-mode'从一个现有的major mode中继承出来. 
+
+即使没有接近的major mode,那也应该从`text-mode',`special-mode'或`prog-mode'这三大基本major mode中选一个来继承.
+
+实在不行,那就从`fundamental-mode'中继承
+
++ 宏(define-derived-mode VARIANT PARENT NAME DOCSTRING KEYWORD-ARGS... BODY...)
+
+  该宏定义VARIANT为新Major Mode Command,该Major Mode,继承自PARENT,且以NAME为Mode Name
+
+  参数VARIANT和PARENT为不被引用的symbol
+
+  新的Major Mode覆盖了PARENT Mode的以下几个方面:
+  
+  - 新Major Mode拥有自己的keymap,名为`VARIANT-map'.
+    除非`VARIANT-map'在调用`define-derived-mode'前已经被设置并且定义了父keymap,否则PARENT mode的keymap为`VARIANT-map'的父keymap
+
+  - 新Major Mode拥有自己的syntax table,名为`VARIANT-syntax-table',但该名字可以通过`:syntax-table' keyword关键字修改
+    除非`VARIANT-syntax-table在调用`define-derived-mode'前已经被设置并且定义了父syntax-table,否则PARENT mode的syntax-table为`VARIANT-syntax-table的父syntax-table
+
+  - 新Major Mode拥有自己的abbrev table,存在名为`VARIANT-abbrev-table'的变量中,但该变量名可以通过`:abbrev-table' keyword关键字修改
+
+  - 新Major Mode有自己的mode hook,名为`VARIANT-hook'. 
+    该hook会在运行完其祖先的mode hook后,通过`run-mode-hooks'调用
+
+  可以在参数BODY指定了如何覆盖PARENT mode的其他设置. *注意不要加`interactive'语句,`define-derived-mode'会自动添加该语句*
+
+  若PARENT有一个非nil的`mode-class'属性,则`define-derived-mode'会设置VARIANT的`mode-class'属性为相同的值.
+
+  参数PARENT也可以为nil,表示新Major Mode没有父mode
+
+  参数DOCSTRING为对新Major Mode的说明,`define-derived-mode'会在此基础上增添一些关于mode hook,mode keymap的信息,该参数可以省略
+
+  `define-drived-mode'支持以下几种KEYWORD-ARG
+
+  - `:syntax-table'
+
+    为新Major Mode指定syntax table变量. 
+
+    若参数为nil,则表示使用PARENT mode的syntax table变量,若参数PARENT为nil,则使用标准syntax-table
+
+  - `:abbrev-table'
+
+    为新Major Mode指定abbrev-table变量.
+
+    若参数为nil,表示使用PARENT mode的abbrev-table变量,若参数PARENT为nil,则使用`fundamental-mode-abbrev-table'
+
+  - `:group'
+
+    指定了该mode所属的customization group.
+
++ 函数(derived-mode-p &rest modes)
+
+  当前Major Mode是否继承自modes中的任意一个mode, modes为symbol列表
+
+*** Basic Major Modes
+
+除了Fundamental mode外,还有三个普遍被继承的mode:Text mode,Prog mode和Special mode
+
++ 命令(text-mode)
+
+  Text-mode用于编辑自然语言.
+
+  It defines the ‘"’ and ‘\’ characters as having punctuation syntax (参见 [[info:elisp#Syntax%20Class%20Table][Syntax Class Table]])
+
+  该mode下绑定`M-<TAB>'为`ispell-complete-word'
+
++ Prog-mode
+
+  Prog-mode用于编辑编程语言. 大u偶数的编程语言major mode都继承自该mode
+
+  Prog-mode设置`parse-sexp-ignore-comments'为`t',设置`bidi-paragraph-direction'为`left-to-right'
+
++ Special-mode
+
+  Special-mode常用于那些内容由Emacs自动产生(而不是人工输入或从文件读取)的buffer中.
+
+  从Special mode继承的mode会设置`mode-class'属性为`special'
+
+  Special mode设置mode为只读的.且会重新绑定很多通用绑定,例如`q'绑定为`quit-window',`g'绑定为`revert-buffer'
+  
+*** Mode Hooks
+每个Major Mode Command最后三条指令应该是调用`change-major-mode-after-body-hook',自己的`MODE-hook',和`after-change-major-mode-hook'. *通常是通过调用函数`run-mode-hooks'来自动完成上面的三个步骤.*
+
+当major mode为某个父mode的子mode,则在body中调用父mode command时,应该放入`delay-mode-hooks'结构内,这样才能保证父mode的hook不会立即被触发,而统一等到子mode调用`run-mode-hooks'时再触发.
+
+若不使用`define-derived-mode'宏,而选择手工定义Major Mode,则可能会需要用到下列函数
+
++ 函数(run-mode-hooks &rest hookvars)
+
+  Major Mode应该使用该函数来运行自己的mode hook. 
+
+  该函数类似`run-hooks',但它还会调用`change-major-mode-after-body-hook'和`after-change-major-mode-hook'.
+
+  *若在`delay-mode-hooks'宏的body中调用该函数,它不会立即执行这些hook,而是推迟到下一次调用`run-mode-hooks'时再执行*
+
++ 宏(delay-mode-hooks &rest body)
+  该宏执行BODY中的语句,但BODY中的所有`run-mode-hooks'调用都会延迟运行他们的hook,直到下次不在`delay-mode-hooks'结构中的调用`run-mode-hooks'才运行.
+
++ 变量`change-major-mode-after-body-hook'
+  触发的时机在major mode hook之前
+
++ 变量`after-change-major-mode-hook'
+  触发时机正常应该为major mode command的最后一步!
+
+*** Generic Modes
+"Generic Modes"是指的那些只支持基本的注释语法和Font Lock Mode的简单Major Mode.
+
+使用宏`define-generic-mode'来定义generic mode,更多例子参见`generic-x.el'中的内容
+
++ (define-generic-mode mode comment-list keyword-list font-lock-list auto-mode-list function-list &optional docstring)
+  
+  若参数docstring为nil,则`define-generic-mode'会自动生成一个
+
+** Minor Modes
+"minor mode"提供了一系列的与major mode无关的特性.
+
++ 变量minor-mode-list
+  该变量存储了所有的minor mode commands
+
+*** Minor Mode Conventions
+定义minor mode也有一些惯例要遵循,这些惯例有:
++ 每个minor mode都应该有一个以`-mode'结尾的指示变量,用于判断该minor mode是否启用.
+
+  若minor mode是buffer-local的,则该指示变量也应该是buffer-local的
+
+  该指示变量常与变量`minor-mode-alist'结合来在mode line上显示minor mode name. 
+
+  该指示变量还与变量`minor-mode-map-alist'结合来判断是否激活minor mode keymap.
+
++ 定义一个与上面的指示变量同名的命令,该命令用于开启/关闭minor mde
+
+  该命令需要能够接收一个可选参数.
+  1. 当以interactive方式调用该命令时,若不带参数调用该命令,则切换minor-mode的状态,若参数为正数,则开启minor-mode,若为负数则关闭minor-mode
+
+  2. 当在lisp中调用该命令时,若参数为nil或正数,则开启minor mode,参数若为'toggle,则切换minor-mode,参数为负数则关闭minor-mode
+
+  下面是一个实现模板
+  #+BEGIN_SRC emacs-lisp
+  (interactive (list (or current-prefix-arg 'toggle)))
+  (let ((enable (if (eq arg 'toggle)
+  (not foo-mode) ; this mode’s mode variable
+  (> (prefix-numeric-value arg) 0))))
+  (if enable
+  DO-ENABLE
+  DO-DISABLE))
+  #+END_SRC
+
++ 若想在mode line显示该minor mode,则需要往变量中`minor-mode-alist'中添加相应的元素.
+
+  `minor-mode-alist'中的元素格式应该为`(MODE-VARIABLE STRING)'. 其中
+  
+  - `MODE-VARIABLE'为指示minor-mode是否开启的哪个变量名称
+
+  - `STRING'为在mode line上的显示文本.
+
+  - *要注意 minor-mode-alist中不要出现重复的MODE-VARIABLE*
+
++ 还有一些类似Major Mode的惯例
+  
+  - those regarding the names of global symbols
+
+  - the use of a hook at the end of the initialization function
+
+  - the use of keymaps
+
+  - other
+
++ 另外,尽可能允许用户通过`customization'来开闭minor mode.
+  
+  因此应该尽量使用`defcustom'来定义minor mode的标识变量. 并且要记得 *給该标识变量加上autoload cookie并指定`:require'定义minor mode的库*:
+  #+BEGIN_SRC emacs-lisp
+       ;;;###autoload
+    (defcustom msb-mode nil
+      "Toggle msb-mode.
+         Setting this variable directly does not take effect;
+         use either \\[customize] or the function `msb-mode'."
+      :set 'custom-set-minor-mode
+      :initialize 'custom-initialize-default
+      :version "20.4"
+      :type    'boolean
+      :group   'msb
+      :require 'msb)
+  #+END_SRC
+
+*** Keymaps and Minor Modes
+每个minor mode都可以有自己的keymap. 要为minor mode设置自己的keymap,需要往变量`minor-mode-map-alist'中添加元素. 具体参见[[info:elisp#Definition%20of%20minor-mode-map-alist][Definition of minor-mode-map-alist]]
+
+*** Defining Minor Modes
++ (define-minor-mode MODE DOC [INIT-VALUE [LIGHTER [KEYMAP]]] KEYWORD-ARGS... &rest BODY)
+
+  该宏定义一个新的名为MODE的minor mode,并生成一个名为MODE的minor mode command. 参数DOC为该minor mode的说明文档
+
+  该宏还定义了一个名为MODE的指示变量,通过设置该变量为t或nil可以开启/关闭该minor mode. 该变量的默认值为INIT-VALUE.
+
+  参数LIGHTER为一个字符串或nil,当开启了该minor mode后就会在mode-line中显示该字符串, 若为nil则表示不显示在mode-line上
+
+  参数KEYMAP为nil,值为keymap的变量名,keymap,或元素为`(KEY-SEQUENCE . DEFINITION)'的alist. 它指定了该minor mode所使用的keymap,并生成名为`MODE-map'的变量用于存放keymap
+  这里的KEY-SEQUENCE和DEFINITION参数格式要匹配`define-key'函数的参数格式.
+
+  目前参数KEYWORD-ARGS支持如何keyword参数:
+  + `:group GROUP'
+
+    指定BODY中的`defcustom'语句定义配置项时所属的默认组为GROUP, 若不指定该参数,则所属的默认组为参数MODE
+
+    *使用该参数前,请确保已经预先用`defgroup'定义了分组*
+
+  + `:global GLOBAL-P'
+
+    指明该minor-mode作用于为global还是buffer-local, 默认为nil即为buffer-local的.
+
+    将一个minor-mode变为global的,意味着它的指示变量`MODE'被定义为用户配置项, 通过配置项界面改变该变量的值会同时关闭/开启该minor mode.
+
+    这种情况下,需要 *保证在配置该配置项时有运行相应的minor mode代码*,最简单的方法是使用`:require'关键字
+
+  + `:init-value INIT-VALUE'
+
+    设置指示变量`MODE'的初始值
+
+  + `:lighter LIGHTER'
+
+    设置显示在mode-line上的内容
+
+  + `:keymap KEYMAP'
+
+    设置minor mode的KEYMAP
+
+  + `:variable PLACE'
+
+    使用PLACE作为minor mode的指示变量(默认为参数MODE). 
+
+    这里PLACE可以是一个变量名称,或者可以被`setf'赋值的泛型变量(参见[[info:elisp#Generalized%20Variables][Generalized Variables]]). 
+
+    PLACE还可以是格式为`(GET . SET)'的cons cell. 其中GET为获取minor mode状态的表达式, SET为接收一个参数并设置minor mode的函数
+
+  + `:after-hook AFTER-HOOK-FORM'
+
+    AFTER-HOOK-FORM为一个S表达式(不需要被引用), 它会在minor mode hook触发后运行.
+
+  + 其他任意的keyword参数
+
+    *这些keyword参数直接被传递給`defcustom'用来作为生成minor mode指示变量时的参数*. 比较常见的有`:require'参数.
+
+  下面是一个使用`define-minor-mode'的例子
+  #+BEGIN_SRC emacs-lisp
+  (define-minor-mode hungry-mode
+  "Toggle Hungry mode.
+  Interactively with no argument, this command toggles the mode.
+  A positive prefix argument enables the mode, any other prefix
+  argument disables it.  From Lisp, argument omitted or nil enables
+  the mode, `toggle' toggles the state.
+
+  When Hungry mode is enabled, the control delete key
+  gobbles all preceding whitespace except the last.
+  See the command \\[hungry-electric-delete]."
+  ;; The initial value.
+  nil
+  ;; The indicator for the mode line.
+  " Hungry"
+  ;; The minor mode bindings.
+  '(([C-backspace] . hungry-electric-delete))
+  :group 'hunger)
+  #+END_SRC
+
++ 宏(define-globalized-minor-mode GLOBAL-MODE MODE TURN-ON KEYWORD-ARGS)
+  创建一个与MODE对应的名为GLOBAL-MODE的minor mode.
+
+  `GLOBAL-MODE'的意义在于同时启用/关闭所有buffer中的名为`MODE'的minor mode
+
+  它会使用函数`TURN-ON'来开启buffer中的minor mode,使用`(MODE -1)'来关闭buffer中的minor mode
+
+  该宏会定义一个名为`GLOBAL-MODE'的配置项,用户可以通过customize通过更改该配置项的值来开启/关闭该minor mode. *当更改该配置项时,请保证已经执行了该`define-globalized-minor-mode'代码,最简单的方法是使用`:require'关键字参数*
+
+  使用`:group GROUP' keyword 参数指定了`GLOBAL-MODE'所属的组别.
+
+  *一般情况下,定义了一个global minor mode的同时,需要定义一个buffer local minor buffer,这样才能允许某些buffer不开启该minor mode*
+** Mode Line Format
+每个Emacs window的底部一般都会有一个mode line,用来显示buffer的信息.
+
+每个Emacs Window的顶部也可以有一个header line,其作用与mode line类似.
+*** Mode Line基础说明
+mode line显示什么内容由buffer local变量`mode-line-format'决定.
+
+header line显示什么内容则由buffer local变量`header-line-format'决定
+
+当前选中的window的mode line使用名为`mode-line'的face显示, 其他为选中的mode line使用名为`mode-line-inactive'的face显示
+
+出于效率考虑,Emacs不会不停地更新mode line和header line. 只有当你进行如下操作时才回去更新mode-line和header-line
+1. 更改window configuration
+2. 切换buffer
+3. narrow或widen buffer
+4. scroll buffer
+5. 修改了buffer内容
+6. 调用了函数`force-mode-line-update'
+
++ (force-mode-line-update &optional all)
+  该函数强制更新当前buffer的mode-line和header-line
+
+  但若参数all为非nil,则表示强制更新所有buffer的mode-line和header-line
+*** mode-line-format,header-line-format和frame-title-format的格式
+
+mode-line-format,header-line-format和frame-title-format的格式可能是以下几种类型:
+
++ 字符串
+  类似`format'函数中的格式说明符. 
+
+  除了字符串中的"%-Constructs"会被替换为其他数据外,其他的内容原样显示
+
+  若部分子串包含`face'属性,则该部分字串显示时使用`face'属性指定的face来显示, 其他没有`face'属性的字串,使用`mode-line'或`mode-line-inactive'来显示.
+
+  *字串中的`help-echo'和`keymap'属性具有特殊的意义*,具体参见[[info:elisp#Properties%20in%20Mode][Properties in Mode]]
+
++ SYMBOL类型的变量
+
+  显示为symbol的值. 
+
+  但 *即使symbol的值为带"%-constructs"的字符串,其中的"%-constructs"也不会被转义!!*
+
+  此外,若symbol的值为t或nil,或者该symbol被标记为"risky"(该symbol的`risky-local-variable'属性非nil),则这些symbol的值会被忽略
+
++ (字符串 其他数据...) / (列表 其他数据...)
+
+  若数据为一个list,且该list的第一个元素为字符串类型或list类型,则表示递归处理所有的列表元素,并将结果合并显示.
+
++ (:eval FORM)
+
+  若数据为一个list,且第一个元素为`:eval',则表示运行`FORM',并将结果作为显示内容
+
+  *注意 FORM中不要load任何文件,因为这样可能导致无穷循环*
+
++ (:propertize ELT PROPS...)
+  
+  若数据为一个list,且第一个元素为`:propertize',则表示递归处理ELT,并为结果加上PROPS提供的字符串属性.
+
+  参数PROPS应该由0到多个"TEXT-PROPERTY" "VALUE"组成
+
++ (SYMBOL THEN ELSE)
+
+  若数据为一个list,且第一个元素为非条件语句的关键字,则表示若SYMBOL的值为非nil则显示递归处理THEN的处理结果,否则显示ELSE的处理记过.
+
+  ELSE可以省略,则表示若symbol值为nil,什么也不显示
+
++ (WIDTH REST...)
+
+  若数据为一个list,且第一个元素为整数,则表示限定REST的结果显示宽度为WIDTH.
+
+  若WIDTH为正数,表示向左对齐,WIDTH为负数,表示向右对齐.
+*** Mode-line-format中常用到的变量
+下面所列举的变量,都是mode-line-format的组成部分
++ mode-line-mule-info
+
+  该变量在mode-line-format中可以显示语言环境,buffer的字节编码,当前的输入法
+
++ mode-line-modified
+
+  该变量会显示当前buffer是否被修改. 默认情况下:
+
+  1. 若buffer被修改显示'**'
+
+  2. 若buffer未被修改显示为'--'
+
+  3. 若buffer只读显示为'%%'
+
+  4. 若buffer只读单被修改,显示为'%*'
+
++ mode-line-frame-identification
+
+  该变量可以用来标识当前frame
+
+  在图形界面下,该变量默认为" ". 在字符界面下,该变量默认为"-%F "
+
++ mode-line-buffer-identification
+
+  该变量可以用来标识当前buffer. 
+
+  它的默认值为"%12b",附带一些text properties
+
++ mode-line-position
+
+  该变量标识光标所在当前buffer的位置.
+
+  它默认为"%p",显示当前所在位置是整个buffer的百分之多少处.
+
+  但也可以给它添加注入buffer大小,行号,列号等信息
+
++ vc-mode
+
+  该变量指示buffer所关联的文件纳入的版本控制信息.
+
+  若文件未纳入版本控制系统中,则该变量值为nil
+
++ mode-line-modes
+
+  该变量显示buffer所开启的major mode,minor mode,递归编辑层次,buffer所关联进程的状态,是否出于narrow状态
+
+  该变量值中又包含了三个变量:
+  - mode-name
+
+    Major Mode的名称
+
+  - mode-line-process
+
+    与当前buffer相关的process的状态. 
+
+    该变量紧挨着major-name显示. 默为nil
+
+  - minor-mode-alist
+
+    该变量是一个buffer local变量,它指示了如何显示minor-mode. 
+
+    该变量的元素组成格式为`(MINOR-MODE-VARIABLE MODE-LINE-STRING)'
+
+    当MINOR-MODE-VARIABLE的值为非nil时,则显示MODE-LINE-STRING,否则什么也不显示
+
+    
++ mode-line-remote
+
+  该变量用来显示当前buffer的`default-directory'是否是远程目录
+
++ mode-line-client
+
+  该变量用来标识哪些frame为`emacsclient'的frame
+
++ global-mode-string
+
+  若开启了该minor mode的话,该变量的内容会显示在`which-func-mode' minor mode后,否则会显示在`mode-line-modes'后
+
+  
+*** %-constructs说明
+类似format函数中的格式字符串,%-constructs的格式为`%[整数]标识',这里的整数指定了最小的长度,标识指定了替换为何值
+| %% | %字符                                                                                                                                                                                                                                                |
+| %b | 当前buffer名称                                                                                                                                                                                                                                       |
+| %c | 当前光标所在的列数                                                                                                                                                                                                                                   |
+| %e | 当Emacs接近内存耗尽时,显示警告信息,否则为空                                                                                                                                                                                                          |
+| %f | 当前buffer访问的文件名称                                                                                                                                                                                                                             |
+| %F | 当前frame的title或name                                                                                                                                                                                                                               |
+| %i | 当前buffer可访问部分的size,单位为字节                                                                                                                                                                                                                |
+| %I | 类似%i,但以更人性化的方式显示,例如会转换为多少k,M,G                                                                                                                                                                                                  |
+| %l | 当前光标所在的行数                                                                                                                                                                                                                                   |
+| %n | 若当前buffer出于narrow状态,则显示"Narrow",否则显示空                                                                                                                                                                                                 |
+| %P | The percentage of the buffer text above the *top* of window, or ‘Top’, ‘Bottom’ or ‘All’.  Note that the default mode line construct truncates this to three characters.                                                                       |
+| %p | The percentage of the buffer text that is above the *bottom* of the window (which includes the text visible in the window, as well as the text above the top), plus ‘Top’ if the top of the buffer is visible on screen; or ‘Bottom’ or ‘All’. |
+| %s | 与当前buffer相关的process的状态                                                                                                                                                                                                                      |
+| %z | 键盘,中断,buffer编码格式的信息                                                                                                                                                                                                                       |
+| %Z | 类似%z,但还包括换行符的信息                                                                                                                                                                                                                          |
+| %* | 若buffer只读,显示"%",若buffer被修改过,显示"*",否则显示"-"                                                                                                                                                                                            |
+| %+ | 类似%*,但若一个read-only buffer被修改了,它显示"*",而%*会显示"%"                                                                                                                                                                                      |
+| %& | 若buffer被修改则显示"*",否则显示"-"                                                                                                                                                                                                                  |
+| %[ | 显示递归编辑的层次,多少层就有多少个"["                                                                                                                                                                                                               |
+| %] | 显示递归编辑的层次,多少层就有多少个"]"                                                                                                                                                                                                               |
+| %- | 使用"-"填充剩余的mode line                                                                                                                                                                                                                            |
+
+*** Mode Line中的text properties
+某些text properties在mode line中有其特殊的意义:
++ `face'属性影响text的显示
++ `help-echo'属性提供了光标指向他text后弹出的帮助内容
++ `keymap'属性是的text能处理鼠标点击事件
+
+*** 模拟mode line的显示结果
++ (format-mode-line format &optional face window buffer)
+  该函数,将format当成是`mode-line-format'的值,模拟当指定的WINDOW显示指定BUFFER时会显示怎样的mode-line.
+
+  参数face指定了那些没有指定`face'属性的text应该如何显示
+*** Window Header Line
+head-line与mode-line极其类似,它的显示是由变量`header-line-format'指定的. 且`header-line-format'的格式与`mode-line-format'的格式一样
+
+当一个Window只能显示一行内容时,则它不会显示header line.
+
+若一个window只能显示两行内容时,它无法同时显示mode-line和header-line. 这时若mode-line不为nil,则会显示mode-line而不是header-line
+
++ (window-header-line-height &optional window)
+  该函数返回指定WINDOW的header line的高度,单位为像素
+
+** Imenu
+Imenu会在imenu菜单(参见[[info:emacs#Imenu][Imenu]])中列出buffer中的语法定义名称或章节名称,然后通过点击菜单中的定义名称或章节名称就能直接跳转到相应位置上了.
++ 命令(imenu-add-to-enubar NAME)
+
+  该命令会产生一个名为NAME的imenu菜单
+
+当然,使用Imenu的前提是,能够产生一个定义/章节名称与buffer位置之间关系的索引. 
+*** 通过设置`imenu-generic-expression'定义Imenu
+
+通过设置`imenu-generic-expression'定义Imenu,是最常用的方式
+
++ imenu-generic-expression
+
+  该变量为一个list,它指定了使用那种正则表达式来定位定义/章节的位置. 它的元素可以是以下两种格式
+
+  - (SUB-MENU-TITLE REGEXP INDEX)
+
+    这里SUB-MENU-TITLE表示通过REGXP找到的项目应该放到名为`SUB-MENU-TITLE'的子菜单中. 
+    若其值为nil,则表示找到的项目直接放到Imenu菜单中.
+
+    参数REGEXP则表示buffer中任何匹配REGEXP的内容都被认为是定义/章节.
+
+    参数INDEX则说明了,REGEXP中哪个匹配的子组为定义/章节的名称
+
+  - (SUB-MENU-TITLE REGEXP INDEX FUNCTION ARGUMENTS...)
+
+    这种格式的`SUB-MENU-TITLE',`REGEXP'和`INDEX'与上面格式的意义相同.
+
+    不同之处在于,当点击Imenu中的相关项是,会调用`FUNCTION'函数,且传入参数为:菜单项的名称,定义的位置和参数ARGUMENTS
+
++ imenu-case-fold-search
+
+  该变量决定了使用`imenu-generic-expression'中的正则表达式匹配buffer内容时,是否大小写敏感. 
+
+  默认为t,表示大小写敏感.
+
++ imenu-syntax-alist
+
+  该变量是一个元素为'(CHARACTER-OR-STRING . SYNTAX-DESCRIPTION)的alist.
+
+  当Imenu处理`imenu-generic-expression'时,会使用该变量来修改当前buffer的syntax table(通过调用`modfy-syntax-entry'来实现,具体参见[[info:elisp#Syntax%20Table%20Functions][Syntax Table Functions]]).
+*** 通过设置`imenu-prev-index-position-function'和`imenu-extract-index-name-function'来定义Imenu
++ imenu-prev-index-position-function
+
+  该变量的函数,需要从光标开始处向前扫描,并将光标定位到发现定义/章节的位置,然后返回非nil值.
+
+  若向前再找不到任何定义/章节了,则该函数需要返回nil
+
++ imenu-extract-index-name-function
+
+  该变量的函数,需要从光标所在位置出抽取出定义/章节的名字
+
+*** 通过设置`imenu-create-index-function'来定义Imenu
+
+该变量的函数不接受参数,并且返回当前buffer的index alist.
+
+该变量的默认值为`imenu-default-create-index-function',该函数通过调用`imenu-prev-index-position-function'和`imenu-extract-index-name-function'的值来产生index alist. 但若这两个参数有一个为nil,则根据`imenu-generic-expression'来产生index alist
+
+这里index alist的元素有三种格式
++ '(INDEX-NAME . INDEX-POSITION)
+  
+  表示选择INDEX-NAME项,则跳转到INDEX-POSITION位置
+
++ '(INDEX-NAME INDEX-POSITION FUNCTION ARGUMENTS...)
+
+  表示选择INDEX-NAME项,则执行`(funcall FUNCTION INDEX-NAME INDEX-POSITION ARGUMENTS...)'
+
++ '(SUB-MENU-TITLE . SUB-INDEX-ALIST)
+
+  表示根据SUB-INDEX-ALIST创建子菜单SUB-MENU-TITLE
+* Font Lock Mode
+Font Lock Mode根据Major Mode的语法规则来对buffer内容进行作色. 
+
+Font Lock Mode通过两种途径来寻找要高亮作色的文本:
++ 根据syntax table的语法规则来作色,这种方法优先进行
++ 通过查询(通常通过正则表达式),这种方法随后运行
+** Font Lock Mode的基础说明
+很多变量用来控制Font Lock Mode如何高亮显示. 但Major Mode不应该直接设置这些变量,它应该通过设置`font-lock-defaults'变量来实现这一目的.
+
+Font Lock minor mode启动时,会根据`font-lock-defaults'的值来自动设置其他变量.
+
++ font-lock-defaults
+
+  该变量的值可以为nil,表示Font Lock mode不做任何高亮,需要用户手工通过Edit->Text Properties->Faces菜单手工指定那些文本高亮.
+
+  若该变量的值为非nil,则其格式应该为:
+  #+BEGIN_SRC emacs-lisp
+  (KEYWORDS [KEYWORDS-ONLY [CASE-FOLD [SYNTAX-ALIST [SYNTAX-BEGIN OTHER-VARS...]]]])
+  #+END_SRC
+  其中:
+  - KEYWORDS
+
+    会被设置为`font-lock-keywords'的值. 该变量会影响基于查询的高亮.
+
+    KEYWORDS可能是一个symbol,一个变量或一个返回值为list的函数
+    
+    KEYWORDS也可以是一个由多个symbol组成的list,每个symbol对应高亮的一个等级. 其中第一个symbol对应'mode default'等级的高亮,下一个symbol对应'level 1'级的高亮,再下一个symbol对应'level2'级别的高亮依次类推.
+
+    'mode default'级别的高亮通常与'level 1'级别的高亮一样,它在当变量`font-lock-maximum-decoration'为nil时被使用.
+
+  - KEYWORD-ONLY
+
+    会被用来设置`font-lock-keyword-only'的值. 该变量标识了是否只采用基于搜索的高亮. 
+
+    若该变量为nil,则Font Lock mode会使用基于语法的高亮,否则Font Lock mode不会使用基于语法的高亮
+
+  - CASE-FOLD
+
+    被用来设置`font-lock-keywords-case-fold-search'的值. 该变量表明了在基于搜索的高亮时,是否忽略大小写的差异. 
+
+    若为非nil,则表示Font Lock mode在搜索时忽略大小写
+
+  - SYNTAX-ALIST
+
+    被用来作为Font Lock mode基于语法高亮时使用的syntax table. 
+
+    该变量的值若为nil,则其应该为由格式`(CHAR-OR-STRING . STRING)'组成的list. 
+
+    若变量的值为nil,则Font Lock mode使用函数`syntax-table'返回的syntax table作为依据.
+
+  - SYNTAX-BEGIN
+
+    该变量用于设置`font-lock-beginning-of-syntax-function'的值. 
+
+    一般设置该值为nil,而使用`syntax-begin-function'代替
+
+  - OTHER-VARS
+
+    剩下的所有元素都统一叫做OTHER-VARS, 其中每个元素的格式应该为(VARIABLE . VALUE),表示将VARIABLE设置为buffer local变量,然后设置值为VALUE
+
+    一样用于设置影响Font Lock mode高亮的其他变量
+** 基于搜索的高亮
+直接控制基于搜索高亮的变量是`font-lock-keywords',它一般由`font-lock-defautls'的'KEYWORDS'元素指定
+
+
+    
+* Auto-Indentation
+
+* Tabulated List Mode
+Tabulated List Mode是一种用列表来显示数据的Major Mode,这种数据往往由一条条的记录组成,每条记录的内容又可以划分到多个列中.
+
+Tabulated List Mode继承至Special mode,且同时被多个子mode继承,例如Process Menu mode和Package Menu Mode
+
+要想继承Tabulated List Mode,需要在`define-derived-mode'中的BODY中通过设置一些变量(下面会讲到)来定义数据的结构,然后调用函数`tabulated-list-init-header'来初始化header line
+同时,继承的子mode还需要定义一个"listing command",该命令不是major mode command,它是給用户使用的命令封装,该命令通常完成以下几个动作
+1. 创建或切换到某个特定buffer
+2. 开启新的Major mode
+3. 指定要以列表方式显示的数据.
+4. 调用`tabulated-list-print'函数,以弹出该buffer
+
+** 指定tabulated data的格式
+通过定义以下变量来指定tabulated data的格式
+
++ tabulated-list-format
+  该变量为buffer-local变量,它定义了数据的格式.
+
+  该变量为一个vector,且vector中的每个元素都表示一个数据列,其格式为`(NAME WIDHT SORT)'. 其中:
+  - NAME为列的名称
+
+  - WIDHT为每列的保留宽度,该参数对最后一列来说无意义
+
+  - SORT指定了根据该列排序记录的方式.
+    | 值           | 意义                                                                                 |
+    |--------------+--------------------------------------------------------------------------------------|
+    | nil          | 表示不排序                                                                           |
+    | t            | 表示根据字符串排序                                                                   |
+    | 其他判断函数 | 使用该判断函数传入`sort'进行排序. 该判断函数的参数为`tabulated-list-entries'中的元素 |
+
++ tabulated-list-entries
+
+  该变量为buffer-local变量,它指定了要显示的记录数据. 它的值 *可以为一个list,或一个函数*
+
+  若该值为list,则list中的每个元素格式应该为`(ID CONTENTS)',其中
+  - ID可以为nil,或一个标识某条记录的lisp object
+
+  - CONTENT为一个表示记录内容的vector,其中vector中的每个元素表示记录的一列内容. 
+
+    vector中的元素可能为字符串或者格式为`(LABEL . PROPERTIES)'的list, 
+    
+    若元素为字符串则表示直接显示该字符串
+
+    若元素为`(LABEL . PROPERTIES)'格式的list,则表示用`LABEL'和`PROPERTIES'作为参数调用`insert-text-button'的方式来插入一个text button(参见[[info:elisp#Making%20Buttons][Making Buttons]])
+
+  若`tabulated-list-entries'的值为为一个函数,则不带参数调用该函数应该返回上面格式的list
+
++ tabulated-list-revert-hook
+
+  该hook在重载入Tabulated List Buffer前会被触发, *常用于对`tabulated-list-entries'的值作预处理.*
+
++ tabulated-list-printer
+
+  该变量的值应该为一个函数, 该函数接收`tabulated-list-entries'中的ID和CONTENTS两个参数, *其返回值才作为真正的列内容显示*
+
+  默认该变量的函数,直接插入CONTENTS
+
++ tabulated-list-sort-key
+
+  该变量指定了根据那几列对记录进行排序.以及是从大到小还是从小到大排序
+
+  - nil表示不排序
+
+  - (NAME . FLIP)格式的cons表示根据名为NAME的列排序,FLIP表示是否反转排序顺序
+
++ 函数(tabulated-list-init-header)
+  该函数为Tabulated List buffer生成并设置`header-line-format'(参见[[info:elisp#Header%20Lines][Header Lines]]),并为header line分配keymap以便允许通过点击header列来排序
+
+  该函数依赖上面所述的变量
+
++ 函数(tabulated-list-print &optional remember-pos)
+  该函数刷新tabulated list buffer. *该函数通常被list command所调用*
+
+  该函数会作以下动作:
+  1. 清空buffer
+
+  2. 根据`tabulated-list-sort-key'对`tabulated-list-entries'中的数据进行排序
+
+  3. 调用`tabulated-list-printer'所表示的函数输出记录
+
+  若参数REMEMBER-POS为非nil,则该函数在刷新buffer前会记住当前行的ID,并在刷新后自动定位到该ID行
+
+
+
+  
+
+
+* Desktop Save Mode
+
 * Number相关函数
   * 判断是否为自然数(0+正整数)
 
@@ -5746,26 +6790,26 @@ buffer-string to get the whole buffer content.
 	 #+END_SRC
 ** 修改list变量
 *** 会破坏原参数中的值
-   	这里的函数都会直接修改参数中的list
+这里的函数都会直接修改参数中的list
 
-   * (push element list)
++ (push element list)
 
-	 把element放在list的第一位,作用类似cons
+  把element放在list的第一位,作用类似cons
 
-   * (add-to-list listname element &optional append compare-fn)
++ (add-to-list listname element &optional append compare-fn)
 
-	 类似push,但若list中已经有了element,则保持list不变
+  类似push,但若list中已经有了element,则保持list不变
 
-	 若append为非nil,则将element放在list的最后位置
+  若append为非nil,则将element放在list的最后位置
 
-	 compare-fn默认使用equal进行比较
+  compare-fn默认使用equal进行比较
 
-   * (add-to-ordered-list listname element &optional order)
++ (add-to-ordered-list listname element &optional order)
 
-	 这里的order需要是number类型,
+  这里的order需要是number类型,
 
-	 order的值决定了element的位置,若order为nil,则将element放在list中最后带order的元素后面
-	 #+BEGIN_SRC emacs-lisp
+  order的值决定了element的位置,若order为nil,则将element放在list中最后带order的元素后面
+	#+BEGIN_SRC emacs-lisp
        (setq foo nil)
        (add-to-ordered-list 'foo 'a 1)         ;=>(a)
        (add-to-ordered-list 'foo 'c 3)         ;=>(a c)
@@ -5775,110 +6819,110 @@ buffer-string to get the whole buffer content.
        (add-to-ordered-list 'foo 'e)           ;=>(a c b e d)
        (add-to-ordered-list 'foo 'f)           ;=>(a c b f e d)  若order为nil,则将element放在list中最后带order的元素后面
 
-	 #+END_SRC
+	#+END_SRC
 
-   * (setcar cons-ceil object) / (setcdr cons-ceil object)
++ (setcar cons-ceil object) / (setcdr cons-ceil object)
 
-	 修改cons-ceil的car/cdr部分,并返回参数object作为返回值
+  修改cons-ceil的car/cdr部分,并返回参数object作为返回值
 
-	 通过setcdr可以实现删除/添加list中element的目的
-	 #+BEGIN_SRC emacs-lisp
-
+  通过setcdr可以实现删除/添加list中element的目的
+	#+BEGIN_SRC emacs-lisp
        (setq x1 '(a b c d))
        (setcdr x1 (cddr x1));=>'(a c d)
        (setcdr x1 (append '(1 2) (cdr x1)))    ;=> (a 1 2 c d)
-	 #+END_SRC
+	#+END_SRC
 
-   * (nconc &rest lists)
++ (nconc &rest lists)
 
-	 类似append,所不同的是它直接修改所有参数的last element的cdr,而不会先做copy-sequence操作.
+  类似append,所不同的是它直接修改所有参数的last element的cdr,而不会先做copy-sequence操作.
 
-	 由于除了最后一个参数不用被修改之外,其他参数的结构都会被修改,因此除了最后一个参数可以是const list外,其他参数必须是个变量.
+  由于除了最后一个参数不用被修改之外,其他参数的结构都会被修改,因此除了最后一个参数可以是const list外,其他参数必须是个变量.
 
-	 跟append一样的,最后一个参数可以不是list
-	 #+BEGIN_SRC emacs-lisp
+  跟append一样的,最后一个参数可以不是list
+	#+BEGIN_SRC emacs-lisp
        (setq x '(1 2 3))                       ; => (1 2 3)
        (nconc x 'z)                            ; => (1 2 3 . z)
        x                                       ; => (1 2 3 . z)
-	 #+END_SRC
+	#+END_SRC
 
-   * (nreverse list)
++ (nreverse list)
 
-	 翻转参数list
+  翻转参数list
 
-   * (sort list predicate-less)
++ (sort list predicate-less)
 
-	 使用predicate-less进行从小到大的排序,若存在相等的值,则保持相等值的位置不变
-	 #+BEGIN_SRC emacs-lisp
-	 (setq x1 '(1 2 4 3 7 6 5));=>(1 2 4 3 7 6 5)
-	 (sort x1 '<)     ;=>(1 2 3 4 5 6 7)
-	 #+END_SRC
+  使用predicate-less进行从小到大的排序,若存在相等的值,则保持相等值的位置不变
+	#+BEGIN_SRC emacs-lisp
+	(setq x1 '(1 2 4 3 7 6 5));=>(1 2 4 3 7 6 5)
+	(sort x1 '<)     ;=>(1 2 3 4 5 6 7)
+	#+END_SRC
 
-	 这里的predicate-less为比较函数,它接收两个参数,并判断第一个参数是否小于第二个参数.
+  这里的predicate-less为比较函数,它接收两个参数,并判断第一个参数是否小于第二个参数.
 
-	 predicate-less函数必须有下面两个特性:
-	 1. A<B,则B!<A
+  predicate-less函数必须有下面两个特性:
+    1. A<B,则B!<A
 
-	 2. 若A>B,B>C,则A>C
+    2. 若A>B,B>C,则A>C
 
-	 *注意:*
+	*注意:*
 	 
-	 sort有一个很变态的特性:sort函数会让参数list依然指向原来的哪个cons-cell的位置,而不管这个cons-cell是否在sort后依然是处于第一个元素的位置. 例如
-	 #+BEGIN_SRC emacs-lisp
-     (setq x1 '(9 8 7 2 3))
-     (sort x1 '<)                            ;=>(2 3 7 8 9)
-     x1                                      ;=>(9),注意,x1实际上依然指向了9这个cons cell的位置
-	 #+END_SRC
+	sort有一个很变态的特性:sort函数会让参数list依然指向原来的哪个cons-cell的位置,而不管这个cons-cell是否在sort后依然是处于第一个元素的位置. 例如
+	#+BEGIN_SRC emacs-lisp
+    (setq x1 '(9 8 7 2 3))
+    (sort x1 '<)                            ;=>(2 3 7 8 9)
+    x1                                      ;=>(9),注意,x1实际上依然指向了9这个cons cell的位置
+	#+END_SRC
 
-	 *因此一般情况下,都需要把sort的返回结果赋值回参数list*
+	*因此一般情况下,都需要把sort的返回结果赋值回参数list*
 
-   * (delq object list)
++ (delq object list)
 
-	 移除list中所有与object相等的element,函数中的q表示使用eq作为比较函数.
+  移除list中所有与object相等的element,函数中的q表示使用eq作为比较函数.
 
-	 由于delq在删除list头部的element时,仅仅是返回跳过头部element的cdr位置,而不会改变list参数所指向的位置.
-	 #+BEGIN_SRC emacs-lisp
-       (setq x1 '(a b c))
-       (delq 'a x1)                            ;=>(b c)
-       x1                                      ;=>(a b c)
-	 #+END_SRC
+  由于delq在删除list头部的element时,仅仅是返回跳过头部element的cdr位置,而不会改变list参数所指向的位置.
+	#+BEGIN_SRC emacs-lisp
+      (setq x1 '(a b c))
+      (delq 'a x1)                            ;=>(b c)
+      x1                                      ;=>(a b c)
+	#+END_SRC
 
-	 *因此使用delq,一般我们也需要将返回值赋值回参数list*
+	*因此使用delq,一般我们也需要将返回值赋值回参数list*
 
-   * (delete object seq)
++ (delete object seq)
 
-	 delete函数比较特殊,它根据seq的类型不同而有不同的行为.
+  delete函数比较特殊,它根据seq的类型不同而有不同的行为.
 
-	 当seq为list类型时,它跟delq一样会修改seq的值,所不同的是它使用equal作为比较函数.
+  当seq为list类型时,它跟delq一样会修改seq的值,所不同的是它使用equal作为比较函数.
 
-	 当seq为vector或string,则delete不会修改原seq的值
-	 #+BEGIN_SRC emacs-lisp
-       (setq l '((2) (1) (2)))
-       (delete '(2) l)                         ; => ((1))
-       l                                       ; => ((2) (1))
-       ;; If you want to change `l' reliably,
-       ;; write `(setq l (delete '(2) l))'.
-       (setq l '((2) (1) (2)))
-       (delete '(1) l)                         ; => ((2) (2))
-       l                                       ; => ((2) (2))
-       ;; In this case, it makes no difference whether you set `l',
-       ;; but you should do so for the sake of the other case.
-       (setq v [(2) (1) (2)])
-       (delete '(2) v)             ; => [(1)]
-       v                           ; => [(2) (1) (2)]
-	 #+END_SRC
+  当seq为vector或string,则delete不会修改原seq的值
+	#+BEGIN_SRC emacs-lisp
+      (setq l '((2) (1) (2)))
+      (delete '(2) l)                         ; => ((1))
+      l                                       ; => ((2) (1))
+      ;; If you want to change `l' reliably,
+      ;; write `(setq l (delete '(2) l))'.
+      (setq l '((2) (1) (2)))
+      (delete '(1) l)                         ; => ((2) (2))
+      l                                       ; => ((2) (2))
+      ;; In this case, it makes no difference whether you set `l',
+      ;; but you should do so for the sake of the other case.
+      (setq v [(2) (1) (2)])
+      (delete '(2) v)             ; => [(1)]
+      v                           ; => [(2) (1) (2)]
+	#+END_SRC
 
-   * (delete-dups list)
++ (delete-dups list)
 
-	 删除list中所有重复的元素,使用equal作为比较函数. 
+  删除list中所有重复的元素,使用equal作为比较函数. 
 
-	 当list中有多个重复元素时,delete-dups保留第一个元素.
+  当list中有多个重复元素时,delete-dups保留第一个元素.
 *** 不破坏原参数的值
-	* (remq object list)
-	  类似delq,但不改变原参数list的值. 这里的q也表示使用eq作为判断函数.
-	* (remove object seq)
-	  类似函数delete,但它保证不修改参数seq的值
-	* ()
++ (remq object list)
+  类似delq,但不改变原参数list的值. 这里的q也表示使用eq作为判断函数.
+
++ (remove object seq)
+  类似函数delete,但它保证不修改参数seq的值
+
 ** alist相关函数
 *** 获取alist
     * (copy-alist alist)
@@ -6648,9 +7692,20 @@ buffer-string to get the whole buffer content.
 
 * Evaluation
 ** `(反引号)
-   ```类似`'`,
-   但当object前带了`,`,则会对该object进行求值,
-   当object前带了`,@`,则会将object的求值结果中的各个元素打散插入.
+`类似', 但当object前带了`,'时则会对该object进行求值, 当object前带了`,@`,则会将object的求值结果中的各个元素打散插入.
+
+对于,@的使用，还另有限制:
+
+1. 为了确保其参数可以被拼接，,@必须出现在序列(sequence)Ʈ中。形如`,@b的说法是错误的,因为无处可供b的值进行拼接。
+
+2. 要进行拼接的对象必须是个列表，除非它出现在列表最后。
+
+   表达式 =`(a ,@1)= 将被求值成 =(a . 1)=.
+
+   但如果尝试将原子拼接到列表的中间位置,例如 =`(a ,@1 b)=,将导致一个错误.
+
+3. 反引用并不是只能使用在.你可以在任何需要构造序列的场合使用反引用.
+
 ** 函数
    * (eval form &optional lexical)
 	 在当前环境下执行form
@@ -8314,6 +9369,274 @@ buffer-string to get the whole buffer content.
 
 	 重新设置serial port process的属性
 * 操作系统相关
+** Emacs启动说明
+*** Emacs启动流程
+1. 搜索`load-path'中的各个目录,看是否存在`subdirs.el'这个文件,有则执行该文件. 
+
+   `subdirs.el'这个文件正常情况下是由Emacs在安装时自动生成的,它的作用是加载目录中的各个子目录到`load-path'中,并且递归执行子目录中的`subdirs.el'文件
+
+2. 在`load-path'中的各目录中寻找`leim-list.el'并加载
+
+   `leim-list.el'这个文件被用来注册输入法. 并且Emacs在搜索`leim-list.el'时会跳过那些存放Emacs自带库的目录.
+
+3. 设置变量`before-init-time'的值为当前时间. 设置变量`after-init-time'为nil,表示Emacs还未初始化完成.
+
+4. 根据`LANG'环境变量设置language environment 和 the terminal coding system
+
+5. 对命令行参数进行基本的处理,这一步处理掉的是emacs本身支持的那些参数.
+
+6. 若不是运行在batch模式下,Emacs根据`initial-window-system'的值来为不同的窗口系统进行不同的初始化.
+
+   某个窗口系统分别加载哪个初始化函数,是根据变量`window-system-initialization-alist'来决定的.
+   
+   存放初始化函数的文件路径应该为`term/窗口系统类型-win.el'中
+
+7. 触发`before-init-hook'
+
+8. 在可以的情况下,创建图形化的frame. 
+
+   若设置了参数`--batch'或`--daemon'或`--script'则直接跳过这一步
+
+9. 初始化最初的frame的显示界面,如果需要的话,还会设置菜单栏和工具栏.
+
+   若系统支持图形化的frame,则不管当前frame是否为图形化的frame,都会去设置工具栏,因为在后面的操作中有可能再次创建图形化frame
+
+10. 使用函数`custom-reevaluate-setting'来重新初始化变量`custom-delayed-init-variables'中的各成员的值.
+
+11. 若`site-start'库存在,则加载之.
+
+    但若设置了参数`-Q'或`--no-site-file'则跳过这一步
+
+12. 加载用户的初始化文件,用户初始化文件可能是`~/.emacs',`~/.emacs.el',`~/.emacs.d/init.el'
+
+    但若设置了参数`-q',`-Q'或`--batch'则跳过这一步
+
+13. 若`default'库存在,则加载之.
+
+    但若变量`inhibit-default-init'为非nil,或设置了参数`-q',`--batch'则跳过这一步
+
+14. 尝试从变量`abbrev-file-name'变量指定的文件中加载缩写配置信息.
+
+    若设置了参数`--batch',则跳过这一步
+
+15. 若`package-enable-at-startup'为非nil,则Emacs调用函数`package-initialize'来激活所有的已安装的第三方Emacs Lisp包. 具体参见[[info:elisp#Packaging%20Basics][Packaging Basics]]
+
+16. 设置变量`after-init-time'的时间为当前时间,表示初始化过程已经完成
+
+17. 触发`after-init-hook'
+
+18. 若`*scratch*' buffer存在,且出于Fundamental mode下,则根据变量`initial-major-mode'的值却换Major Mode
+
+19. 若在文本终端环境启动的Emacs,则还会加载与终端相关的lisp library,并触发`tty-setup-hook'
+
+20. 若`inhibit-startup-echo-area-message'为nil,则在echo area显示初始信息
+
+21. 处理尚未被处理的命令行参数,这一步处理的是用户自定义的参数
+
+22. 若设置了参数`--batch'则此时退出
+
+23. 若`initial-buffer-choice'为字符串,则访问该字符串所表示的文件/目录
+
+    若为函数,则不带参数调用该函数,并根据返回结果选择显示哪个buffer
+
+    若`*scratch*' buffer存在且无内容,则插入`initial-scratch-message'变量值到buffer中
+
+24. 触发`emacs-startup-hook'
+
+25. 调用`frame-notice-user-settings',该函数根据初始化文件修改选中的frame参数
+
+26. 触发`window-setup-hook'
+
+27. 显示`startup screen' buffer
+
+    但若`inhibit-startup-screen'或`inital-buffer-choice'为非nil,或设置了`--no-splash'/`-Q'命令行参数,则跳过这一步
+
+28. 若设置了选项`--daemon',则调用`server-start'函数,并从控制终端相分离(参见[[info:emacs#Emacs%20Server][Emacs Server]])
+
+29. 若Emacs由X Session Manager调起,则会调用`emacs-session-restore'函数,调用参数为之前X Session的ID
+*** Emacs相关初始化文件
+用户初始化文件可能是`~/.emacs',`~/.emacs.el',`~/.emacs.d/init.el'
+
+有些Emacs会有一个名为`default.el'的默认初始化文件,若在`load-path'中能找到该文件的话,则当启动Emacs,会加载该文件.
+
+个人用户的初始化文件优先级比`default.el'的要高, *若在加载个人初始化文件时将`inhibit-default-init'设置非nil,则不再加载`default.el'了*
+
+当然`-q'和`-Q'参数,使得Emacs既不加载个人初始化文件,也不加载默认初始化文件
+
+还有一个配置site相关的初始化文件叫做`site-start.el',Emacs在加载用户初始化文件前会加载该文件,但你可以通过参数`--no-site-file'来跳过加载该文件
+
++ 配置项site-run-file
+
+  该变量指定了与site相关配置的初始化文件的文件名,默认为`site-start'
+
+  The only way you can change it with real effect is to do so before
+
++ 配置项`inhibit-default-init'
+
+  该变量指定是否不加载默认初始化文件`default.el',默认为nil表示加载
+
++ before-init-hook
+
+  在加载所有的初始化文件(`site-start.el',个人初始化文件,`default.el')前触发
+
++ after-init-hook
+
+  加载完所有的初始化文件后,在加载与终端相关library前(若在文本终端下启动的Emacs)或处理命令行参数前触发
+
++ emacs-startup-hook
+
+  在处理完命令行参数后触发
+
+  若在batch模式下,Emacs不触发该hook
+
++ window-setup-hook
+
+  类似`emacs-startup-hook',但是它触发的时间要晚一点,在设置完frame参数之后触发
+
++ user-init-file
+
+  该参数的值为用户初始化文件的绝对路径名. 若实际加载的初始化文件为.elc文件,则该值为相应的源代码路径
+
++ user-emacs-directory
+
+  该参数的值为`.emacs.d'目录的路径. 除了MS-DOS平台,其他平台上该值都是`~/.emacs.d'
+*** 终端相关的library
+Emacs在不同类型的终端下启动时,都会加载不同的终端相关的library. 该library的名字由`term-file-prefix'变量的值(默认为"term/")与终端类型(通常由环境变量`TERM'表示)组合而成.
+
+该terminal-specific librar的作用常用来使得Emacs能够识别special keys. 若操作系统的Termcap或Terminfo项无法完全识别所有的终端功能键,则可以需要修改变量`input-decode-map'的值
+
+若终端类型名中包含`-'或`_',且使用改名字查找library时未找到,则会尝试去除终端名中最后那个`_'或`-'部分后,作为终端名称在此查询library.
+
+可以在初始化文件中通过设置`term-file-prefix'为nil,以阻止Emacs加载terminal specific library
+
+在Emacs完成初始化文本终端后,会触发`tty-setup-hook',You could use this hook to define initializations for terminals that do not have their own libraries.
+
++ term-file-prefix
+
+  若变量为nil表示不加载终端初始化文件. 否则Emacs加载名为 =(load (concat term-file-prefix (getenv "TERM"))= 的文件作为初始化终端的脚本.
+
++ tty-setup-hook
+
+  该hook在Emacs初始化万一个新文本终端后触发.(This applies when Emacs starts up in non-windowed mode, and when making a tty ‘emacsclient’ connection.)
+
++ (suspend-tty &optional TTY)
+
+  参数TTY为Emacs使用的终端. 该函数挂起指定的终端,此时使用该终端的Frame依然存在,但是Emacs并不再从该终端读取任何输入,也不再更新使用该终端的frame.
+
+  参数TTY可以使一个终端对象,也可以是一个frame(表示该frame所在的终端),或nil(表示当前frame所在的终端)
+
+  若TTY已经出于挂起状态,该函数不做任何事情.
+
+  该函数还会触发`suspend-tty-functions',以终端对象作为参数来调用其中的每个函数.
+
++ (resume-tty &optional tty)
+
+  参数TTY为之前挂起的终端设备,该函数恢复该终端,并触发`resume-tty-functions',同样以终端对象作为参数来调用其中的每个函数.
+
+  若TTY不处于挂起状态,则该函数不做任何事
+
+  If the same device is already used by another Emacs terminal, this function signals an error.
+
++ (controlling-tty-p &optional tty)
+
+  判断TTY是否为控制终端.
+
+  参数TTY可能是终端对象,frame(表示该frame所在的终端),或nil(表示当前frame所在的终端)
+
+*** Emacs是如何处理命令行参数的
+
+当使用emacs --script xxx.el args时,为了获取command-line参数,可以在xxx.el中使用变量`argv`获取参数列表
++ (command-line)
+
+  该函数解析调用Emacs时的command line,处理该command line,加载用户初始化文件,然后显示启动信息
+
++ command-line-processed
+  
+  该变量标识了,comand line是否已经被处理过了, 若处理过了则该值为t
+
+  当通过`dump-emacs'函数来redump Emacs时,常常会先将该变量设为nil,这样可以让新dumped Emacs会去再一次处理它的command-line arguments
+
++ command-switch-alist
+  该变量是素为`(option . handler-function)'的alist. 这里
+
+  - option为command-line argument中的`-option'参数(*带-*),为字符串格式
+
+  - handler-function为相应的处理函数名,它接收option为参数
+
+  若command line option后还带了其他参数,则在handler-function中可以通过变量`command-line-args-left'来获取剩余的命令行参数
+
++ command-line-args
+  传递给Emacs的完整command-line argument列表
+
++ command-line-args-left
+  尚未处理的command-line argument列表. *自定义函数有时需要修改该变量*
+
++ command-line-functions
+  该变量是一系列函数的列表,这些函数用来处理无法识别的command-line参数.
+
+  每次处理一个没有特殊意义的command line argument时,该变量中的函数都会被依次调用, *直到有一个函数返回非nil的值*
+
+  *这些函数被调用时并不传递参数,但在这些函数内可以通过变量`argi'获取当前待处理的command-line argument. 可以通过变量`command-line-args-left'获取尚未被处理的command line arguments*. 
+
+  *若某函数除了当前待处理的函数,同时也把后面的参数給处理过了,则需要把后面那些被处理过的参数从`command-line-args-left'中删除*
+
+  *若某函数已经处理了当前代处理的参数,则一定记得返回非nil值*. *若所有的函数都返回nil,该参数会被认为是Emacs要打开的文件名称*
+
+** 退出Emacs
+*** 退出Emacs
++ 命令(kill-emacs &optional exit-data)
+  
+  该命令触发`kill-emacs-hook',并退出Emacs进程
+
+  参数`EXIT-DATA'若为整数,则表示Emacs进程的退出码
+
+  参数`EXIT-DATA'若为字符串,则表示Emacs退出时输出的内容
+
++ kill-emacs-hook
+
+  该hook在`kill-emacs'真正退出Emacs进程前被触发
+
+  *由于`kill-emacs'被调用的时候可能已经与用户失去了交互,因此该hook的参数不能包含与用户交互的语句.* 
+
+  若需要在退出时与用户交互,使用下面的`kill-emacs-query-functions'
+
++ kill-emacs-query-functions
+
+  当`save-buffers-kill-terminal'(C-x C-c)尝试退出Emacs时,它会触发该hook.
+
+  在该hook的函数中可以继续询问用户确认是否退出. 若该hook中任何一个函数返回nil,则`save-buffer-kill-emacs'并不会真正退出Emacs,并且也不执行hook之后的函数.
+
+  *直接调用`kill-emacs'并不会触发该hook*
+*** 挂起Emacs
+在 *文本终端(图形终端下无效)* 中调用Emacs的情况下,可以对Emacs执行挂起操作(对于不支持挂起操作的shell来说,该功能只是临时再启动一个shell而已).
+
++ 命令(suspend-emacs &optional string)
+
+  该函数阻塞并挂起Emacs并将控制权交回给它的父进程. 当重新激活Emacs后,该函数返回nil
+
+  该函数仅当Emacs是在控制终端下启动时才有用.to relinquish control of other tty devices, use‘suspend-tty’
+
+  在挂起Emacs之前,你必须删除该Emacs在其他终端上的frame,否则该函数会抛出异常. 参见[[info:elisp#Multiple%20Terminals][Multiple Terminals]]
+
+  若参数string为非nil,则字符串中的每个字符都会发送到上层shell,作为 *终端输入(注意:不是作为进程输出)  该输入会被shell读取并执行*
+
+  在挂起Emacs前,`suspend-emacs'会触发`suspend-hook'.在恢复Emacs后,`suspend-emacs'会触发`suspend-resume-hook'
+
++ suspend-hook
+
+  Emacs挂起前触发
+
++ suspend-resume-hook
+
+  Emacs恢复后触发
+
++ 命令(suspend-frame)
+
+  挂起当前frame.
+
+  若出于图形界面下,则它调用函数`iconify-frame'最小化frame.
+
+  若出于文本界面下,则根据当前frame是否出于控制终端下,而调用`suspend-emacs'或`suspend-tty'
 ** 操作系统环境相关
    * system-configureation
 
