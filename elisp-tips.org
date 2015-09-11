@@ -1,0 +1,14 @@
+#+TITLE: elisp-tips
+#+AUTHOR: lujun9972
+#+CATEGORY: emacs
+#+DATE: [2015-09-12 六 07:18]
+#+OPTIONS: ^:{}
+
+* button
+** 如何更改button label
+一个button其实就是一个overlay,通过修改button-start到button-end之间的文字即可更改button label. 
+#+BEGIN_SRC emacs-lisp
+  (defun set-button-label (btn label)
+    ""
+    (replace-regexp ".+" label nil (button-start btn) (button-end btn)))
+#+END_SRC
