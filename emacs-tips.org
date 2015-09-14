@@ -12,9 +12,6 @@
 
 重启Emacs后执行 =M-: (gnutls-available-p)= ,结果应该为t,表示Emacs已经支持TLS了.
 
-* evil
-** evil-normal-state下,可以通过`-'或`|'快速分割窗口
-
 * ido
 ** 如何在不使用第三方插件的情况下,将ido的排列方式改为一行一列候选项目
 默认情况下,ido将多个候选项排在一排显示,可以通过设置变量`ido-decorations'的第三个元素值或`ido-separator'为'\n'的方式,将ido的排列方式模拟成一行一列候选项的形式.
