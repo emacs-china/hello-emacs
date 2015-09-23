@@ -9152,7 +9152,7 @@ buffer-string to get the whole buffer content.
 
 	  若设置成功,则返回t
 
-    * (open-network-stream name buffer host service &rest parameters)
+  * (open-network-stream name buffer host service &rest parameters)
 
       该函数创建一个TCP连接(可选择加密),并返回一个process object
 
