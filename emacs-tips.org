@@ -131,6 +131,11 @@ org-mode提供了`org-goto'命令,可以快速定位
 这样, =M-x org-display-inline-images-async= 就能显示http url中的图片了. 
 
 注意由于读取http url图片的速度可能会很慢,因此这里采用了异步的方式来显示.
+** 如何使用org-agenda查看某一天做了那些事情
+1. 按 =C-c a a= 或 =M-x org-agenda <RET> a= 进入org-agenda界面
+2. 按d进入day view
+3. 按j,在弹出的日历中选择要查看的日期
+4. 按l,开启log-mode(若已经开启log-mode,则无需该步骤)
 * ispell
 ** 如何让ispell跳过某段文本不做拼写检查
 默认情况下,ispell会检查整篇文本中的拼写是否正确. 但通过设置变量`ispell-skip-region-alist'的值,可以指定跳过某几段文本不做拼写检查.
