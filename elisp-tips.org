@@ -12,3 +12,12 @@
     ""
     (replace-regexp ".+" label nil (button-start btn) (button-end btn)))
 #+END_SRC
+* navigate
+** 使用宏`easy-mmode-define-navigation'可以快速生成导航命令
+(easy-mmode-define-navigation BASE RE &optional NAME ENDFUN NARROWFUN &rest BODY)
+
+该宏生成`BASE-next'和`BASE-prev'两个导航命令.
+
+参数RE为正则表达式,决定了导航的位置.
+
+其他参数详细说明,参见该宏的doc-string
