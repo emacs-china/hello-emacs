@@ -4,75 +4,75 @@
 #+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
 
 * Forms-mode
-  * forms-mode�漰�������ļ�:һ�������ļ�,�洢��Ҫչʾ������. һ�������ļ�,���������չʾ����
-* ����/�˳�Forms-Mode
+  * forms-mode涉及到两个文件:一个数据文件,存储了要展示的数据. 一个控制文件,描述了如何展示数据
+* 进入/退出Forms-Mode
   * forms-find-file
-	ʹ��Forms-mode�򿪿����ļ�.(ע���ǿ����ļ������������ļ�)
-	�򿪿����ļ���,������ʾ�����ļ�������,�෴����ʾ������������ļ��е�һ����¼.
-	�ϸ���˵,form-mode�������buffer:"forms buffer"�����򿪿����ļ�����ʾ��¼����;"data buffer"���������ļ���ͨ����˵�ǲ��ɼ���.
+	使用Forms-mode打开控制文件.(注意是控制文件而不是数据文件)
+	打开控制文件后,不会显示控制文件的内容,相反它显示的是相关数据文件中的一条记录.
+	严格来说,form-mode会打开两个buffer:"forms buffer"用来打开控制文件并显示记录内容;"data buffer"保存数据文件但通常来说是不可见的.
   * forms-find-file-other-window
-	����`forms-find-file-other-window`,����ʾ����һ��������
+	类似`forms-find-file-other-window`,但显示在另一个窗口中
   * C-x C-s(forms-save-buffer)
-	���������ļ�
-  * �˳�Forms-mode�ķ�����,ֱ�ӽ�forms buffer��data bufferɱ���ͺ�
+	更新数据文件
+  * 退出Forms-mode的方法是,直接将forms buffer和data buffer杀掉就好
 * Forms Commands
-  Forms-mode��,����<TAB>,���е������C-c��ͷ. Forms-mode����ͨģʽ��ֻ��ģʽ���в�ͬ��key-map,һ���ڿɶ�ģʽ�²��İ���Ҫ������,������C-cǰ׺,Ҳ���ü�ctrl�ַ�,������`n`����`C-c C-n`
+  Forms-mode中,除了<TAB>,所有的命令都以C-c开头. Forms-mode对普通模式和只读模式下有不同的key-map,一般在可读模式下不的按键要简单许多,它不用C-c前缀,也不用加ctrl字符,例如用`n`代替`C-c C-n`
   * C-c C-n
-	��ʾ��һ����¼,���������ֲ���N,���ʾ��ʾ�����N����¼
+	显示下一条记录,若加了数字参数N,则表示显示下面第N条记录
   * C-c C-p
-	��ʾ��һ����¼,���������ֲ���N,���ʾ��ʾ�����N����¼
+	显示上一条记录,若加了数字参数N,则表示显示上面第N条记录
   * C-c C-l
-	����ָ���ļ�¼
+	跳到指定的记录
   * C-c <
-	������һ����¼
+	跳到第一条记录
   * C-c >
-	�������һ����¼,������ͬʱ�����¼��������ļ��еļ�¼����
+	跳到最后一条记录,该命令同时会重新计算数据文件中的记录数量
   * <TAB>
-	������ǰ��¼��һ����,�������ֲ���N��ʾ������N����,����������һ����,����ת�ص�һ����.
+	跳到当前记录下一个域,若有数字参数N表示跳到下N个域,如果到达最后一个域,则跳转回第一个域.
   * C-c C-q
-	�л�read-onlyģʽ
+	切换read-only模式
   * C-c C-o
-	�ڵ�ǰ��¼ǰ����һ���¼�¼. ���������ֲ���,��ʾ�¼�¼���ڵ�ǰ��¼����.
+	在当前记录前插入一条新记录. 若加了数字参数,表示新纪录插在当前记录后面.
   * C-c C-k
-    ɾ����ǰ��¼
+    删除当前记录
   * C-c C-s
-    ����������������ʽ��ǰ���Ҽ�¼
-  * C��c C-r
-    ����������������ʽ�����Ҽ�¼
+    根据输入的正则表达式向前查找记录
+  * C－c C-r
+    根据输入的正则表达式向后查找记录
   * S-<TAB> forms-prev-field
-    ������ǰ��¼��ǰһ����
+    跳到当前记录的前一个域
   * C-x C-s
-    ���������ļ�
+    更新数据文件
   * forms-print
-    ��ӡ��ʽ�����������ʾ
-* �����ļ���ʽ
-  һ�������,forms��Ϊ�����ļ��е�һ�ж�Ӧһ����¼,��¼�ɶ�������,��֮�����ض��ķָ����ָ�.
-  * forms-field-sep����
-    �����ļ�����֮��ķָ�����
-  * forms-read-file-filter���� �� forms-write-file-filter����
-    �������ļ����Ǻܷ��Ϲ淶��ʽ,����ͨ������forms-read-file-filter�������ļ�������ת���ɷ��Ϲ淶�ĸ�ʽ,����д������ʱ,ͨ��forms-write-file-filterת����֮ǰ�ĸ�ʽ.
-  * forms-multi-line����
-    ��ʱ��һ��������ݿ��ܰ����˻��з�,���������ֶ�����,��ʹ�øñ���������ַ�������������еĻ��з�.
-* �����ļ���ʽ
-  �����ļ��ĸ�ʽΪһ��Lisp����,�����Lisp�����ж�����ʹ�õ������ļ��������ļ��ĸ�ʽ������.
-  �ڿ����ļ�����Ҫ�������¼���Lisp����
+    打印格式化后的数据显示
+* 数据文件格式
+  一般情况下,forms认为数据文件中的一行对应一条记录,记录由多个域组成,域之间由特定的分隔符分隔.
+  * forms-field-sep变量
+    数据文件中域之间的分隔符号
+  * forms-read-file-filter变量 和 forms-write-file-filter变量
+    若数据文件不是很符合规范格式,可以通过定义forms-read-file-filter将数据文件的内容转换成符合规范的格式,并在写回数据时,通过forms-write-file-filter转换回之前的格式.
+  * forms-multi-line变量
+    有时候一个域的内容可能包含了换行符,若存在这种多行域,则使用该变量定义的字符来替代多行域中的换行符.
+* 控制文件格式
+  控制文件的格式为一段Lisp程序,在这段Lisp程序中定义了使用的数据文件和数据文件的格式与属性.
+  在控制文件中需要设置以下几个Lisp变量
   * forms-file
-    ����ֵ,�����������ļ��ĵ�ַ
+    必设值,定义了数据文件的地址
     #+BEGIN_SRC elisp
       (setq forms-file "my/data-file")
     #+END_SRC
   * forms-format-list
-    ����ֵ,�ñ��������������ļ��м�¼����ʾ��ʽ.
+    必设值,该变量描述了数据文件中记录的显示方式.
   * forms-number-of-fields
-    ����ֵ,˵����ÿ����¼�ж��ٸ���. ����ֵ���¼�е���������,�򷢳�����. ��¼�ж������ʡ��,�ٵ��򱻸�ֵΪ��.
+    必设值,说明了每个记录有多少个域. 若该值与记录中的域数不读,则发出警告. 记录中多出的域被省略,少的域被赋值为空.
   * forms-field-sep
-    ��ʾ����ķָ���,Ĭ��Ϊ\t
+    标示了域的分隔符,默认为\t
   * forms-read-only
-    ��ѡ��,��nil��ʾ�����ļ�Ϊֻ��.
+    可选项,非nil表示数据文件为只读.
   * forms-multi-line
-    ������Ļ��з��Ը�ֵ����,Ĭ��ֵΪ
+    多行域的换行符以该值代替,默认值为
   * forms-read-file-filter
-    ��ȡ�����ļ�ʱ��ת������. ����
+    读取数据文件时的转换函数. 例如
     #+BEGIN_SRC elisp
        ;; to maintain a gzipped database:     
       
@@ -82,7 +82,7 @@
       (setq forms-read-file-filter 'gzip-read-file-filter)   
     #+END_SRC
   * forms-write-file-filter
-    д�������ļ�ʱ��ת������. ����
+    写入数据文件时的转换函数. 例如
     #+BEGIN_SRC elisp
       (defun gzip-write-file-filter ()
         (make-variable-buffer-local 'require-final-newline)
@@ -92,9 +92,9 @@
       (setq forms-write-file-filter 'gzip-write-file-filter)   
     #+END_SRC
   * forms-modified-record-filter
-    �ú����ڼ�¼���޸ĺ�,��д�������ļ�֮ǰ������.
-    �ú�������һ������:һ��������¼�������ݵ�vector. ������ݴ�vector�ĵ�1��Ԫ�ؿ�ʼ.��vector�ĵ�0��Ԫ��������.
-    �ú�����Ҫ���ش�������vector����. ����
+    该函数在记录被修改后,在写入数据文件之前被调用.
+    该函数接受一个参数:一个包含记录中域内容的vector. 域的内容从vector的第1个元素开始.该vector的第0个元素无意义.
+    该函数需要返回传入的这个vector参数. 例如
     #+BEGIN_SRC elisp
       (defun my-modified-record-filter (record)
         ;; Modify second field.
@@ -105,9 +105,9 @@
       (setq forms-modified-record-filter 'my-modified-record-filter)   
     #+END_SRC
   * forms-new-record-filter
-    �ú����ڵ����¼�¼ʱ������,һ�����������¼�¼�ĳ�ʼֵ.
-    ����`forms-modified-record-filter`�������ĺ���,�ú���Ҳ����һ������vector,���Ǹ�vector�и�Ԫ�ص�ֵΪ���ַ���. �ú���Ҳ��Ҫ���ظ�vector.
-    ����:
+    该函数在调用新纪录时被调用,一般用于设置新纪录的初始值.
+    类似`forms-modified-record-filter`所代表的函数,该函数也接受一个参数vector,但是该vector中各元素的值为空字符串. 该函数也需要返回该vector.
+    例如:
     #+BEGIN_SRC elisp
       (defun my-new-record-filter (fields)
         (aset fields 5 (login-name))
@@ -117,20 +117,20 @@
       (setq forms-new-record-filter 'my-new-record-filter)   
     #+END_SRC
   * forms-insert-after
-    ����ֵΪ��nil���¼�¼����ʱĬ���ڵ�ǰ��¼֮��. ͬʱ�ڴ��ļ�ʱ,��ʼλ��Ϊ���һ����¼�����ǵ�һ����¼
+    若该值为非nil则新纪录创建时默认在当前记录之后. 同时在打开文件时,初始位置为最后一条记录而不是第一条记录
   * forms-check-number-of-fields
-    Ĭ�������,�����ļ��е�ÿ����¼���ᱻ����Ƿ�����ȷ��������,����ֵΪnil,�򲻽��иü��.
-** forms-format-list�ĸ�ʽ˵��
-   forms-format-list�еĸ�Ԫ�ؿ������ַ���,����,list��symbol.
-   * �ַ���
-     һ����Ϊ���˵������,ԭ����ʾ���ַ���
-   * ����
-     ��ʾ��¼�еĵڼ����������. ��1��ʼ����.
+    默认情况下,数据文件中的每条记录都会被检查是否有正确个数的域,若该值为nil,则不进行该检查.
+** forms-format-list的格式说明
+   forms-format-list中的各元素可以是字符串,数字,list或symbol.
+   * 字符串
+     一般作为域的说明部分,原样显示该字符串
+   * 数字
+     表示记录中的第几个域的内容. 从1开始算起.
    * list
-     ��ʾһ�κ���,�ú������뷵��һ���ַ���. �ڸú�������Ҫ�õ���¼�е���ֵ,ʹ�ñ���`forms-fields`����
+     表示一段函数,该函数必须返回一个字符串. 在该函数中若要用到记录中的域值,使用变量`forms-fields`代替
    * symbol
-     �÷���ִ�е�ֵ������һ���ַ���,���ֻ���list,Ȼ���������˵�����н���.
-   ������һ��forms-format-list������
+     该符号执行的值必须是一个字符串,数字或者list,然后按照上面的说明进行解析.
+   下面是一个forms-format-list的例子
    #+BEGIN_SRC elisp
      ;; This demo visits `/etc/passwd'.
      
@@ -156,11 +156,11 @@
             "\n"))
    #+END_SRC
    
-* ����
-  * forms-version����
-    forms-mode�İ汾��Ϣ
+* 其他
+  * forms-version变量
+    forms-mode的版本信息
   * forms-enumerate
-    ����һϵ�еı���ֵΪһϵ�е�����ֵ,��1��ʼ,���������ֵ. ���������ڶ���`forms-format-list`ʱ����Щ��������������.��Щ���������ֿ���˵�������������. ����
+    设置一系列的变量值为一系列的整数值,从1开始,并返回最大值. 这样可以在定义`forms-format-list`时用这些变量来代替数字.这些变量的名字可以说明各个域的意义. 例如
     #+BEGIN_SRC elisp
       ;; This sets `field1' to 1, `field2' to 2, and so on.
       (setq forms-number-of-fields

@@ -1,141 +1,141 @@
-#+TITLE: EmacsÖÐµÄÈÕ³Ì¹ÜÀí
+#+TITLE: Emacsä¸­çš„æ—¥ç¨‹ç®¡ç†
 #+AUTHOR: DarkSun
 #+EMAIL: lujun9972@gmail.com
 #+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
 
 
 * Calendar
-  Í¨¹ýEmacsÌá¹©µÄcalendar+Appointment¿ÉÒÔÊµÏÖ¼òµ¥µÄÈÕ³Ì¹ÜÀí¹¦ÄÜ. ´ËÍâEmacsÆäÊµ»¹Ìá¹©ÁË¹¦ÄÜ¸üÇ¿µÄOrg-mode,µ«¸ÃmodeÌ«¹ý¸´ÔÓ,¼òµ¥µÄÈÕ³Ì¹ÜÀíÎÞÐèÓÃµ½ÕâÃ´¸´ÔÓµÄ¶«Î÷.
-** ¶¨Î»ÈÕÆÚ
-   Ê¹ÓÃM-x calendar¾Í¿ÉÒÔµ÷ÓÃEmacsµÄcalendar¹¦ÄÜ,ÕâÊ±Emacs»á´ò¿ªÒ»¸öÏÔÊ¾ÁËÈý¸öÔÂ(·Ö±ðÊÇÇ°Ò»¸öÔÂ,µ±Ç°ÔÂ,ºóÒ»¸öÔÂ)ÐÅÏ¢µÄÈÕÀú,¹â±ê×Ô¶¯·ÅÔÚ±íÊ¾½ñÌìµÄÄÇ¸öÎ»ÖÃ. EmacsÌá¹©ÁË´óÁ¿µÄÃüÁî¶Ô¹â±êËùÔÚµÄÈÕÆÚ½øÐÐÈÕ³Ì¹ÜÀí.
-   Ä¬ÈÏÇé¿öÏÂcalendar½«ÖÜÈÕ×÷ÎªÒ»ÖÜµÄµÚÒ»Ìì,ÎÒÃÇ¿ÉÒÔÍ¨¹ý¸ü¸Ä±äÁ¿calendar-week-startµÄÖµÀ´ÉèÖÃÒÔÐÇÆÚ¼¸×÷ÎªÒ»ÖÜµÄµÚÒ»Ìì
+  é€šè¿‡Emacsæä¾›çš„calendar+Appointmentå¯ä»¥å®žçŽ°ç®€å•çš„æ—¥ç¨‹ç®¡ç†åŠŸèƒ½. æ­¤å¤–Emacså…¶å®žè¿˜æä¾›äº†åŠŸèƒ½æ›´å¼ºçš„Org-mode,ä½†è¯¥modeå¤ªè¿‡å¤æ‚,ç®€å•çš„æ—¥ç¨‹ç®¡ç†æ— éœ€ç”¨åˆ°è¿™ä¹ˆå¤æ‚çš„ä¸œè¥¿.
+** å®šä½æ—¥æœŸ
+   ä½¿ç”¨M-x calendarå°±å¯ä»¥è°ƒç”¨Emacsçš„calendaråŠŸèƒ½,è¿™æ—¶Emacsä¼šæ‰“å¼€ä¸€ä¸ªæ˜¾ç¤ºäº†ä¸‰ä¸ªæœˆ(åˆ†åˆ«æ˜¯å‰ä¸€ä¸ªæœˆ,å½“å‰æœˆ,åŽä¸€ä¸ªæœˆ)ä¿¡æ¯çš„æ—¥åŽ†,å…‰æ ‡è‡ªåŠ¨æ”¾åœ¨è¡¨ç¤ºä»Šå¤©çš„é‚£ä¸ªä½ç½®. Emacsæä¾›äº†å¤§é‡çš„å‘½ä»¤å¯¹å…‰æ ‡æ‰€åœ¨çš„æ—¥æœŸè¿›è¡Œæ—¥ç¨‹ç®¡ç†.
+   é»˜è®¤æƒ…å†µä¸‹calendarå°†å‘¨æ—¥ä½œä¸ºä¸€å‘¨çš„ç¬¬ä¸€å¤©,æˆ‘ä»¬å¯ä»¥é€šè¿‡æ›´æ”¹å˜é‡calendar-week-startçš„å€¼æ¥è®¾ç½®ä»¥æ˜ŸæœŸå‡ ä½œä¸ºä¸€å‘¨çš„ç¬¬ä¸€å¤©
    #+BEGIN_SRC elisp
-     (setq calendar-week-start 1)            ;ÉèÖÃÐÇÆÚÒ»ÎªÃ¿ÖÜµÄµÚÒ»Ìì
+     (setq calendar-week-start 1)            ;è®¾ç½®æ˜ŸæœŸä¸€ä¸ºæ¯å‘¨çš„ç¬¬ä¸€å¤©
    #+END_SRC
-   Ò»°ãÇé¿öÏÂÎÒÃÇ¿ÉÒÔÖ±½ÓÓÃÉÏÏÂ×óÓÒ·½Ïò¼üÒÆ¶¯¹â±êµ½ÆäËûÈÕÆÚ´¦,Ò²¿ÉÒÔÖ±½ÓÓÃÊó±êµã»÷Òª¶¨Î»µÄÈÕÆÚ. ´ËÍâ,EmacsÒ²Ìá¹©ÁËÆäËûµÄÒÆ¶¯ÃüÁî,ÈçÏÂ±íËùÊ¾:
-   #+CAPTION: ÒÆ¶¯ÃüÁî 
-   | ÃüÁî              | ËµÃ÷             |
+   ä¸€èˆ¬æƒ…å†µä¸‹æˆ‘ä»¬å¯ä»¥ç›´æŽ¥ç”¨ä¸Šä¸‹å·¦å³æ–¹å‘é”®ç§»åŠ¨å…‰æ ‡åˆ°å…¶ä»–æ—¥æœŸå¤„,ä¹Ÿå¯ä»¥ç›´æŽ¥ç”¨é¼ æ ‡ç‚¹å‡»è¦å®šä½çš„æ—¥æœŸ. æ­¤å¤–,Emacsä¹Ÿæä¾›äº†å…¶ä»–çš„ç§»åŠ¨å‘½ä»¤,å¦‚ä¸‹è¡¨æ‰€ç¤º:
+   #+CAPTION: ç§»åŠ¨å‘½ä»¤ 
+   | å‘½ä»¤              | è¯´æ˜Ž             |
    |-------------------+------------------|
-   | C-f »òÕß ×ó·½Ïò¼ü | ºóÒ»ÈÕ           |
-   | C-b »òÕß ÓÒ·½Ïò¼ü | Ç°Ò»ÈÕ           |
-   | C-n »òÕß ÏÂ·½Ïò¼ü | ºóÒ»ÖÜ           |
-   | c-p »òÕß ÉÏ·½Ïò¼ü | Ç°Ò»ÖÜ           |
-   | M-}               | ºóÒ»ÔÂ           |
-   | M-{               | Ç°Ò»ÔÂ           |
-   | C-x ]             | ºóÒ»Äê           |
-   | C-x [             | Ç°Ò»Äê           |
-   | C-a               | ÒÆ¶¯µ½Ò»ÖÜµÄ¿ªÊ¼ |
-   | C-e               | ÒÆ¶¯µ½Ò»ÖÜµÄÄ©Î² |
-   | M-a               | ÒÆ¶¯µ½Ò»ÔÂµÄ¿ªÊ¼ |
-   | M-e               | ÒÆ¶¯µ½Ò»ÔÂµÄÄ©Î² |
-   | M-<               | ÒÆ¶¯µ½Ò»ÄêµÄ¿ªÊ¼ |
-   | M->               | ÒÆ¶¯µ½Ò»ÄêµÄÄ©Î² |
-   ³ýÁËÊ¹ÓÃÉÏËßµÄÒÆ¶¯ÃüÁîÀ´¶¨Î»ÈÕÆÚÍâ,Emacs»¹Ìá¹©ÁË¶à¸öÃüÁîÖ±½Ó¶¨Î»µ½Ö¸¶¨µÄÈÕÆÚ´¦:
-   * Ê¹ÓÃg dÒÆ¶¯µ½Ö¸¶¨µÄÈÕÆÚ
-     ÔÚcalendarÏÂ°´ÏÂg d¼üºó,ÔÚminibufferÌáÊ¾ÎÒÃÇÒÀ´ÎÊäÈëÄê ÔÂ ÈÕ, EmacsÖ±½Ó½«¹â±ê¶¨Î»µ½ÊäÈëµÄÈÕÆÚ´¦.
-   * Ê¹ÓÃg DÒÆ¶¯µ½Ä³ÄêµÄÖ¸¶¨ÌìÊý´¦
-     ÔÚcalendarÏÂ°´ÏÂg D¼üºó,ÔÚminibufferÌáÊ¾ÎÒÃÇÒÀ´ÎÊäÈëÄê ¸ÃÄêµÄµÚ¼¸Ìì, Emacs½«¹â±ê¶¨Î»µ½Ö¸¶¨µÄÈÕÆÚ´¦. ÖµµÃÒ»ÌáµÄÊÇ,ÊäÈëÌìÊýÊ±¿ÉÒÔÊäÈë¸ºÊý,Èç¹ûÊäÈëµÄÊÇ¸ºÊý,Ôò±íÊ¾»¹ÓÐ¶àÉÙÌìµ½Äêµ×.
-   * Ê¹ÓÃ. ÒÆ¶¯µ½µ±Ç°µÄÈÕÆÚ´¦
-     ÔÚcalendarÏÂ°´ÏÂ.¼üºó,¹â±êÖ±½ÓÌøµ½´ú±í½ñÌìµÄÈÕÆÚ´¦.
-   * Ê¹ÓÃg CÒÆ¶¯µ½Ö¸¶¨µÄÅ©ÀúËù±íÊ¾µÄÈÕÆÚ´¦
-     ÔÚcalendarÏÂ°´ÏÂg C¼üºó,EmacsÌáÊ¾ÄãÊäÈëÅ©ÀúµÄÐÅÏ¢,Emacs½«¹â±ê¶¨Î»µ½Ö¸¶¨µÄÈÕÆÚ´¦.
-   #+CAPTION: ¶¨Î»ÃüÁî
-   | ÃüÁî | ËµÃ÷             |
+   | C-f æˆ–è€… å·¦æ–¹å‘é”® | åŽä¸€æ—¥           |
+   | C-b æˆ–è€… å³æ–¹å‘é”® | å‰ä¸€æ—¥           |
+   | C-n æˆ–è€… ä¸‹æ–¹å‘é”® | åŽä¸€å‘¨           |
+   | c-p æˆ–è€… ä¸Šæ–¹å‘é”® | å‰ä¸€å‘¨           |
+   | M-}               | åŽä¸€æœˆ           |
+   | M-{               | å‰ä¸€æœˆ           |
+   | C-x ]             | åŽä¸€å¹´           |
+   | C-x [             | å‰ä¸€å¹´           |
+   | C-a               | ç§»åŠ¨åˆ°ä¸€å‘¨çš„å¼€å§‹ |
+   | C-e               | ç§»åŠ¨åˆ°ä¸€å‘¨çš„æœ«å°¾ |
+   | M-a               | ç§»åŠ¨åˆ°ä¸€æœˆçš„å¼€å§‹ |
+   | M-e               | ç§»åŠ¨åˆ°ä¸€æœˆçš„æœ«å°¾ |
+   | M-<               | ç§»åŠ¨åˆ°ä¸€å¹´çš„å¼€å§‹ |
+   | M->               | ç§»åŠ¨åˆ°ä¸€å¹´çš„æœ«å°¾ |
+   é™¤äº†ä½¿ç”¨ä¸Šè¯‰çš„ç§»åŠ¨å‘½ä»¤æ¥å®šä½æ—¥æœŸå¤–,Emacsè¿˜æä¾›äº†å¤šä¸ªå‘½ä»¤ç›´æŽ¥å®šä½åˆ°æŒ‡å®šçš„æ—¥æœŸå¤„:
+   * ä½¿ç”¨g dç§»åŠ¨åˆ°æŒ‡å®šçš„æ—¥æœŸ
+     åœ¨calendarä¸‹æŒ‰ä¸‹g dé”®åŽ,åœ¨minibufferæç¤ºæˆ‘ä»¬ä¾æ¬¡è¾“å…¥å¹´ æœˆ æ—¥, Emacsç›´æŽ¥å°†å…‰æ ‡å®šä½åˆ°è¾“å…¥çš„æ—¥æœŸå¤„.
+   * ä½¿ç”¨g Dç§»åŠ¨åˆ°æŸå¹´çš„æŒ‡å®šå¤©æ•°å¤„
+     åœ¨calendarä¸‹æŒ‰ä¸‹g Dé”®åŽ,åœ¨minibufferæç¤ºæˆ‘ä»¬ä¾æ¬¡è¾“å…¥å¹´ è¯¥å¹´çš„ç¬¬å‡ å¤©, Emacså°†å…‰æ ‡å®šä½åˆ°æŒ‡å®šçš„æ—¥æœŸå¤„. å€¼å¾—ä¸€æçš„æ˜¯,è¾“å…¥å¤©æ•°æ—¶å¯ä»¥è¾“å…¥è´Ÿæ•°,å¦‚æžœè¾“å…¥çš„æ˜¯è´Ÿæ•°,åˆ™è¡¨ç¤ºè¿˜æœ‰å¤šå°‘å¤©åˆ°å¹´åº•.
+   * ä½¿ç”¨. ç§»åŠ¨åˆ°å½“å‰çš„æ—¥æœŸå¤„
+     åœ¨calendarä¸‹æŒ‰ä¸‹.é”®åŽ,å…‰æ ‡ç›´æŽ¥è·³åˆ°ä»£è¡¨ä»Šå¤©çš„æ—¥æœŸå¤„.
+   * ä½¿ç”¨g Cç§»åŠ¨åˆ°æŒ‡å®šçš„å†œåŽ†æ‰€è¡¨ç¤ºçš„æ—¥æœŸå¤„
+     åœ¨calendarä¸‹æŒ‰ä¸‹g Cé”®åŽ,Emacsæç¤ºä½ è¾“å…¥å†œåŽ†çš„ä¿¡æ¯,Emacså°†å…‰æ ‡å®šä½åˆ°æŒ‡å®šçš„æ—¥æœŸå¤„.
+   #+CAPTION: å®šä½å‘½ä»¤
+   | å‘½ä»¤ | è¯´æ˜Ž             |
    |------+------------------|
-   | g d  | ¸ù¾ÝÈÕÆÚ¶¨Î»     |
-   | g D  | ¸ù¾ÝÌìÊý         |
-   | .    | ÒÆ¶¯µ½µ±Ç°ÈÕÆÚ   |
-   | g C  | ¶¨Î»µ½Ö¸¶¨µÄÒõÀú |
-** Ìí¼Ó´ú°ìÊÂÏî
-   ÔÚCalendarÖÐ¿ÉÒÔÎªÖ¸¶¨µÄÈÕÆÚÌí¼Ó´ú°ìÊÂÏî:
-   * Ê¹ÓÃi dÃüÁîÎªÖ¸¶¨ÈÕÆÚÌí¼Ó´ú°ìÊÂÏî
-     ÔÚcalendarÖÐÊäÈëi dÃüÁîºó,Emacs»á´ò¿ªÒ»¸ö½ÌdiaryµÄÎÄ¼þ,²¢×Ô¶¯ÌîÈë¹â±êËù´¦µÄÈÕÆÚÐÅÏ¢,ÎÒÃÇÖ»ÐèÒª½Ó×ÅÊäÈë´ú°ìÊÂÏîµÄÐÅÏ¢²¢±£´æ¾Í¿ÉÒÔÁË.
-   * Ê¹ÓÃi wÃüÁîÎªÃ¿ÖÜµÄÄ³Ò»ÌìÌí¼Ó´ú°ìÊÂÏî
-     ÎÒÃÇ¿ÉÒÔÊ¹ÓÃi wÃüÁî½¨Á¢Ã¿ÖÜÀýÐÐÈÎÎñ
-   * Ê¹ÓÃi mÃüÁîÎªÃ¿ÔÂµÄÄ³Ò»ÌìÌí¼Ó´ú°ìÊÂÏî
-     ÎÒÃÇ¿ÉÒÔÊ¹ÓÃi mÃüÁî½¨Á¢Ã¿ÔÂÀýÐÐÈÎÎñ
-   * Ê¹ÓÃi yÃüÁîÎªÃ¿ÄêµÄÄ³Ò»ÌìÌí¼Ó´ú±äÊÂÏî
-     ÎÒÃÇ¿ÉÒÔÊ¹ÓÃi yÃüÁî½¨Á¢Ã¿ÄêµÄÀýÐÐÈÎÎñ
-   * Ê¹ÓÃi a½¨Á¢ÖÜÄê¼ÍÄîÈÕ
-     ¸úi yÃüÁîÀàËÆ,µ«calendar»á¼ÇÂ¼ÆðÊ¼Äê·Ý
-   * Ê¹ÓÃi bÃüÁîÎªÒ»¸öÊ±¼ä¶ÎÌí¼Ó´ú°ìÊÂÏî
-     ½«¹â±êºÍmark·ÅÖÃÔÚÒ»¶ÎÊ±¼äµÄÆðÊ¼/½áÎ²´¦,°´ÏÂi b¼ü,Calendar×Ô¶¯²åÈëÊ±¼ä¶ÎµÄÐÅÏ¢,ÎÒÃÇÖ»ÒªÊäÈë´ý°ìÊÂÏîµÄÐÅÏ¢¾ÍÐÐÁË
-   * Ê¹ÓÃi cÃüÁî¶¨ÒåÒ»¸öÑ­»·ÊÂÏî
-     °´ÏÂi cºó,calendarÌáÊ¾ÊäÈëÑ­»·¼ä¸ôµÄÈÕÆÚ,ËäÓÐCalendar×Ô¶¯²åÈë´ú±íÑ­»·µÄÊ±¼äÐÅÏ¢,ÎÒÃÇÖ»ÐèÒªÊäÈë´ú±äÊÂÏîµÄÐÅÏ¢¾ÍÐÐÁË
-   #+CAPTION: Ìí¼Ó´ú°ìÊÂÏî
-   | ÃüÁî | ËµÃ÷                   |
+   | g d  | æ ¹æ®æ—¥æœŸå®šä½     |
+   | g D  | æ ¹æ®å¤©æ•°         |
+   | .    | ç§»åŠ¨åˆ°å½“å‰æ—¥æœŸ   |
+   | g C  | å®šä½åˆ°æŒ‡å®šçš„é˜´åŽ† |
+** æ·»åŠ ä»£åŠžäº‹é¡¹
+   åœ¨Calendarä¸­å¯ä»¥ä¸ºæŒ‡å®šçš„æ—¥æœŸæ·»åŠ ä»£åŠžäº‹é¡¹:
+   * ä½¿ç”¨i då‘½ä»¤ä¸ºæŒ‡å®šæ—¥æœŸæ·»åŠ ä»£åŠžäº‹é¡¹
+     åœ¨calendarä¸­è¾“å…¥i då‘½ä»¤åŽ,Emacsä¼šæ‰“å¼€ä¸€ä¸ªæ•™diaryçš„æ–‡ä»¶,å¹¶è‡ªåŠ¨å¡«å…¥å…‰æ ‡æ‰€å¤„çš„æ—¥æœŸä¿¡æ¯,æˆ‘ä»¬åªéœ€è¦æŽ¥ç€è¾“å…¥ä»£åŠžäº‹é¡¹çš„ä¿¡æ¯å¹¶ä¿å­˜å°±å¯ä»¥äº†.
+   * ä½¿ç”¨i wå‘½ä»¤ä¸ºæ¯å‘¨çš„æŸä¸€å¤©æ·»åŠ ä»£åŠžäº‹é¡¹
+     æˆ‘ä»¬å¯ä»¥ä½¿ç”¨i wå‘½ä»¤å»ºç«‹æ¯å‘¨ä¾‹è¡Œä»»åŠ¡
+   * ä½¿ç”¨i må‘½ä»¤ä¸ºæ¯æœˆçš„æŸä¸€å¤©æ·»åŠ ä»£åŠžäº‹é¡¹
+     æˆ‘ä»¬å¯ä»¥ä½¿ç”¨i må‘½ä»¤å»ºç«‹æ¯æœˆä¾‹è¡Œä»»åŠ¡
+   * ä½¿ç”¨i yå‘½ä»¤ä¸ºæ¯å¹´çš„æŸä¸€å¤©æ·»åŠ ä»£å˜äº‹é¡¹
+     æˆ‘ä»¬å¯ä»¥ä½¿ç”¨i yå‘½ä»¤å»ºç«‹æ¯å¹´çš„ä¾‹è¡Œä»»åŠ¡
+   * ä½¿ç”¨i aå»ºç«‹å‘¨å¹´çºªå¿µæ—¥
+     è·Ÿi yå‘½ä»¤ç±»ä¼¼,ä½†calendarä¼šè®°å½•èµ·å§‹å¹´ä»½
+   * ä½¿ç”¨i bå‘½ä»¤ä¸ºä¸€ä¸ªæ—¶é—´æ®µæ·»åŠ ä»£åŠžäº‹é¡¹
+     å°†å…‰æ ‡å’Œmarkæ”¾ç½®åœ¨ä¸€æ®µæ—¶é—´çš„èµ·å§‹/ç»“å°¾å¤„,æŒ‰ä¸‹i bé”®,Calendarè‡ªåŠ¨æ’å…¥æ—¶é—´æ®µçš„ä¿¡æ¯,æˆ‘ä»¬åªè¦è¾“å…¥å¾…åŠžäº‹é¡¹çš„ä¿¡æ¯å°±è¡Œäº†
+   * ä½¿ç”¨i cå‘½ä»¤å®šä¹‰ä¸€ä¸ªå¾ªçŽ¯äº‹é¡¹
+     æŒ‰ä¸‹i cåŽ,calendaræç¤ºè¾“å…¥å¾ªçŽ¯é—´éš”çš„æ—¥æœŸ,è™½æœ‰Calendarè‡ªåŠ¨æ’å…¥ä»£è¡¨å¾ªçŽ¯çš„æ—¶é—´ä¿¡æ¯,æˆ‘ä»¬åªéœ€è¦è¾“å…¥ä»£å˜äº‹é¡¹çš„ä¿¡æ¯å°±è¡Œäº†
+   #+CAPTION: æ·»åŠ ä»£åŠžäº‹é¡¹
+   | å‘½ä»¤ | è¯´æ˜Ž                   |
    |------+------------------------|
-   | i d  | Ìí¼Ó´ý°ìÊÂÏî           |
-   | i w  | Ìí¼ÓÃ¿ÖÜÀýÐÐÈÎÎñ       |
-   | i m  | Ìí¼ÓÃ¿ÔÂÀýÐÐÈÎÎñ       |
-   | i y  | Ìí¼ÓÃ¿ÄêÀýÐÐÈÎÎñ       |
-   | i a  | Ìí¼ÓÖÜÄê¼ÍÄîÈÕ         |
-   | i b  | ÎªÒ»¶ÎÊ±¼äÌí¼Ó´ý°ìÊÂÏî |
-   | i c  | Ìí¼ÓÑ­»·ÊÂÏî                 |
-** ÈÕÆÚÐÅÏ¢
-   ½«¹â±ê¶¨Î»µ½Ö¸¶¨µÄÈÕÆÚ´¦ºó,Emacs»¹Ìá¹©ÁËÒ»Ð©ÃüÁîÀ´»ñÈ¡¹â±êËù´¦ÈÕÆÚµÄÐÅÏ¢. ³£ÓÃµ½µÄÃüÁîÓÐ:
-   * Ê¹ÓÃp dÃüÁîÏÔÊ¾¹â±êËù´¦ÈÕÆÚÊÇµ±ÄêÖÐµÄµÚ¼¸Ìì
-   * Ê¹ÓÃp CÃüÁîÏÔÊ¾¹â±êËù´¦ÈÕÆÚµÄÅ©ÀúÐÅÏ¢
-   * M-=¼ÆËãÒ»¶ÎÊ±¼äµÄÌìÊý
-     ÔÚÒª¼ÆËãÊ±¼ä¶ÎµÄÆðÊ¼ÌìÊý/½áÊøÌìÊýÓÃÃüÁîC-@¶¨ÒåÎªmark,È»ºó½«¹â±êÒÆ¶¯µ½Ê±¼ä¶ÎµÄ½áÊøÌìÊý/ÆðÊ¼ÌìÊý,Õâ¾Í¶¨ÒåÁËÒ»¸öÊ±¼ä¶ÎÇøÓò,°´ÏÂM-=ºó¾Í»áÔÚminibufferÖÐÏÔÊ¾¸ÃÊ±¼ä¶Î°üº¬µÄÌìÊý. ÆäÖÐ,¸ÃÌìÊý°üº¬ÁËÆðÊ¼ÌìÊýºÍ½áÊøÌìÊýµÄ.
-   * Ê¹ÓÃhÃüÁî²é¿´¹â±êËù´¦ÈÕÆÚµÄ¼ÙÆÚÐÅÏ¢
-     Èç¹û¹â±êËù´¦µÄÈÕÆÚ²¢Ã»ÓÐ¼ÙÆÚ,ÔòEmacsÔÚminibufferÌáÊ¾No Holidays known,·ñÔòÔòÏÔÊ¾¸ÃÈÕÆÚ¶ÔÓ¦½Ú¼ÙÈÕµÄÃû×Ö.
-     EmacsÄÚÖÃÁËÒ»Ð©³£¼ûµÄ½Ú¼ÙÈÕÐÅÏ¢,ÁíÍâ,EmacsÒ²Ìá¹©ÁËÒ»Ð©º¯Êý¹©ÎÒÃÇ×Ô¶¨Òå½Ú¼ÙÈÕ:
+   | i d  | æ·»åŠ å¾…åŠžäº‹é¡¹           |
+   | i w  | æ·»åŠ æ¯å‘¨ä¾‹è¡Œä»»åŠ¡       |
+   | i m  | æ·»åŠ æ¯æœˆä¾‹è¡Œä»»åŠ¡       |
+   | i y  | æ·»åŠ æ¯å¹´ä¾‹è¡Œä»»åŠ¡       |
+   | i a  | æ·»åŠ å‘¨å¹´çºªå¿µæ—¥         |
+   | i b  | ä¸ºä¸€æ®µæ—¶é—´æ·»åŠ å¾…åŠžäº‹é¡¹ |
+   | i c  | æ·»åŠ å¾ªçŽ¯äº‹é¡¹                 |
+** æ—¥æœŸä¿¡æ¯
+   å°†å…‰æ ‡å®šä½åˆ°æŒ‡å®šçš„æ—¥æœŸå¤„åŽ,Emacsè¿˜æä¾›äº†ä¸€äº›å‘½ä»¤æ¥èŽ·å–å…‰æ ‡æ‰€å¤„æ—¥æœŸçš„ä¿¡æ¯. å¸¸ç”¨åˆ°çš„å‘½ä»¤æœ‰:
+   * ä½¿ç”¨p då‘½ä»¤æ˜¾ç¤ºå…‰æ ‡æ‰€å¤„æ—¥æœŸæ˜¯å½“å¹´ä¸­çš„ç¬¬å‡ å¤©
+   * ä½¿ç”¨p Cå‘½ä»¤æ˜¾ç¤ºå…‰æ ‡æ‰€å¤„æ—¥æœŸçš„å†œåŽ†ä¿¡æ¯
+   * M-=è®¡ç®—ä¸€æ®µæ—¶é—´çš„å¤©æ•°
+     åœ¨è¦è®¡ç®—æ—¶é—´æ®µçš„èµ·å§‹å¤©æ•°/ç»“æŸå¤©æ•°ç”¨å‘½ä»¤C-@å®šä¹‰ä¸ºmark,ç„¶åŽå°†å…‰æ ‡ç§»åŠ¨åˆ°æ—¶é—´æ®µçš„ç»“æŸå¤©æ•°/èµ·å§‹å¤©æ•°,è¿™å°±å®šä¹‰äº†ä¸€ä¸ªæ—¶é—´æ®µåŒºåŸŸ,æŒ‰ä¸‹M-=åŽå°±ä¼šåœ¨minibufferä¸­æ˜¾ç¤ºè¯¥æ—¶é—´æ®µåŒ…å«çš„å¤©æ•°. å…¶ä¸­,è¯¥å¤©æ•°åŒ…å«äº†èµ·å§‹å¤©æ•°å’Œç»“æŸå¤©æ•°çš„.
+   * ä½¿ç”¨hå‘½ä»¤æŸ¥çœ‹å…‰æ ‡æ‰€å¤„æ—¥æœŸçš„å‡æœŸä¿¡æ¯
+     å¦‚æžœå…‰æ ‡æ‰€å¤„çš„æ—¥æœŸå¹¶æ²¡æœ‰å‡æœŸ,åˆ™Emacsåœ¨minibufferæç¤ºNo Holidays known,å¦åˆ™åˆ™æ˜¾ç¤ºè¯¥æ—¥æœŸå¯¹åº”èŠ‚å‡æ—¥çš„åå­—.
+     Emacså†…ç½®äº†ä¸€äº›å¸¸è§çš„èŠ‚å‡æ—¥ä¿¡æ¯,å¦å¤–,Emacsä¹Ÿæä¾›äº†ä¸€äº›å‡½æ•°ä¾›æˆ‘ä»¬è‡ªå®šä¹‰èŠ‚å‡æ—¥:
      #+BEGIN_SRC elisp
-       (holiday-fixed m d ½ÚÈÕÃû) ;¶¨ÒåmÔÂµÄµÚdÈÕÎªxx½Ú¼ÙÈÕ
-       (holiday-float m w n ½ÚÈÕÃû) ;¶¨ÒåmÔÂµÄµÚw¸öÐÇÆÚµÄµÚnÌìÎªxx½Ú¼ÙÈÕ,Ä¬ÈÏÖÜÈÕÎªµÚ0ÈÕ
+       (holiday-fixed m d èŠ‚æ—¥å) ;å®šä¹‰mæœˆçš„ç¬¬dæ—¥ä¸ºxxèŠ‚å‡æ—¥
+       (holiday-float m w n èŠ‚æ—¥å) ;å®šä¹‰mæœˆçš„ç¬¬wä¸ªæ˜ŸæœŸçš„ç¬¬nå¤©ä¸ºxxèŠ‚å‡æ—¥,é»˜è®¤å‘¨æ—¥ä¸ºç¬¬0æ—¥
      #+END_SRC
-   * Ê¹ÓÃaÃüÁî²é¿´ËùÓÐÈý¸öÔÂµÄ¼ÙÆÚÐÅÏ¢
-     °´ÏÂa¼üºó,Emacs»áÔÚÁíÒ»¸ö´°¿ÚÏÔÊ¾calendarÖÐÈý¸öÔÂÆÚ¼äÄÚµÄËùÓÐ½Ú¼ÙÈÕÐÅÏ¢.
-   * Ê¹ÓÃxÃüÁîÔÚcalendarÖÐ±êÊ¾³öËùÓÐÎª½Ú¼ÙÈÕµÄÈÕÆÚÀ´
-     ÈôÎÒÃÇÏëÈÃcalendar×Ô¶¯±êÊ¾³ö½Ú¼ÙÈÕµÄÈÕÆÚÀ´,Ôò¸ü¸Äcalendar-mark-holidays-flagµÄÖµÎª·Çnil¼´¿É
+   * ä½¿ç”¨aå‘½ä»¤æŸ¥çœ‹æ‰€æœ‰ä¸‰ä¸ªæœˆçš„å‡æœŸä¿¡æ¯
+     æŒ‰ä¸‹aé”®åŽ,Emacsä¼šåœ¨å¦ä¸€ä¸ªçª—å£æ˜¾ç¤ºcalendarä¸­ä¸‰ä¸ªæœˆæœŸé—´å†…çš„æ‰€æœ‰èŠ‚å‡æ—¥ä¿¡æ¯.
+   * ä½¿ç”¨xå‘½ä»¤åœ¨calendarä¸­æ ‡ç¤ºå‡ºæ‰€æœ‰ä¸ºèŠ‚å‡æ—¥çš„æ—¥æœŸæ¥
+     è‹¥æˆ‘ä»¬æƒ³è®©calendarè‡ªåŠ¨æ ‡ç¤ºå‡ºèŠ‚å‡æ—¥çš„æ—¥æœŸæ¥,åˆ™æ›´æ”¹calendar-mark-holidays-flagçš„å€¼ä¸ºéžnilå³å¯
      #+BEGIN_SRC elisp
-       (setq calendar-mark-holidays-flag t)    ;ÈÃcalendar×Ô¶¯±ê¼Ç³ö½Ú¼ÙÈÕµÄÈÕÆÚ
+       (setq calendar-mark-holidays-flag t)    ;è®©calendarè‡ªåŠ¨æ ‡è®°å‡ºèŠ‚å‡æ—¥çš„æ—¥æœŸ
      #+END_SRC
-   * Ê¹ÓÃdÃüÁîÏÔÊ¾¹â±êµ±Ç°ÈÕÆÚµÄ´ú°ìÊÂÏî
-     ¿ÉÒÔÔÚdÃüÁîÇ°¼ÓÉÏÒ»¸öÊý×Ön,±íÊ¾ÏÔÊ¾nÌìÄÚµÄËùÓÐ´ú°ìÊÂÏî
-   * Ê¹ÓÃmÃüÁîÔÚcalendarÖÐ±ê¼Ç³öËùÓÐ¼ÇÓÐ´ý°ìÊÂÏîµÄÈÕÆÚ
-     ¸ÃÃüÁî¸úxÀàËÆ,Ö»ÊÇËü±ê¼Ç³öµÄÊÇ´øÓÐ´ý°ìÊÂÏîµÄÈÕÆÚ. Í¬ÑùµÄ,ÄãÒ²¿ÉÒÔÍ¨¹ý¸ü¸Ä±äÁ¿calendar-mark-diary-entries-flagµÄÖµÎª·ÇnilÀ´ÈÃcalendar×Ô¶¯±ê¼Ç³ö¼ÇÓÐ´ý°ìÊÂÏîµÄÈÕÆÚ.
+   * ä½¿ç”¨då‘½ä»¤æ˜¾ç¤ºå…‰æ ‡å½“å‰æ—¥æœŸçš„ä»£åŠžäº‹é¡¹
+     å¯ä»¥åœ¨då‘½ä»¤å‰åŠ ä¸Šä¸€ä¸ªæ•°å­—n,è¡¨ç¤ºæ˜¾ç¤ºnå¤©å†…çš„æ‰€æœ‰ä»£åŠžäº‹é¡¹
+   * ä½¿ç”¨må‘½ä»¤åœ¨calendarä¸­æ ‡è®°å‡ºæ‰€æœ‰è®°æœ‰å¾…åŠžäº‹é¡¹çš„æ—¥æœŸ
+     è¯¥å‘½ä»¤è·Ÿxç±»ä¼¼,åªæ˜¯å®ƒæ ‡è®°å‡ºçš„æ˜¯å¸¦æœ‰å¾…åŠžäº‹é¡¹çš„æ—¥æœŸ. åŒæ ·çš„,ä½ ä¹Ÿå¯ä»¥é€šè¿‡æ›´æ”¹å˜é‡calendar-mark-diary-entries-flagçš„å€¼ä¸ºéžnilæ¥è®©calendarè‡ªåŠ¨æ ‡è®°å‡ºè®°æœ‰å¾…åŠžäº‹é¡¹çš„æ—¥æœŸ.
      #+BEGIN_SRC elisp
-       (setq calendar-mark-diary-entries-flag t)    ;ÈÃcalendar×Ô¶¯±ê¼Ç³ö¼ÇÓÐ´ý°ìÊÂÏîµÄÈÕÆÚ
+       (setq calendar-mark-diary-entries-flag t)    ;è®©calendarè‡ªåŠ¨æ ‡è®°å‡ºè®°æœ‰å¾…åŠžäº‹é¡¹çš„æ—¥æœŸ
      #+END_SRC
-     ÖµµÃÒ»ÌáµÄÊ±,Èç¹ûÄã½«¼ÇÂ¼Ä³Ïî´ú°ìÊÂÏîµ«È´²»Ïë±»±ê¼Ç³öÀ´,Ö»ÐèÒªÔÚÖ´ÐÐ²åÈë´ý°ìÊÂÏîµÄÃüÁîÇ°Ö´ÐÐC-u¾ÍÐÐÁË(¾ÍÏñC-u i dÕâÑù).
-   * Ê¹ÓÃuÃüÁîÈ¥³ýcalendarÖÐµÄ±ê¼Ç
-   | ÃüÁî | ËµÃ÷                               |
+     å€¼å¾—ä¸€æçš„æ—¶,å¦‚æžœä½ å°†è®°å½•æŸé¡¹ä»£åŠžäº‹é¡¹ä½†å´ä¸æƒ³è¢«æ ‡è®°å‡ºæ¥,åªéœ€è¦åœ¨æ‰§è¡Œæ’å…¥å¾…åŠžäº‹é¡¹çš„å‘½ä»¤å‰æ‰§è¡ŒC-uå°±è¡Œäº†(å°±åƒC-u i dè¿™æ ·).
+   * ä½¿ç”¨uå‘½ä»¤åŽ»é™¤calendarä¸­çš„æ ‡è®°
+   | å‘½ä»¤ | è¯´æ˜Ž                               |
    |------+------------------------------------|
-   | p d  | ÏÔÊ¾µ±Ç°ÈÕÆÚÊÇµ±ÄêµÄµÚ¼¸Ìì         |
-   | p C  | ÏÔÊ¾µ±Ç°ÈÕÆÚµÄÅ©ÀúÐÅÏ¢             |
-   | M-=  | ¼ÆËãÒ»¶ÎÊ±¼äµÄÌìÊý                 |
-   | h    | ²é¿´µ±Ç°ÈÕÆÚµÄ¼ÙÆÚÐÅÏ¢             |
-   | a    | ²é¿´Èý¸öÔÂÄÚµÄËùÓÐ½Ú¼ÙÈÕÐÅÏ¢       |
-   | x    | ±ê¼Ç³öcalendarÖÐËùÓÐÎª½Ú¼ÙÈÕµÄÈÕÆÚ |
-   | d    | ²é¿´Ö¸¶¨ÈÕÆÚµÄ´ý°ìÊÂÏî             |
-   | m    | ±ê¼Ç³öcalendarÖÐËùÓÐ¼ÇÓÐ´ý°ìÊÂÏîµÄÈÕÆÚ |
-   | u    | Çå³ýcalendarÖÐµÄ±ê¼Ç               |
+   | p d  | æ˜¾ç¤ºå½“å‰æ—¥æœŸæ˜¯å½“å¹´çš„ç¬¬å‡ å¤©         |
+   | p C  | æ˜¾ç¤ºå½“å‰æ—¥æœŸçš„å†œåŽ†ä¿¡æ¯             |
+   | M-=  | è®¡ç®—ä¸€æ®µæ—¶é—´çš„å¤©æ•°                 |
+   | h    | æŸ¥çœ‹å½“å‰æ—¥æœŸçš„å‡æœŸä¿¡æ¯             |
+   | a    | æŸ¥çœ‹ä¸‰ä¸ªæœˆå†…çš„æ‰€æœ‰èŠ‚å‡æ—¥ä¿¡æ¯       |
+   | x    | æ ‡è®°å‡ºcalendarä¸­æ‰€æœ‰ä¸ºèŠ‚å‡æ—¥çš„æ—¥æœŸ |
+   | d    | æŸ¥çœ‹æŒ‡å®šæ—¥æœŸçš„å¾…åŠžäº‹é¡¹             |
+   | m    | æ ‡è®°å‡ºcalendarä¸­æ‰€æœ‰è®°æœ‰å¾…åŠžäº‹é¡¹çš„æ—¥æœŸ |
+   | u    | æ¸…é™¤calendarä¸­çš„æ ‡è®°               |
 
 
-** µ¼³öÎªHTML
-   EmacsÌá¹©ÁËÁ½¸öÃüÁîÀ´½«ÈÕÀúÐÅÏ¢,½Ú¼ÙÈÕÐÅÏ¢ºÍ´ý°ìÊÂÏîÐÅÏ¢Ò»Æðµ¼³ö³ÉHTMLÎÄ¼þ¹©ÎÒÃÇ²é¿´,ÕâÁ½¸öÃüÁîÎª:
-   | ÃüÁî | ËµÃ÷                   |
+** å¯¼å‡ºä¸ºHTML
+   Emacsæä¾›äº†ä¸¤ä¸ªå‘½ä»¤æ¥å°†æ—¥åŽ†ä¿¡æ¯,èŠ‚å‡æ—¥ä¿¡æ¯å’Œå¾…åŠžäº‹é¡¹ä¿¡æ¯ä¸€èµ·å¯¼å‡ºæˆHTMLæ–‡ä»¶ä¾›æˆ‘ä»¬æŸ¥çœ‹,è¿™ä¸¤ä¸ªå‘½ä»¤ä¸º:
+   | å‘½ä»¤ | è¯´æ˜Ž                   |
    |------+------------------------|
-   | H m  | µ¼³öµ¥ÔÂµÄÈÕ³Ì°²ÅÅÐÅÏ¢ |
-   | H y  | µ¼³öµ±ÄêµÄÃ¿¸öÔÂµÄÈÕ³Ì°²ÅÅÐÅÏ¢ |
+   | H m  | å¯¼å‡ºå•æœˆçš„æ—¥ç¨‹å®‰æŽ’ä¿¡æ¯ |
+   | H y  | å¯¼å‡ºå½“å¹´çš„æ¯ä¸ªæœˆçš„æ—¥ç¨‹å®‰æŽ’ä¿¡æ¯ |
    |      |                                |
-* Ô¼»áÌáÐÑ¹¦ÄÜ
-  * ÓÃM-x appt-activate¿ªÆôÔ¼»áÌáÐÑ¹¦ÄÜ
-    ÒªÊ¹ÓÃÔ¼»áÌáÐÑ¹¦ÄÜ,ÏÈÐèÒª¿ªÆôappointmentÍ¨Öª¹¦ÄÜ,ÃüÁîÊÇM-x appt-activate
-  * ËæºóÊ¹ÓÃM-x appt-addÃüÁîÀ´Ìí¼ÓÒ»¸öÔ¼»áÌáÐÑ.
-    Ö´ÐÐapp-addÃüÁîºó,ÔÚEmacsÌáÐÑÄãÒÀ´ÎÊäÈëÔ¼»á¿ªÊ¼µÄÊ±¼ä,ÌáÐÑµÄÏûÏ¢,ºÍÌáÇ°¶àÉÙ·ÖÖÓ¿ªÊ¼ÌáÐÑ. ËäÓÐÔÚÀëÔ¼»á»¹ÓÐÖ¸¶¨·ÖÖÓµÄÊ±ºò,Emacs»áÔÚµ×²¿µ¯³öÒ»¸ö´°¿Ú,´°¿ÚµÄÄÚÈÝÏÔÊ¾ÁËÖ¸¶¨µÄÌáÐÑÏûÏ¢.
-  * Ê¹ÓÃM-x appt-deleteÀ´É¾³ýÒ»¸öÔ¼»áÌáÐÑ
-    Ö´ÐÐappt-deleteºó,EmacsÒÀ´ÎÏÔÊ¾ËùÓÐÌí¼ÓµÄÔ¼»áÌáÐÑ,²¢Ñ¯ÎÊÊÇ·ñÉ¾³ý,°´y±íÊ¾É¾³ý,°´n±íÊ¾±£Áô
-  * ÔÚmode-lineÉÏÏÔÊ¾Ô¼»áÌáÐÑµÄµ¹¼ÆÊ±
-    Í¨¹ýÉèÖÃ±äÁ¿appt-display-mode-lineµÄÖµÎª·Çnil,Emacs»áÔÚmode-lineÉÏÏÔÊ¾»¹ÓÐ¶àÉÙ·ÖÖÓµ½ÏÂÒ»¸öÔ¼»áµÄµ¹¼ÆÊ±.
+* çº¦ä¼šæé†’åŠŸèƒ½
+  * ç”¨M-x appt-activateå¼€å¯çº¦ä¼šæé†’åŠŸèƒ½
+    è¦ä½¿ç”¨çº¦ä¼šæé†’åŠŸèƒ½,å…ˆéœ€è¦å¼€å¯appointmenté€šçŸ¥åŠŸèƒ½,å‘½ä»¤æ˜¯M-x appt-activate
+  * éšåŽä½¿ç”¨M-x appt-addå‘½ä»¤æ¥æ·»åŠ ä¸€ä¸ªçº¦ä¼šæé†’.
+    æ‰§è¡Œapp-addå‘½ä»¤åŽ,åœ¨Emacsæé†’ä½ ä¾æ¬¡è¾“å…¥çº¦ä¼šå¼€å§‹çš„æ—¶é—´,æé†’çš„æ¶ˆæ¯,å’Œæå‰å¤šå°‘åˆ†é’Ÿå¼€å§‹æé†’. è™½æœ‰åœ¨ç¦»çº¦ä¼šè¿˜æœ‰æŒ‡å®šåˆ†é’Ÿçš„æ—¶å€™,Emacsä¼šåœ¨åº•éƒ¨å¼¹å‡ºä¸€ä¸ªçª—å£,çª—å£çš„å†…å®¹æ˜¾ç¤ºäº†æŒ‡å®šçš„æé†’æ¶ˆæ¯.
+  * ä½¿ç”¨M-x appt-deleteæ¥åˆ é™¤ä¸€ä¸ªçº¦ä¼šæé†’
+    æ‰§è¡Œappt-deleteåŽ,Emacsä¾æ¬¡æ˜¾ç¤ºæ‰€æœ‰æ·»åŠ çš„çº¦ä¼šæé†’,å¹¶è¯¢é—®æ˜¯å¦åˆ é™¤,æŒ‰yè¡¨ç¤ºåˆ é™¤,æŒ‰nè¡¨ç¤ºä¿ç•™
+  * åœ¨mode-lineä¸Šæ˜¾ç¤ºçº¦ä¼šæé†’çš„å€’è®¡æ—¶
+    é€šè¿‡è®¾ç½®å˜é‡appt-display-mode-lineçš„å€¼ä¸ºéžnil,Emacsä¼šåœ¨mode-lineä¸Šæ˜¾ç¤ºè¿˜æœ‰å¤šå°‘åˆ†é’Ÿåˆ°ä¸‹ä¸€ä¸ªçº¦ä¼šçš„å€’è®¡æ—¶.
     #+BEGIN_SRC elisp
-      (setq appt-display-mode-line t)         ;ÔÚmode-lineÉÏÏÔÊ¾»¹ÓÐ¶àÉÙ·ÖÖÓµ½Ô¼»áµÄµ¹¼ÆÊ±
+      (setq appt-display-mode-line t)         ;åœ¨mode-lineä¸Šæ˜¾ç¤ºè¿˜æœ‰å¤šå°‘åˆ†é’Ÿåˆ°çº¦ä¼šçš„å€’è®¡æ—¶
     #+END_SRC
-    | ÃüÁî              | ËµÃ÷                    |
+    | å‘½ä»¤              | è¯´æ˜Ž                    |
     |-------------------+-------------------------|
-    | M-x appt-activate | ¿ªÆôappointmentÌáÐÑ¹¦ÄÜ |
-    | M-x appt-add      | Ìí¼ÓÒ»¸öÔ¼»áÌáÐÑ        |
-    | M-x appt-delete   | É¾³ýÔ¼»áÌáÐÑ            |
+    | M-x appt-activate | å¼€å¯appointmentæé†’åŠŸèƒ½ |
+    | M-x appt-add      | æ·»åŠ ä¸€ä¸ªçº¦ä¼šæé†’        |
+    | M-x appt-delete   | åˆ é™¤çº¦ä¼šæé†’            |
     |                   |                         |

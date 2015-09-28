@@ -3,8 +3,8 @@
 #+EMAIL: lujun9972@gmail.com
 #+OPTIONS: H3 num:nil toc:nil \n:nil ::t |:t ^:nil -:nil f:t *:t <:t
 
-* ¼ò½é
-  newstickerÊÇÒ»¸öRSSÔÄ¶ÁÆ÷,ËüÖ§³ÖÒÔÏÂ¼¸ÖÖ¸ñÊ½
+* ç®€ä»‹
+  newstickeræ˜¯ä¸€ä¸ªRSSé˜…è¯»å™¨,å®ƒæ”¯æŒä»¥ä¸‹å‡ ç§æ ¼å¼
   * RSS 0.91
   * RSS 0.92
   * RSS 1.0
@@ -12,41 +12,41 @@
   * Atom 0.3
   * Atom 1.0
   
-  newsticker-modeÖ§³Öimenu,ÕâÊ¹µÃÄã¿ÉÒÔÊ¹ÓÃ²Ëµ¥À´¶¨Î». ¸Ã¹¦ÄÜ¿ÉÒÔÊ¹ÓÃÒÔÏÂÅäÖÃÐÅÏ¢ÊµÏÖ
+  newsticker-modeæ”¯æŒimenu,è¿™ä½¿å¾—ä½ å¯ä»¥ä½¿ç”¨èœå•æ¥å®šä½. è¯¥åŠŸèƒ½å¯ä»¥ä½¿ç”¨ä»¥ä¸‹é…ç½®ä¿¡æ¯å®žçŽ°
   #+begin_src elisp
     (add-hook 'newsticker-mode-hook 'imenu-add-menubar-index) 
   #+end_src
 
-* Ê¹ÓÃ
+* ä½¿ç”¨
   * newsticker-show-news
-    ÏÔÊ¾³öËùÓÐ¿ÉÓÃµÄheadline. ÔÚheadlineÉÏ°´Êó±êÖÐ¼ä»ò»Ø³µ¾Í»áµ÷ÓÃ`browse-url`À´´ò¿ªÁ´½Ó.
+    æ˜¾ç¤ºå‡ºæ‰€æœ‰å¯ç”¨çš„headline. åœ¨headlineä¸ŠæŒ‰é¼ æ ‡ä¸­é—´æˆ–å›žè½¦å°±ä¼šè°ƒç”¨`browse-url`æ¥æ‰“å¼€é“¾æŽ¥.
   * newsticker-start-ticker
-	Ê¹µÃheadlineÔÚecho area¹ö¶¯
+	ä½¿å¾—headlineåœ¨echo areaæ»šåŠ¨
   * newsticker-stopticker
-	headlineÍ£Ö¹ÔÚecho areaÉÏ¹ö¶¯
+	headlineåœæ­¢åœ¨echo areaä¸Šæ»šåŠ¨
   * newsticker-start
-	¿ªÊ¼ÖÜÆÚÐÔµØÏÂÔØheadline
+	å¼€å§‹å‘¨æœŸæ€§åœ°ä¸‹è½½headline
   * newsticker-stop
-	Í£Ö¹ÖÜÆÚÐÔµØÏÂÔØheadline,Í¬Ê±Ò²»áµ÷ÓÃnewsticker-stop-ticker
-* ÅäÖÃ
+	åœæ­¢å‘¨æœŸæ€§åœ°ä¸‹è½½headline,åŒæ—¶ä¹Ÿä¼šè°ƒç”¨newsticker-stop-ticker
+* é…ç½®
   * newsticker-url-list
-	¶¨ÒåÁËfeedµÄµØÖ·ÁÐ±í,ÔªËØ¸ñÊ½Îª(LABEL URL &START-TIME INTERVAL WGET-ARGUMENTS)
-	ÀýÈç
+	å®šä¹‰äº†feedçš„åœ°å€åˆ—è¡¨,å…ƒç´ æ ¼å¼ä¸º(LABEL URL &START-TIME INTERVAL WGET-ARGUMENTS)
+	ä¾‹å¦‚
 	#+begin_src elisp
       (add-to-list 'newsticker-url-list '(("MantistBt" "http://10.8.6.167/mantisbt/issues_rss.php?username=lujw&key=a88ade4f7cc4ced3706d36b3465e4005&project_id=1" nil nil nil)))
 	#+end_src
   * newsticker-retrieval-method
-	¶¨ÒåÁË´Ófeed»ñÈ¡headlineµÄ·½Ê½,¼È¿ÉÒÔÊ¹ÓÃEmacsÄÚ½¨µÄÏÂÔØ¹¦ÄÜ(ÉèÖÃÎª'intern)Ò²¿ÉÒÔÊ¹ÓÃÍâ²¿¹¤¾ß(ÉèÖÃÎª'extern)ÀýÈçwget(ÓÉ±äÁ¿`newsticker-wget-name`À´¾ö¶¨)À´ÊµÏÖ
+	å®šä¹‰äº†ä»ŽfeedèŽ·å–headlineçš„æ–¹å¼,æ—¢å¯ä»¥ä½¿ç”¨Emacså†…å»ºçš„ä¸‹è½½åŠŸèƒ½(è®¾ç½®ä¸º'intern)ä¹Ÿå¯ä»¥ä½¿ç”¨å¤–éƒ¨å·¥å…·(è®¾ç½®ä¸º'extern)ä¾‹å¦‚wget(ç”±å˜é‡`newsticker-wget-name`æ¥å†³å®š)æ¥å®žçŽ°
   * newsticker-retrieval-interval
-	¶¨ÒåÁË»ñÈ¡headlineµÄÊ±¼ä¼ä¸ô,ÒÔÃëÎªµ¥Î»
+	å®šä¹‰äº†èŽ·å–headlineçš„æ—¶é—´é—´éš”,ä»¥ç§’ä¸ºå•ä½
   * newsticker-keep-obsolete-items
-	µ±Î´¶ÁµÄheadline´ÓfeedÖÐÉ¾³ýÊ±,ÊÇ·ñ»¹±£ÁôÔÚNewsticker»º´æÖÐ
+	å½“æœªè¯»çš„headlineä»Žfeedä¸­åˆ é™¤æ—¶,æ˜¯å¦è¿˜ä¿ç•™åœ¨Newstickerç¼“å­˜ä¸­
   * newsticker-auto-mark-filter-list
-	×Ô¶¯±ê¼ÇheadlineÎªimmortalµÄ»òÕßÊÇoldµÄ
+	è‡ªåŠ¨æ ‡è®°headlineä¸ºimmortalçš„æˆ–è€…æ˜¯oldçš„
   * newsticker-new-item-functions
-	»ñÈ¡ÐÂheadlineÊ±×Ô¶¯µ÷ÓÃµÄº¯ÊýÁÐ±í,¿ÉÓÃÍ¨¹ýº¯Êý`newsticker-download-images`ºÍ`newsticker-download-enclosures`×Ô¶¯ÏÂÔØÍ¼Æ¬»òÏà¹Ø¸½¼þ
-  * newsticker-ticker-interval ºÍ newsticker-scroll-smoothly
-	¾ö¶¨ÁËheadlineÔÚecho areaÏÔÊ¾Ê±µÄÊ±¼ä¼ä¸ôºÍÇÐ»»·½Ê½
+	èŽ·å–æ–°headlineæ—¶è‡ªåŠ¨è°ƒç”¨çš„å‡½æ•°åˆ—è¡¨,å¯ç”¨é€šè¿‡å‡½æ•°`newsticker-download-images`å’Œ`newsticker-download-enclosures`è‡ªåŠ¨ä¸‹è½½å›¾ç‰‡æˆ–ç›¸å…³é™„ä»¶
+  * newsticker-ticker-interval å’Œ newsticker-scroll-smoothly
+	å†³å®šäº†headlineåœ¨echo areaæ˜¾ç¤ºæ—¶çš„æ—¶é—´é—´éš”å’Œåˆ‡æ¢æ–¹å¼
   * newsticker-frontend
-    newstickerÌá¹©ÁËtreeviewºÍplainviewÁ½ÖÖÏÔÊ¾½çÃæ. ¸Ä±äÁ¿¾ö¶¨ÁËÊ¹ÓÃÄÄÖÖÏÔÊ¾½çÃæ. ¿ÉÓÃÎª`newsticker-plainview`»ò`newsticker-treeview`
+    newstickeræä¾›äº†treeviewå’Œplainviewä¸¤ç§æ˜¾ç¤ºç•Œé¢. æ”¹å˜é‡å†³å®šäº†ä½¿ç”¨å“ªç§æ˜¾ç¤ºç•Œé¢. å¯ç”¨ä¸º`newsticker-plainview`æˆ–`newsticker-treeview`
 	
