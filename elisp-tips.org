@@ -21,3 +21,11 @@
 参数RE为正则表达式,决定了导航的位置.
 
 其他参数详细说明,参见该宏的doc-string
+* directory-variables
+** 如何将directory-local variables应用到non-file buffer中
+使用函数`hack-dir-local-variables-non-file-buffer'可以将`default-directory'目录及其父目录的directory-local variable应用到当前的non file buffer中.
+* cl
+** 使用cl-check-type可以方便地对参数类型作检查
+(cl-check-type FORM TYPE &optional STRING)
+
+校验FORM的值是否为TYPE类型,若不是则抛出error,以STRING为error的描述.
