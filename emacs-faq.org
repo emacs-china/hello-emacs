@@ -1,4 +1,4 @@
-#+TITLE: emacs-tips
+#+TITLE: emacs-faq
 #+AUTHOR: DarkSun
 #+CATEGORY: emacs
 #+DATE: [2015-08-04 周二 14:28]
