@@ -254,4 +254,11 @@ Emacs若在文件的第一行找到#!声明,则认为该文件为script文件. �
 #+BEGIN_SRC elisp
 (add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p)
 #+END_SRC
+** 如何关闭emacs中对按键的提示呢? 
+比如使用M-x helm-occur. 会提示you can run command `helm-occur' with XXXX
+
+执行如下代码,可以取消这种提示.
+ #+BEGIN_SRC emacs-lisp
+(setq suggest-key-bindings nil)
+#+END_SRC
 
