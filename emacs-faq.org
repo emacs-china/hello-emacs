@@ -249,4 +249,9 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
  #+END_SRC
 ** 如何在空格和tab之间相互转换
 使用tabify和untabify命令可用使文件的空格和tab相互转换,但是要注意的是,tabify和untabify在转换时 *也会转换字符串中的空格和tab*,这在编程时需要注意
-** 
+** 如何让emacs自动給script加上可执行权限
+Emacs若在文件的第一行找到#!声明,则认为该文件为script文件. 通过下面设置可用让Emacs自动給script文件加上可执行文件
+#+BEGIN_SRC elisp
+(add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p)
+#+END_SRC
+
