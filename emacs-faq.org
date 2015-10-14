@@ -220,3 +220,25 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
 #+END_EXAMPLE
 
 当然,你的当前用户需要在sudoer组内.
+** emacs是如何决定文件的major mode的?
+打开一个文件时,Emacs依据如下顺序来决定应该进入的Major Mode
+
+1. 查看buffer local的mode变量:
+         
+   第一行包含类似_*_ mode: xyz_*_,则emacs自动进入xyz-mode
+         
+2. 查看第一行的#!标记后的解释器,根据变量interpreter-mode-alist寻找匹配mode
+         
+3. 根据第一行的内容,在变量magic-mode-alist中寻找匹配的mode
+         
+   #+BEGIN_SRC elisp
+      (add-to-list 'magic-mode-alist '("<!DOCTYPE html .+DTD XHTML .+>" . nxml-mode) )
+   #+END_SRC
+         
+4. 根据文件名后缀,在量auto-mode-alist中寻找匹配的mode
+         
+   #+BEGIN_SRC elisp
+      ;; setup files ending in “.js” to open in js2-mode
+      (add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode))
+   #+END_SRC
+
