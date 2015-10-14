@@ -213,3 +213,10 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
 * 其他
 ** 在text terminal下如何调用text-based menu
 按 ~M-`~ 或 ~M-x tmm-menubar~ 即可
+** 如何编辑需要root权限的文件
+在编辑文件路径前加上`/sudo::`. 例如
+#+BEGIN_EXAMPLE
+/sudo::/etc/bashrc
+#+END_EXAMPLE
+
+当然,你的当前用户需要在sudoer组内.
