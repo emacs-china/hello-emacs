@@ -207,3 +207,6 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
   (when (member system-type '(ms-dos windows-nt))
     (setq vc-git-commits-coding-system 'gbk))
 #+END_SRC
+* info
+** 如何打开外部的info文件
+使用C-u C-h i即可使用emacs info打开外部info文件
