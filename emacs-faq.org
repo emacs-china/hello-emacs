@@ -241,4 +241,9 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
       ;; setup files ending in “.js” to open in js2-mode
       (add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode))
    #+END_SRC
-
+** 如何让光标无法进入minibuffer的prompt部分
+ minibuffer的prompt部分是不能被修改的,这样允许光标进入是没有意义的,可用加入如下配置信息达到阻止光标进入minibuffer的prompt部分.
+ #+BEGIN_SRC elisp
+ ;; don't let the cursor go into minibuffer prompt
+ (setq minibuffer-prompt-properties (quote (read-only t point-entered minibuffer-avoid-prompt face minibuffer-prompt)))
+ #+END_SRC
