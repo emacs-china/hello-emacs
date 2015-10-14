@@ -247,3 +247,6 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
  ;; don't let the cursor go into minibuffer prompt
  (setq minibuffer-prompt-properties (quote (read-only t point-entered minibuffer-avoid-prompt face minibuffer-prompt)))
  #+END_SRC
+** 如何在空格和tab之间相互转换
+使用tabify和untabify命令可用使文件的空格和tab相互转换,但是要注意的是,tabify和untabify在转换时 *也会转换字符串中的空格和tab*,这在编程时需要注意
+** 
