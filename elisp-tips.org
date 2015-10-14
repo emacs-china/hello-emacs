@@ -29,3 +29,6 @@
 (cl-check-type FORM TYPE &optional STRING)
 
 校验FORM的值是否为TYPE类型,若不是则抛出error,以STRING为error的描述.
+* 其他
+** 如何查看最后一次操作的命令对应的elisp代码?
+该命令会显示最后一次操作的命令对应的elisp代码,你可以修改该代码并按回车执行该代码,也可以按C-g取消执行. 
