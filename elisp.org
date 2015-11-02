@@ -3711,6 +3711,28 @@ defmacro宏允许任意列表结构作为参数列表.当宏调用被展开时,�
 	 * 使用=比较两个检测结果
 
    * 执行M-x profiler-stop结束监控过程
+** Trace
+*** (trace-function FUNCTION &optional BUFFER CONTEXT)
+
+可以追踪函数FUNCTION的执行过程. 当调用到FUNCTION函数时,会在trace buffer中输出FUNCTION的参数以及返回值.
+
+参数BUFFER,指明了在哪个buffer中输出trace信息. 默认buffer名由变量`trace-buffer'决定
+
+*使用该函数追踪FUNCTION时,总会弹出`trace-buffer' buffer.因此不要用该函数追踪哪些会切换buffer的函数,对于这种函数使用`trace-function-background'代替*
+
+使用`untrace-function'或`untrace-all'停止对FUNCTION的追踪.
+
+*** (trace-function-background FUNCTION &optional BUFFERCONTEXT)
+
+类似`trace-function',但追踪函数FUNCTION时,不会弹出buffer也不会改变window configuration
+
+*** (untrace-function FUNCTION)
+
+取消对FUNCTION的追踪
+
+*** (untrace-all)
+
+取消对所有的函数的追踪
 * Command Loop
   当进入Emacs后,Emacs会循环读取key sequences,读取对应的命令,并显示结果. 这个过程称为Command Loop.
 ** Command Loop概述
@@ -4939,7 +4961,7 @@ defmacro宏允许任意列表结构作为参数列表.当宏调用被展开时,�
 
 	 创建一个空的keymap
 
-	 若传递了参数prompt,则其称为keymap的overall prompt string. 你只能为menu keymap设置该值,因为任何被设了overall prompt string的keymap都被人是menu
+	 若传递了参数prompt,则其称为keymap的overall prompt string. 你只能为menu keymap设置该值,因为任何被设了overall prompt string的keymap都被认为是menu
 
    * (make-keymap &optional prompt)
 
