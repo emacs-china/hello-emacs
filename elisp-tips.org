@@ -29,6 +29,26 @@
 (cl-check-type FORM TYPE &optional STRING)
 
 校验FORM的值是否为TYPE类型,若不是则抛出error,以STRING为error的描述.
+* url
+** 如何使用url.el访问带认证的url
+当访问一些Restful api时,常常需要输入认证信息,当用curl访问时可以使用-u option
+#+BEGIN_SRC sh
+  curl -u user:password https://gnu.org
+#+END_SRC
+
+要模拟这种情况有两种方案可以尝试:
+
+1. 访问类似 =https://username:password@gnu.org= 这种url
+
+2. 通过设置`url-request-extra-headers'变量来实现
+   #+BEGIN_SRC emacs-lisp
+     (let ((url-request-method "PUT")
+           (url-request-extra-headers
+            `(("Authorization" . ,(concat "Basic "
+                                          (base64-encode-string "username:password")))))
+           (url-retrieve-synchronously "https://gnu.org")))
+   #+END_SRC
+
 * 其他
 ** 如何查看最后一次操作的命令对应的elisp代码?
 该命令会显示最后一次操作的命令对应的elisp代码,你可以修改该代码并按回车执行该代码,也可以按C-g取消执行. 
