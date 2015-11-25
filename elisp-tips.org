@@ -48,6 +48,26 @@
                                           (base64-encode-string "username:password")))))
            (url-retrieve-synchronously "https://gnu.org")))
    #+END_SRC
+* buffer
+** 如何替换某一buffer从位置start到end之间的内容?
+要实现这一目的有多种方法,例如
+#+BEGIN_SRC emacs-lisp
+  (goto-char start)
+  (delete-region start end)
+  (insert new-content)
+#+END_SRC
+
+或者
+#+BEGIN_SRC emacs-lisp
+  (goto-char start)
+  (re-search-forward ".+" end)
+  (replace-match new-content)
+#+END_SRC
+
+但我觉得最lisp style的一种方法是用setf:
+#+BEGIN_SRC emacs-lisp
+  (setf (buffer-substring start end) new-content)
+#+END_SRC
 
 * 其他
 ** 如何查看最后一次操作的命令对应的elisp代码?
