@@ -69,6 +69,14 @@
   (setf (buffer-substring start end) new-content)
 #+END_SRC
 
+* eshell
+** eshell-preoutput-filter-functions
+** 如何判断eshell中上一次命令是否执行成功
+通过执行函数`eshell-exit-success-p'可以获取eshell中上一次命令执行的完成状态.
+
+若上一次执行的是一段lisp代码,则所谓成功表示该段lisp代码返回non-nil.
+
+若上一次执行的是一个外部程序,则所谓成功表示该外部程序的退出码为0.
 * 其他
 ** 如何查看最后一次操作的命令对应的elisp代码?
 该命令会显示最后一次操作的命令对应的elisp代码,你可以修改该代码并按回车执行该代码,也可以按C-g取消执行. 
