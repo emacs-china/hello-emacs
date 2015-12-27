@@ -70,7 +70,11 @@
 #+END_SRC
 
 * eshell
-** eshell-preoutput-filter-functions
+** 如何修改命令的执行输出
+hooks`eshell-preoutput-filter-functions'中的函数会在命令的输出结果插入eshell之前调用.
+
+这些函数接受一个参数:命令的输出结果字符串,并且其返回值也应该是一个字符串,该返回的字符串才是真正插入到eshell中的内容.
+
 ** 如何判断eshell中上一次命令是否执行成功
 通过执行函数`eshell-exit-success-p'可以获取eshell中上一次命令执行的完成状态.
 
