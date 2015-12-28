@@ -279,4 +279,8 @@ Emacs若在文件的第一行找到#!声明,则认为该文件为script文件. �
  #+BEGIN_SRC emacs-lisp
 (setq suggest-key-bindings nil)
 #+END_SRC
-
+** How to Fix a Stuck Emacs
+若Emacs卡住了,且按C-g无效的话,可以执行以下命令强制emacs取消正在运行的东西
+#+BEGIN_SRC sh
+  pkill -SIGUSR2 emacs
+#+END_SRC
