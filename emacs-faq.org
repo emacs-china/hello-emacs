@@ -226,6 +226,8 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
   (setq read-file-name-completion-ignore-case t)
   (setq read-buffer-completion-ignore-case t)
 #+END_SRC
+** 补全时,忽略某些特定扩展名的文件
+可以设置`completion-ignored-extensions'来实现
 * 其他
 ** 在text terminal下如何调用text-based menu
 按 ~M-`~ 或 ~M-x tmm-menubar~ 即可
