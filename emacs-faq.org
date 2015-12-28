@@ -284,3 +284,7 @@ Emacs若在文件的第一行找到#!声明,则认为该文件为script文件. �
 #+BEGIN_SRC sh
   pkill -SIGUSR2 emacs
 #+END_SRC
+** Show unfinished keybindings early
+按键序列只按到一半时,等待一秒钟会显示已经按下的键序列并等待用户输入剩下的键序列.
+
+通过配置`echo-keystrokes'的值,可以修改这个等待时间.
