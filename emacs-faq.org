@@ -220,6 +220,12 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
 * info
 ** 如何打开外部的info文件
 使用C-u C-h i即可使用emacs info打开外部info文件
+* completion
+** 如何在补全file/buffer时忽略大小写的差别
+#+BEGIN_SRC emacs-lisp
+  (setq read-file-name-completion-ignore-case t)
+  (setq read-buffer-completion-ignore-case t)
+#+END_SRC
 * 其他
 ** 在text terminal下如何调用text-based menu
 按 ~M-`~ 或 ~M-x tmm-menubar~ 即可
