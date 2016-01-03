@@ -86,3 +86,6 @@ hooks`eshell-preoutput-filter-functions'中的函数会在命令的输出结果�
 该命令会显示最后一次操作的命令对应的elisp代码,你可以修改该代码并按回车执行该代码,也可以按C-g取消执行.
 ** 如何计算两个字符串的编辑距离?
 org已经有了现成的函数了`org-babel-edit-distance'
+** 关于interactive的注意事项
+1. 使用(interactive "r")则表示执行该命令前,必须要有一个active region
+2. 尽量不要使用`called-interactively-p',因为该函数存在BUG,可能结果不准.
