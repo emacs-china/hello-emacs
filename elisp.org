@@ -5501,6 +5501,462 @@ defmacro宏允许任意列表结构作为参数列表.当宏调用被展开时,�
 
 	 默认绑定为`C-h b'
 
+** Menu Keymaps
+*** Defining Menus
+一个menu其实就是带有prompt-string的keymap. 这个prompt-string是`make-keymap',`make-sparse-keymap'和`define-prefix-command'函数的最后一个参数.
+
+需要注意的是,使用define-key为menu创建新绑定时,会将新绑定放在最前面,因此若关心menu项的顺序的话,要注意从最后项开始向最前项定义.
+
+当然也可以使用`define-key-after'来指定新绑定的位置.
+
++ (keymap-prompt keymap)
+
+  获取keymap中的prompt-string
+**** Simple Menu Items
+定义menu item的原始方法是绑定event type(具体是什么event type无所谓)到如下格式的list
++ (ITEM-STRING . REAL-BINDING)
++ (ITEM-STRING HELP-STRING . REAL-BINDING)
+  
+例如:
+#+BEGIN_SRC emacs-lisp
+  (defvar menu-lancher-keymap (make-sparse-keymap "menu-lancher"))
+
+  (define-key menu-lancher-keymap "C-c C-a"
+    '("menu-item" "menu-item-help" (lambda ()
+                                     (message "show menu-item"))))
+#+END_SRC
+
+需要注意的是, 使用lookup-key来查找键绑定时,只会返回real-binding这部分内容.
+#+BEGIN_SRC emacs-lisp
+  (lookup-key menu-lancher-keymap "C-c C-a")
+  ;; => ((lambda nil (message "show menu-item")))
+#+END_SRC
+
+若real-binding为nil,则menu-item无法被选中.
+
+若real-binding为symbol,且该symbol具有非nil的menu-enable属性(该属性需为一个S-表达式),则每次显示menu都会执行该S-表达式以决定该item是否可选.
+**** Extended Menu Item
+定义Extended menu item的方法是绑定event type(具体是什么event type无所谓)到如下格式的list(*这些list的car都是menu-item*)
++ (menu-item ITEM-NAME) 
+
+  定义不可选中的menu item.
+
++ (menu-item ITEM-NAME REAL-BINDING . ITEM-PROPERTY-LIST) 
+  
+  定义可选中的menu item. 其中
+
+  - ITEM-NAME为一个表达式,该表达式的运行结果必须返回一个string.
+
+  - REAL-BINDING为要执行的command
+
+  - ITEM-PROPERTY-LIST定义了menu item的其他信息
+
+    | :enable FORM               | FORM的计算结果决定了该menu item是否有用                                                                                                                                                                                                                        |
+    |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | :visible FORM              | FORM的计算结果决定了是否显示该menu item                                                                                                                                                                                                                        |
+    |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | :helper HELP-STR           | HELP-STR为固定字符串,其指定了help-echo的显示内容                                                                                                                                                                                                               |
+    |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | :button (TYPE . SELECTED)  | 该属性提供了一种定义radio button或toggle button的方式                                                                                                                                                                                                          |
+    |                            | TYPE表示button的类型,可以是:toggle或:radio                                                                                                                                                                                                                     |
+    |                            | SELECTED需要为一个FORM,该FORM的计算结果决定了是否选中该button                                                                                                                                                                                                  |
+    |                            | 对于toggle button来说,SELECTED的返回值决定了该button为on还是off                                                                                                                                                                                                |
+    |                            | 对于radio button来说,The SELECTED form for each radio button in the group should check whether the variable has the right value for selecting that button.  Clicking on the button should set the variable so that the button you clicked on becomes selected. |
+    |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | :key-sequence KEY-SEQUENCE | 该属性指定该menu item对应的command可能被分配到哪个键序列上.                                                                                                                                                                                                    |
+    |                            | 若分配的键序列与该command实际分配的键序列相同,则能够加快menu的显示速度                                                                                                                                                                                         |
+    |                            | 若分配的键序列与实际分配的键序列不同,则无效果                                                                                                                                                                                                                  |
+    |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | :key-sequence nil          | 表示该menu item对应的command可能没有对应的键绑定,这使得Emacs不用去搜索对应的键序列,从而加快menu的显示速度                                                                                                                                                      |
+    |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | :keys STRING               | STRING被显示为触发该menu item的键序列,可以在STRING中使用\\[...]格式                                                                                                                                                                                            |
+    |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | :filter FILTER-FN          | 该属性提供了一种动态产生menu item的途径.                                                                                                                                                                                                                       |
+    |                            | FILTER-FN为一个函数,该函数接收REAL-BINDING作为唯一的参数,该函数的返回值会作为该menu item的真正READL-BINDING.                                                                                                                                                                                  |
+**** Menu Separator
+所谓menu separator是一种特殊的menu item. 它被显示为一个横线,因此被用来将menu分隔成几个部分.
+
+menu separator也是一个以symbol menu-item开头的list. 它的格式如下:
++ (menu-item SEPARATOR-TYPE)
+  #+BEGIN_SRC emacs-lisp
+    (menu-item "--")
+  #+END_SRC
+
++ (menu-item SEPARATOR-TYPE nil . ITEM-PROPERTY-LIST)
+  #+BEGIN_SRC emacs-lisp
+    (menu-item "--" nil :visible (boundp 'foo))
+  #+END_SRC
+
+这里SEPARATOR-TYPE为一个以"--"开头的字符串. 它有如下几种类型
+  
++ "" / "-" / "--"
+  
+  默认的seprator风格
+
++ "--no-line" / "--space"
+  
+  以空格分隔
+
++ "--single-line"
+  
+  以menu前景色着色的单行线
+
++ "--double-line"
+  
+  以menu前景色着色的双行线
+
++ "--single-dashed-line"
+  
+  以menu前景色着色的单行间断线
+  
++ "--double-dashed-line"
+  
+  以menu前景色着色的双行间断线
+
++ "--shadow-etched-in"
+
+  3D的凹入线
+
++ "--shadow-etched-out"
+  
+  3D的凸出线
+
++ "--shadow-etched-in-dash"
+
+  3D的凹入间断线
+
++ "--shadow-etched-out-dash"
+
+  3D的凸出间断线
+
++ "--shadow-double-etched-in"
+
+  3D的凹入双行线
+
++ "--shadow-double-etched-out"
+
+  3D的凸出双行线
+
++ "--shadow-double-etched-in-dash"
+
+  3D的凹入双行间断线
+
++ "--shadow-double-etched-out-dash"
+  
+  3D的凸出双行间断线
+*** Menu and the Mouse
+若一个menu keymap是由鼠标事件触发的,则会弹出一个menu,使得用户可以通过鼠标来选择菜单项.
+
+the event generated is whatever character or symbol has the binding that brought about that menu item. 
+
+*比较常见的方式是使用button-down事件来触发menu,这样一释放鼠标就能触发menu item了*
+
+一般情况下,若menu keymap的binding中有另一个keymap,则该keymap被认为是submenu. *但若被包含的keymap中无其他menu item,则会直接显示该keymap的内容,而不是作为submenu*
+
+However, if Emacs is compiled without X toolkit support, or on text terminals, submenus are not supported.  
+Each nested keymap is shown as a menu item, but clicking on it does not automatically pop up the submenu.
+If you wish to imitate the effect of submenus, you can do that by giving a nested keymap an item string which starts with ‘@’.
+This causes Emacs to display the nested keymap using a separate "menu pane"; the rest of the item string after the ‘@’ is the pane label.  
+If Emacs is compiled without X toolkit support, or if a menu is displayed on a text terminal, menu panes are not used; in that case, a ‘@’ at the beginning of an item string is omitted when the menu label is displayed, and has no other effect.
+*** Menus and the Keyboard
+若menu是由键盘事件触发的,则我们称这种menu为keyboard menu.
+
+Emacs使用文本的方式,在echo area中显示菜单. 若在一次无法显示完整的菜单,可以通过按<SPC>(由变量`menu-prompt-more-char'决定)来显示下一屏菜单.
+
+*** The Menu Bar
+要添加item到menu bar上,需要先创建自己的"function key"(例如KEY),然后为 =[menu-bar KEY]= 这样一个键序列添加绑定.
+
+若为同一个 =[menu-bar KEY]= 绑定了多个不同的menu item,则只会创建一个menu,但包含了多个menu item的内容.
+
+下面是一个例子:
+#+BEGIN_SRC emacs-lisp
+  ;; Make a menu keymap (with a prompt string)
+  ;; and make it the menu bar item’s definition.
+  (define-key global-map [menu-bar words]
+    (cons "Words" (make-sparse-keymap "Words")))
+
+  ;; Define specific subcommands in this menu.
+  (define-key global-map
+    [menu-bar words forward]
+    '("Forward word" . forward-word))
+  (define-key global-map
+    [menu-bar words backward]
+    '("Backward word" . backward-word))
+#+END_SRC
+
+local keymap可以取消global keymap创建的menu bar item. 方法是重新绑定该item的key为'undefined.
+例如:
+#+BEGIN_SRC emacs-lisp
+  (define-key dired-mode-map [menu-bar edit] 'undefined)
+#+END_SRC
+
++ menu-bar-final-items
+  
+  默认情况下,menu bar先显示global-map中定义的menu item,再显示local-map中定义的menu item.
+
+  而该变量中包含着的多个item对应的fake function key. 这些item会显示在menubar的最后面.
+
++ menu-bar-update-hook
+  
+  在重新刷新menu bar之前会触发该hook.
+
+*** Tool bars
+
+Tool-bar的定义与menu-bar的定义及其类似,只是fake "function key"由"menu-bar"变为了"tool-bar". 例如:
+#+BEGIN_SRC emacs-lisp
+  (define-key global-map [tool-bar KEY] ITEM)
+#+END_SRC
+
+同样,也可以通过为major mode的local map添加`[tool-bar FOO]'绑定来设置特定major-mode的tool-bar
+
+你还可以为Modifier-key(shift,control,meta...)+鼠标点击定义不同的意义. 例如:
+#+BEGIN_SRC emacs-lisp
+  ;; if the original item was defined this way,
+  (define-key global-map [tool-bar shell]
+    '(menu-item "Shell" shell
+                :image (image :type xpm :file "shell.xpm")))
+
+  ;; here is how you can define clicking on the same tool bar image with the shift modifier:
+  (define-key global-map [tool-bar S-shell] 'some-command)
+#+END_SRC
+
+*但是ITEM中的REAL-BINDING必须是一个command,而不能是keymap*
+
+ITEM中除了能使用一般的extended menu item中的属性外,还能使用`:image'属性来指定显示的图标.
+
++ `:image IMAGE'
+
+  这里IMAGE可以是一个image对象,或一个由4个image对象组成的vector. 
+
+  若IMAGE是一个由4个image对象组成的vector,则在不同的条件下会展示不同的image对象:
+  | item 0 | Used when the item is enabled and selected.    |
+  | item 1 | Used when the item is enabled and deselected.  |
+  | item 2 | Used when the item is disabled and selected.   |
+  | item 3 | Used when the item is disabled and deselected. |
+
+  若IMAGE为单个的image对象,则当该menu item disable时,Emacs自动使用edge-detection算法修改image的显示
+
++ `:rtl IMAGE'
+  
+  表示当使用right-to-left语言时,显示的图像内容.
+
+相关函数与变量
++ tool-bar-map
+
+  默认情况下,`[tool-bar]'的定义是通过如下代码实现的:
+  #+BEGIN_SRC emacs-lisp
+    (global-set-key [tool-bar]
+                    `(menu-item ,(purecopy "tool bar") ignore
+                                :filter tool-bar-make-keymap))
+  #+END_SRC
+  
+  这里函数`tool-bar-make-keymap'会从变量`tool-bar-map'中动态派生出实际的tool-bar map.
+  因此可以通过修改该变量的值来修改默认的global tool-bar. 
+  在某些Major mode中(例如Info mode)是通过将`tool-bar-map'设为buffer-local,再设置该值的方式来代替global tool bar的.
+
++ (tool-bar-add-item icon def key &rest props)
+  
+  通过修改`tool-bar-map'的方式,添加item到tool bar中. 其中
+
+  ICON为XPM,XBM或PBM文件的 *base name*. 例如若ICON为"exit",则emacs会依次查找exit.xpm,exit.pbm和exit.xbm
+
+  DEF为实际调用的命令
+
+  KEY为the fake function key symbol in the prefix keymap.
+
+  PROPS则为tool bar menu item的其他属性.
+
+  To define items in some local map, bind ‘tool-bar-map’ with ‘let’ around calls of this function:
+  #+BEGIN_SRC emacs-lisp
+    (defvar foo-tool-bar-map
+      (let ((tool-bar-map (make-sparse-keymap)))
+        (tool-bar-add-item …)
+        …
+        tool-bar-map))
+  #+END_SRC
+
++ (tool-bar-add-item-from-menu command icon &optional map &rest props)
+  
+  用该函数可以将menu bar中的绑定添加到tool bar中来.
+
+  各参数说明与tool-bar-add-item icon类似.
+
+  The binding of COMMAND is looked up in the menu bar in MAP (default ‘global-map’) 
+  
+  MAP must contain an appropriate keymap bound to ‘[menu-bar]’.
+
+  该函数会修改`tool-bar-map',因此最好只在修改global tool bar item时才使用该函数
+
++ (tool-bar-local-item-from-menu command icon in-map &optional from-map &rest prop)
+  
+  该函数可以用来创建非全局的tool bar items. 
+
+  使用方式类似`tool-baar-add-item-from-menu',只是多了个IN-MAP参数用来指明新加的tool bar item放在哪个keymap中.
+
++ auto-resize-tool-bars
+
+  若该变量值为非nil,则tool bar会自动改变大小以便在一个frame中能显示出所有的tool bar item
+
+  若变量值为'grow-only,则tool bar只自动增大,而不自动缩小. 要想缩小tool bar,必须用户手工输入`C-l'
+
++ auto-raise-tool-bar-buttons
+
+  若该变量为非nil,则当鼠标移到item上时,该item会凸起
+
++ tool-bar-button-margin
+
+  指定了tool bar item的extra margin. 单位为像素
+
++ tool-bar-button-relief
+
+  该变量值指定了tool bar item的阴影宽度,单位为像素
+
++ tool-bar-border
+
+  This variable specifies the height of the border drawn below the tool bar area.  An integer specifies height as a number of pixels.
+
+  If the value is one of ‘internal-border-width’ (the default) or ‘border-width’, the tool bar border height corresponds to the corresponding frame parameter.
+
+*** Modifying Menus
+
+当使用`define-key'往menu中添加item时,会把新加的item放到menu的第一项的位置.
+
+若想指定新加item的位置,需要使用`define-key-after'
+
++ (define-key-after map key binding &optional after)
+  
+  与`define-key'类似,在MAP中将KEY绑定到BINDING. 但是位置由AFTER决定.
+
+  The argument KEY should be of length one—a vector or string with just one element.  
+
+  But AFTER should be a single event type—a symbol or a character, not a sequence. 
+  
+  先加入的item位置在AFTER之后,若AFTER为t或nil,则表示新item会放在最后的位置.
+
+  下面是一些例子
+  #+BEGIN_SRC emacs-lisp
+    ;; makes a binding for the fake function key <DRINK> and puts it right after the binding for <EAT>.
+    (define-key-after my-menu [drink]
+      '("Drink" . drink-command) 'eat)
+
+
+    ;; Here is how to insert an item called ‘Work’ in the ‘Signals’ menu
+    ;; of Shell mode, after the item ‘break’:
+    (define-key-after
+      (lookup-key shell-mode-map [menu-bar signals])
+      [work] '("Work" . work-command) 'break)
+  #+END_SRC
+
+*** Easy Menu
+
+使用宏`easy-menu-define symbol maps doc menu'可以很容易的定义pop-up-menu / menu-bar-menu
+
++ (easy-menu-define symbol maps doc menu)
+  
+  该宏定义一个pop-up-menu / menu-bar-menu,其内容由MENU决定.
+
+  若参数SYMBOL非空,则会生成一个名为SYMBOL的函数,该函数用来弹出该menu. 且该函数使用DOC作为其的doc-string.
+
+  参数SYMBOL不需要被引用.
+
+  MAPS可以为一个keymap,也可以为一个由keymap组成的list. 
+  + if MAPS is a keymap, the menu is added to that keymap, as a top-level menu for the menu bar
+  + It can also be a list of keymaps, in which case the menu is added separately to each of those keymaps.
+
+  MENU参数的第一个元素必须为字符串,该字符串被作为menu label. 
+
+  MENU参数中紧跟着的是以下的键值对的任意组合:
+  
+  + :filter FUNCTION
+
+    FUNCTION会接收唯一的一个函数:其他menu item组成的列表. 其返回值作为menu中显示的真实item
+
+  + :visible VISIBLE-FORM 
+    
+    VISIBLE-FORM的执行结果决定了该item是否可见
+
+  + :active ENABLE-FORM
+    
+    ENABLE-FORM的执行结果决定了该item是否可选.
+
+  参数MENU可以是如下几种形式:
+  + [NAME CALLBACK ENABLE]
+    
+    NAME为一个字符串,表示menu item的名字
+
+    CALLBACK为点击该item时要运行的命令或S-表达式
+
+    ENABLE为一个S-表达式,其执行结果决定了该item是否可用.
+
+  + [MENU CALLBACK [KEYWORD ARG]...]
+    
+    这里KEYWORD与ARG对必须是如下几种:
+
+    - :keys KEYS
+
+      KEYS为与menu item等价的keyboard键序列,它需为字符串格式
+
+    - :key-sequence KEYS
+
+      该KEYS用来加速Emacs第一次显示menu. 
+
+      若你知道该menu item没有对应的keyboard键序列,则KEYS应该设成nil,否则它应该是表示该键序列的string或vector
+
+    - :active ENABLE
+
+      ENABLE为一个S表达式,其计算结果决定了该item是否可用
+
+    - :visible INCLUDE
+
+      INCLUDE为一个S表达式,其计算结果决定了该item是否可见
+
+    - :label FORM
+
+      FORM是一个S表达式,其计算结果作为该menu item的标签(默认为参数NAME)
+
+    - :suffix FORM
+
+      FORM是一个S表达式,其计算结果会作为后缀自动加到menu item标签后
+
+    - :style STYLE
+
+      STYLE为一个symbol,它决定了该item的类型.
+
+      它可以是以下几个值:
+      | 'toggle | checkbox           |
+      |---------+--------------------|
+      | 'radio  | radio button       |
+      |---------+--------------------|
+      | 其他    | ordinary menu item |
+
+    - :selected SELECTED
+
+      SELECTED为一个S表达式,其计算结果决定了该checkbox item或radio button item是否被选中
+
+    - :help HELP
+
+      HELP为一个字符串,描述了menu item
+
+  + menu-string
+
+    MENU也可以是一个字符串,则该字符串在menu中显示为一段不可用的文本.
+
+    若字符串以`-'开头,则解释为menu-separator
+
+  + (MENU1 MENU2 ...)
+ 
+    MENU还可以使上述MENU格式组成的list,则表示为submenu
+    
+下面是一个例子:
+#+BEGIN_SRC emacs-lisp
+  (easy-menu-define words-menu global-map
+    "Menu for word navigation commands."
+    '("Words"
+      ["Forward word" forward-word]
+      ["Backward word" backward-word]))
+#+END_SRC
+    
+
 * Major Mode and Minor Mode
 ** Hooks
 Emacs中大多数的hook为"normal hooks",这表示该hook中的函数会被不带参数调用,且他们的返回值会被忽略. 以`-hook'结尾的hook都是"normal hook". 
@@ -10378,3 +10834,171 @@ Emacs在不同类型的终端下启动时,都会加载不同的终端相关的li
 	参数seconds可以为浮点数.
 
 	参数millisec表示在等待seconds秒后,再等待millisec毫秒
+* Package相关说明
+** Package的分类
+package可以分为单文件package和多文件package. 其中单文件package在package archive中以单个elisp文件形式存在,而多文件package以tar文件形式存在.
+
+*** 单文件Package
+单文件package中elisp文件必须遵循[[info:elisp:Library%20Headers][elisp library header conventions]]
+下面是一个例子
+#+BEGIN_SRC emacs-lisp
+  ;;; superfrobnicator.el --- Frobnicate and bifurcate flanges
+
+  ;; Copyright (C) 2011 Free Software Foundation, Inc.
+
+  ;; Author: J. R. Hacker <jrh@example.com>
+  ;; Version: 1.3
+  ;; Package-Requires: ((flange "1.0"))
+  ;; Keywords: multimedia, frobnicate
+  ;; URL: http://example.com/jrhacker/superfrobnicate
+
+
+  ;;; Commentary:
+
+  ;; This package provides a minor mode to frobnicate and/or
+  ;; bifurcate any flanges you desire.  To activate it, just type
+
+#+END_SRC
+
+package的名称与elisp文件的base name必须一致. package名称被写到第一行. 在上例中为"superfrobnicator"
+
+单行描述也放在第一行,在上例中为"Frobnicate and bifurcate flange"
+
+package的版本号,通过`Package-Version' header表示,若不存在`Package-Version' header则通过`Version' header标识. 该属性必须存在. 在上例中为1.3
+
+若文件中有`;;; Commentary:'部分,则该部分内容作为package的详细描述.
+
+若文件中有`Package-Requires' header,则该部分标识了package的依赖包有哪些. 若没有该header表示package不依赖其他包.
+
+`Keywords'与`URL'也是可选的,但一般建议添加这两个header. `describe-package'函数会展示这两个header中的值.
+`Keywords' header应该至少包含一个`finder-known-keywrods'中的标准keyword
+
+*** 多文件Package
+多文件package不像单文件package那样有那么多的规范. 
+
+多文件package在package archive中以一个tar文件的形式存在. 该tar文件的名称必须是`package名-package版本.tar'. 
+
+多文件package的content directory中必须有一个名为`package名-pkg.el'的文件. 
+该文件的内容为一个`define-package'函数的调用form. `define-package'函数定义了package的版本,单行描述和依赖包.
+
+若content directory中包含名为`README'的文件,则该文件的内容作为package的详细描述
+
+若content directory中包含名为`dir'的文件,则该文件被认为是通过命令`install-info'生成的Info directory文件. 同时,相关的Info文件也必须在content directory中.
+这中情况下,当激活该package后,Emacs会自动将content directory添加到`Info-directory-list'中.
+
+*不要在package中包含任何.elc文件,它们是由package安装时自动生成的.且无法控制各文件编译的顺序*
+
+*不要包含名为`package名-autoloads.el'的文件,它也是由package安装时自动生成的.*
+
+若package中包含其他格式的文件(例如图片等),则在elisp源代码中,可以使用`load-file-name'变量值来引用存放这些文件的目录. 例如
+#+BEGIN_SRC emacs-lisp
+  (defconst superfrobnicator-base (file-name-directory load-file-name))
+
+  (defun superfrobnicator-fetch-image (file)
+    (expand-file-name file superfrobnicator-base))
+#+END_SRC
+
+**** (define-package name version &optional docstring requirements)
+  
+该函数定义了一个名为`NAME'的package. 
+
+参数`VERSION'为一个表示版本的字符串,该字符串的格式必须被`version-to-list'所认识.
+
+参数`DOCSTRING'为单行描述
+
+参数`REQUIREMENTS'为一个由依赖包和最低版本组成的list. 该list的每个元素应该是(DEP-NAME-symbol DEP-VERSION-string)
+
+** Package的属性
+每个package都具有如下一些属性:
+
++ Name
+
+  pacakge name,常在程序中作为变量/函数名的前缀.
+
++ Version
+
+  版本号,其格式必须被函数`version-to-list'所知. 每次release package都应该增加该版本号属性
+
++ 单行简洁描述
+
+  该描述应该只占一行,最好不超过36个字符. 该描述会在list package时展示
+
++ 详细描述
+
+  常常包含该package的用处,以及使用方法. 该描述会在`describe-package'中展示
+
++ Dependencies
+
+  依赖关系, 该属性值为其他package的list. 该list中的每个元素可以是一个表示package的symbol或一个(package min-version)的列表.
+** package的安装说明
+
+通过`pacakge-install-file'可以安装一个package. 安装package包含以下几个步骤:
+
+1. 在`package-user-dir'目录下创建一个名为`package名称-package版本'的目录. 
+
+   该目录用于存放package的内容的,因此也被称为"content direcotry"
+
+2. Emacs搜索content directory中的所有elisp文件,并查找里面的autoload magic comments
+   
+   这些autoload定义被保存在名为`package名称-autoloads.el'的文件中.
+   
+   这些autoload定义通常用来自动加载package中定义的供用户使用的主要command,但也能用来作其他事情,例如王`auto-mode-alist'中添加内容
+
+3. Emacs编译package中的所有elisp文件
+   
+** package的加载过程
+
+Emacs启动过程中,当Emacs加载完初始化完init file及abbrev file后,在触发`after-init-hook'前,Emacs会自动调用`package-initialize'函数来加载安装的package. 
+
+但是Emacs加载package的过程,在变量`package-enable-at-startup'为nil时会被禁止.
+
+Emacs加载package的过程由两个步骤组成
+
+1. 添加package的content directory到`load-path'中
+
+2. 执行`package名-autoloads.el'中的autoload定义.
+
+*** (package-initialize &optional no-activate)
+
+该函数初始化Emacs用于记录哪些package已经安装的内部变量并加载这些package.
+
+用户配置项`package-load-list'指明了哪些package会被加载,默认是所有已经安装的package.
+
+参数`NO-ACTIVATE'若为非nil,则表示只更新已安装package的记录,而不加载这些package
+
+** Package Archives
++ 配置项package-archives
+
+  该配置项为一个alist,指明了Emacs包管理系统从哪些archive中搜索package
+
+  该alist的每个元素的格式为(ID . LOCATION),这里ID为表示archive名称的字符串,LOCATION为表示archive地址的字符串.
+  目前LOCATION只能为http url或一个本地目录的路径.
+
+  一个package archive只是一个包含了package源代码文件及其相关文件的目录而已. 
+  若希望可以通过http获取该archive,则需要把该目录放在web server上.
+
+一种设置和更新package archive的比较方便的方式是使用库`package-x',该库是Emacs自带的,但是默认情况下并不加载.
+
+`package-x'的相关命令与变量如下:
+
++ 配置项pacakge-archive-upload-base
+
+  该变量的值应为一个目录的名称,它将作为package archive的base location.
+
+  该变量的值必须是一个 *绝对路径*. 
+
+  若package archive不在本地,可以使用类似`/ssh:foo@example.com:/var/www/packages/' 的形式来设置
+
++ (package-upload-file filename)
+
+  该命令上传FILENAME到`package-archive-upload-base'中.
+
+  FILENAME必须是单文件package(el文件),多多文件package(tar文件),否则会抛出错误.
+
+  若`package-archive-upload-base'中的路径非法,则会提示用户重新输入,若路径不存在,则会自动创建该目录
+
++ (package-upload-buffer)
+  
+  类似`package-upload-file',只不过是将当前buffer的内容上传上去.
+
+  该buffer必须访问一个单文件package(el文件)或多文件pacakge(tar文件),否则会抛出错误
