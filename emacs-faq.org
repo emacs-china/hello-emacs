@@ -228,6 +228,23 @@ dired内部是调用`ls'命令来产生文件列表的,通过设置变量`dired-
 #+END_SRC
 ** 补全时,忽略某些特定扩展名的文件
 可以设置`completion-ignored-extensions'来实现
+* desktop-save-mode
+** 如何使用desktop-save-mode保持"*scratch*" buffer内容重启emacs后不变.
+只需要两个步骤即可
+1. 通知desktop-save-mode保存变量`initial-scratch-message'的值
+2. 在emacs退出前,将"*scratch*" buffer内容赋值给`initial-scratch-message'
+   
+#+BEGIN_SRC emacs-lisp
+  require ’desktop)
+  (add-to-list ’desktop-globals-to-save ’initial-scratch-message)
+  (desktop-save-mode)
+
+  (add-hook 'kill-emacs-hook
+            (lambda ()
+              (with-current-buffer "*scratch*"
+                (setq-default initial-scratch-message
+                              (buffer-string)))))
+#+END_SRC
 * 其他
 ** 在text terminal下如何调用text-based menu
 按 ~M-`~ 或 ~M-x tmm-menubar~ 即可
@@ -288,3 +305,26 @@ Emacs若在文件的第一行找到#!声明,则认为该文件为script文件. �
 按键序列只按到一半时,等待一秒钟会显示已经按下的键序列并等待用户输入剩下的键序列.
 
 通过配置`echo-keystrokes'的值,可以修改这个等待时间.
+This global minor mode provides a simple way to switch between layouts and
+the buffers you left open before you switched (unless you closed it).
+
+It doesn't require any setup at all more than:
+(0blayout-mode)
+
+When you start Emacs with 0blayout loaded, you will have a default layout
+named "default", and then you can create new layouts (<prefix> C-c), switch
+layouts (C-c C-l C-b), and kill the current layout (<prefix> C-k).
+The default <prefix> is (C-c C-l), but you can change it using:
+(0blayout-add-keybindings-with-prefix "<your prefix>")
+
+You can also customize-variable to change the name of the default session.
+
+The project is hosted at https://github.com/etu/0blayout
+There you can leave bug-reports and suggestions.
+
+Another comparable mode is eyebrowse which have been developed for longer.
+** 如何输入重音符号
+=C-x 8 标点符号 字符= 就能输入重音符号. 例如
+=C-x 8 , c= 能够输入ç
+使用 =C-x 8 C-h= 能够显示所有可以输入的重音符号
+** 
