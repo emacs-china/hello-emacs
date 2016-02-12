@@ -327,4 +327,9 @@ Another comparable mode is eyebrowse which have been developed for longer.
 =C-x 8 标点符号 字符= 就能输入重音符号. 例如
 =C-x 8 , c= 能够输入ç
 使用 =C-x 8 C-h= 能够显示所有可以输入的重音符号
+** 如何输入Unicode中的那些特殊字符
+使用 =C-x 8 RET 十六进制代码/符号名称= 可以方便的输入unicode中的那些特殊字符
+
+例如
+=C-x 8 RET ADDRESSED TO THE SUBJECT= 输入℁
 ** 
