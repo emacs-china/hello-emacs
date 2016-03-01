@@ -147,6 +147,7 @@ org-mode提供了`org-goto'命令,可以快速定位
 
 使用 ~C-u C-c .~ 则可以插入当前时间.
 ** 如何插入行合并的表格
+
 org表格本身只能列合并,而无法行合并. 要插入行合并的表格需要使用table.el提供的表格功能(详见Tbl菜单).
 
 org还提供了一个转换org表格到table表格的方法`org-table-create-with-table.el' (=C-c ~=)
@@ -160,7 +161,23 @@ org还提供了一个转换org表格到table表格的方法`org-table-create-wit
 |     +-----+-----+
 |     |     |     |
 +-----+-----+-----+
+** 从任意数字开始对列表item进行编号
+方法是将 =[@N]= 放到item的开头，这样下一个list item的编号就是N+1,依次类推
+例如
+#+BEGIN_SRC org
+  2. [@2] item2
+  3. item3
+  4. item4
+#+END_SRC
+** 调用另一个org文件中的代码块
+假设在si.org中有一块名为figure-1的代码块，那么可以通过，下面那样来调用
 
+#+BEGIN_SRC org
+  ,#+call: si.org:figure-1()
+#+END_SRC
+** 快速插入org date
++ 使用 =C-c . fri RET= 这样，插入active date 
++ 使用 =C-c ! fri RET= 这样，插入inactive date 
 
 * ispell
 ** 如何让ispell跳过某段文本不做拼写检查
@@ -348,4 +365,10 @@ Another comparable mode is eyebrowse which have been developed for longer.
 
 例如
 =C-x 8 RET ADDRESSED TO THE SUBJECT= 输入℁
-** 
+** 使用tab同时作为缩进和补全的触发键
+默认情况下，tab只是用来缩进，但是通过以下配置
+#+BEGIN_SRC emacs-lisp
+  (setq tab-always-indent 'complete)
+#+END_SRC
+
+则，第一次按tab，它会缩进，但是再按一次，则表示补全
