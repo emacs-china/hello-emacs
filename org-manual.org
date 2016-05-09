@@ -373,7 +373,7 @@
      ,   After the drawer.
    #+END_SRC
 
-   无论如何在标题上切换可见性(参见[[#Visibility cycling][切换可见性]]),drawer都是收缩为一行显示的. 要看drawer内的信息,你需要移动鼠标到drawer这一行,然后按<TAB>键. Org-mode使用名为'PROPERTIES'的drawer来存放属性(参见[[#Properties and columns][属性与列]]), 你也可以把状态改变记录(参见[[Tracking TODO state changes][跟踪TODO状态变化]])和计时时间(参见[[#Clocking work time][记录工作时间]])存放在名为'LOGBOOK'的drawer中. 如果你想像状态变化信息一样把自己的一段记录也存放到名为'LOGBOOK'的这个drawer中,使用
+   无论在标题上如何切换可见性(参见[[#Visibility cycling][切换可见性]]),drawer都是收缩为一行显示的. 要看drawer内的信息,你需要移动鼠标到drawer这一行,然后按<TAB>键. Org-mode使用名为'PROPERTIES'的drawer来存放属性(参见[[#Properties and columns][属性与列]]), 你也可以把状态改变记录(参见[[Tracking TODO state changes][跟踪TODO状态变化]])和计时时间(参见[[#Clocking work time][记录工作时间]])存放在名为'LOGBOOK'的drawer中. 如果你想把除了状态变化信息之外的一段记录也存放到名为'LOGBOOK'的这个drawer中,使用
    * C-c C-z ::
         添加一个带有时间戳信息的记录到名为'LOGBOOK'的drawer中
 ** 区块                  :折叠的区块
@@ -805,7 +805,7 @@
 	 对当前缓冲区中的所有表格进行迭代计算,以便converge(汇聚??)表与表之间的依赖关系.
 *** 高级特性               :域和列的名字,参数和自动重计算
     #<<Advanced features>>
-    如果你想自动重计算域的值,或者你向为域和列分配名字[fn:33],你需要保留表格的第一列作存放特殊的标志字符.
+    如果你想自动重计算域的值,或者你想为域和列分配名字[fn:33],你需要保留表格的第一列作存放特殊的标志字符.
 
     * C-# (org-table-rotate-recalc-marks) ::
          使第一列的标志字符在' ','#','*','!','$'这几个状态之间切换. 如果存在一个激活的块,则会改变该块中所有的标志.
@@ -2968,6 +2968,892 @@
 ** Custom agenda views :自定义搜索规则和显示方法
 ** Exporting Agenda Views :导出视图到文件中
 ** Agenda column view :使用column视图显示agenda中的事物
+* Working with source code
+org提供了对代码块的多种处理方式,比如使用原生的major-mode编辑代码块,执行代码块,将代码块抽取到其他源文件中去,导出代码块及其结果为其他格式的文档.
+** 代码块的结构
+代码块的结果一般如下所示:
+#+BEGIN_SRC org
+  ,#+NAME: <name>
+  ,#+BEGIN_SRC <language> <switches> <header arguments>
+         <body>
+  ,#+END_SRC
+
+#+END_SRC
+
+还有一种简写形式如下:
+#+BEGIN_SRC org
+  src_<language>{<body>}
+#+END_SRC
+或
+#+BEGIN_SRC org
+  src_<language>[<header arguments>]{<body>}
+#+END_SRC
+
+其中
++ ~#+NAME~ 行是可选的,并常用来为代码块命名,以方便在其他地方(可以跨文件)调用该代码块. =<name>= 应该是唯一的,否则结果未定义
+
++ ~<language>~ 指明了代码块中的代码是哪种语言的代码
+
++ ~<switchers>~ 也是可选的,它控制了代码块的导出方式
+
++ ~<header arguments>~ 也是可选的,它控制了代码块的执行,导出与抽取的各方面的行为. ~<header arguments>~ 还可以通过buffer或subtree的属性来控制
+
++ ~<body>~ 为代码块的具体内容
+
+** 编辑代码块
+使用 =C-c '= 来编辑当前的代码块. 它会新开一个编辑buffer,进入<language>的major mode,并插入代码块的原内容.
+在该编辑buffer中按 =C-x C-s= 会将编辑buffer中的内容写回原代码块. 
+当然,你可以通过设置 =org-edit-src-auto-save-idle-delay= 的值来设置空闲多少秒后自动保存buffer内容. 或者通过设置 =org-edit-src-turn-on-auto-save= 来让进入代码块后自动开启 =auto-save-mode=
+若编辑完后,想退出编辑窗口,再按一次 ~C-c '~ 即可.
+
+在按 =C-c '= 进入编辑buffer后,会自动激活 =org-src-mode=. 同时,还可以通过以下变量来设置编辑buffer的其他行为(更多配置项请参见配置组 =org-edit-structure=)
+
++ org-src-lang-modes
+
+  若 =<lang>-mode= 存在,则默认编辑buffer会进入该major-mode. 但通过设置该变量可以映射任意的 =<lang>= 为其他的major-mode
+
++ org-src-window-setup
+
+  该变量控制了当创建编辑buffer后,各window怎么排列
+
++ org-src-preserve-indentation
+
+  该变量控制了是否保持代码块中的空格为空格,而不转换为TAB.
+
+  默认为nil,表示将代码块中的空格转换为TAB. 当代码块中的代码为类似python这种对空格缩进很严格的语言时,最好设置为t
+
++ org-src-ask-before-returnning-to-edit-buffer
+
+  当已经存在编辑buffer的情况下,再次按下 ~C-c '~,该变量控制是否弹出提示.
+
++ org-src-fontify-natively
+
+  在 =org= buffer中,也高亮显示代码块中的代码.
+** 导出代码块及其结果
+~:exports~ 这一header argument控制了导出代码块及其执行结果时的行为.
+
++ :exports code
+
+  大多数语言的默认设置(ditta是个例外). 表示只导出代码块的内容
+
++ :exports results
+
+  执行代码块并导出结果. 若之前已经有了该代码块的结果,则更新之前的结果而不是插入新的结果.
+
+  代码块本身不会被导出
+
++ :exports both
+
+  代码块及其计算结果都被导出
+
++ :exports none
+
+  代码块及其计算结果都不会被导出
+
+
+~org-export-babel-evaluate~ 变量可以控制在导出org时,哪些代码块可以被执行
+
++ nil :: 所有代码块都不会执行,这在包含有不安全的代码块时特别有用
++ inline-only :: 只有inline 代码块会被执行. 非inline代码块需要人手工执行,这一特性常用于避免在导出时执行过于消耗资源的代码
+** 抽取代码块
+从代码块中抽取代码存到一个纯源代码文件中的过程称之为"tangling"(这一术语来源于文学编程社区). 在tangling的过程中,代码块中的代码会经过 ~org-babel-expand-src-block~ 的扩展,该函数会扩展代码块中的变量与 =noweb= 风格的引用.
+*** Header arguments
++ :tangle no :: 默认值,表示不抽取出该代码块中的代码
++ :tangle yes :: 抽取出代码块中的代码,存放的文件命为将该org文件后的 =.org= 替换为代码块语言后缀后的名称
++ :tangle filename :: 抽取出代码块中的代码,存放在filename中
+*** Function
+- org-babel-tangle :: tangle当前文件,若带有prefix argument则只tangle当前代码块. 快捷键为 ~C-c C-v t~
+- org-babel-tangle-file :: 选择一个文件来tangle. 快捷键为 ~C-c C-v f~
+- org-babel-tangle-jump-to-org :: 该函数可以从tangle的代码处跳回源org文件的代码块处. 但前提是 ~padline~ header argument必须为True(默认),且 ~comment~ header argument必须为 ~link~
+*** Hooks
++ org-babel-post-tangle-hook :: Hook run in code files tangled by `org-babel-tangle'.
+** 执行代码块
+代码块可以被执行,且执行结果可以被插入org buffer中. 执行的结果与代码块之间会有一行间隔文本,该间隔默认为 ~#+RESULTS~ (该值由 ~org-babel-results-keyword~ 的值决定). 
+若代码块的Header argument开启了cache,则间隔行文本还可能有一个cache标识符
+
+默认只有 =emacs-lisp= 的代码块能够被执行,但是可以通过设置 ~org-babel-load-languages~ 的值来决定哪些语言的代码块能够被执行.
+
+最简单的执行代码块的办法就是把光标定位到代码块中,然后按下 ~C-c C-c~ 或者 ~C-c C-v e~, 这会调用 ~org-babel-execute-src-block~ 函数来执行代码块并将结果插入org buffer中.
+
+若为代码块命名了,则可以在org buffer或org table的任意地方执行该代码块. 但前提是该代码块位于当前org buffer或 ~Library of Babel~ 中. 
+
+执行指定名称代码块的方法为使用单独的 ~#+CALL:~ 行或它的嵌入式语法
+
+~#+CALL:~ 的语法为:
+#+BEGIN_SRC org
+   ,#+CALL: <name>(<arguments>)
+   ,#+CALL: <name>[<inside header arguments>](<arguments>) <end header arguments>
+#+END_SRC
+其嵌入式语法为:
+#+BEGIN_SRC org
+  ... call_<name>(<arguments>) ...
+  ... call_<name>[<inside header arguments>](<arguments>)[<end header arguments>] ...
+#+END_SRC
+
+其中:
++ <name>
+
+  要执行代码块的名字
+
++ <arguments>
+
+  传递给代码块的参数,该参数会覆盖代码块header argument中的参数值. 下面是一个例子
+  #+BEGIN_SRC org
+    ,#+CALL: double(n=4)
+  #+END_SRC
+
++ <inside header arguments>
+
+  这些参数会被应用到指定的代码块中去,从而影响代码块的执行. 例如 ~[:result output]~ 就会搜集代码块执行过程中所有输出到 =STDOUT= 中的结果
+
++ <end header arguments>
+
+  这些参数作用于"calling instance"而并不会影响到指定代码块的执行. 这些参数影响的是执行结果如何插入到org buffer中以及 =call line= 语句本身export时的参数. 
+
+  例如: ~[:results html]~ 会在插入执行结果时,用 ~BEGIN_HTML:~ 块包裹起来.
+*** Library of Babel
+存放在 =Library of Babel= 中的代码块可以被任意org文件调用. 
+
+The central repository of code blocks in the “Library of Babel” is housed in an Org mode file located in the ‘contrib’ directory of Org mode.
+
+要想将某个代码块加入到 =Library of Babel= 中,只需要调用函数 ~org-babel-lob-ingest~ 即可,该函数的快捷键为 ~C-c C-v i~
+** 支持的语言
+*** Python
+*** C / C++
+*** Lisp
+** header arguments
+*** 设置header arguments
+有多种途径设置header arguments,每种途径设置参数的作用域与优先级都不一样. 一般来说作用域越大的优先级越低
++ 设置全系统的header arguments
+  
+  设置 ~org-babel-default-header-args~ 变量可以设置全系统的header arguments. 它的默认值为
+  #+BEGIN_SRC emacs-lisp
+    ((:session . "none")
+     (:results . "replace")
+     (:exports . "code")
+     (:cache . "no")
+     (:noweb . "no")
+     (:hlines . "no")
+     (:tangle . "no"))
+  #+END_SRC
+
++ 为某种语言设置header arguments
+  
+  通过设置变量 ~org-babel-default-header-args:<lang>~ 的变量值可以为特定语言设置默认header arguments. 这里<lang>替换为代码块的语言名称
+
++ 为heading设置header arguments
+  
+  通过设置heading名为 ~header-args~ 和 ~header-args:<lang>~ 属性,可以为某个heading下的所有代码块设置header arguments. 
+
+  这种情况下,无论 ~org-use-property-inheritance~ 的值是什么, 这些属性一定是基础的.
+
+  #+BEGIN_SRC org
+    ,#+PROPERTY: header-args:R  :session *R*
+    ,#+PROPERTY: header-args    :results silent
+  #+END_SRC
+  或
+  #+BEGIN_SRC org
+    ,* outline header
+    :PROPERTIES: 
+    :header-args: :cache yes
+    :END:      
+  #+END_SRC
+
++ 为某代码块设置header arguments
+  
+  为独立的代码块设置自己的header arguments是最普遍也是最灵活的方式. 方法是在 ~#+BEGIN_SRC~ 行后列上一系列的header arguments及其值即可. 例如
+  #+BEGIN_SRC org
+      ,#+NAME: factorial
+      ,#+BEGIN_SRC haskell :results silent :exports code :var n=0
+         fac 0 = 1
+         fac n = n * fac (n-1)
+      ,#+END_SRC
+  #+END_SRC
+  
+  当然也可以为嵌入式代码块设置header arguments. 例如
+  #+BEGIN_SRC org
+      src_haskell[:exports both]{fac 5}
+  #+END_SRC
+  
+  代码块的header aguments还可以分拆到多个 ~#+HEADER:~ 或 ~#+HEADERS:~ 行中,这些行放在 ~#+BEGIN_SRC~ 之前 ~#+NAME:~ 之后. 例如
+  #+BEGIN_SRC org
+      ,#+HEADERS: :var data1=1
+      ,#+BEGIN_SRC emacs-lisp :var data2=2
+            (message "data1:%S, data2:%S" data1 data2)
+      ,#+END_SRC
+      
+      ,#+RESULTS:
+      : data1:1, data2:2
+  #+END_SRC
+  或
+  #+BEGIN_SRC org
+    ,#+NAME: named-block
+    ,#+HEADER: :var data=2
+    ,#+BEGIN_SRC emacs-lisp
+      (message "data:%S" data)
+    ,#+END_SRC
+
+    ,#+RESULTS: named-block
+    : data:2
+
+  #+END_SRC
+
++ 设置调用代码块时的header arguments
+  
+  请参见 `执行代码块' 这一节
+*** header arguments说明
+**** var
+  ~:var~ 参数用于传递参数給代码块. 传递参数給代码块的具体方式,依各个语言的不同而改变,具体需要阅读特定语言的文档.
+
+  当为代码块设置 ~:var~ 参数时,总是需要为它设置一个默认值
+
+  参数的值可以是字面量,引用甚至是Emacs Lisp代码. 其中引用可以是带有 ~#+NAME:~, ~#+RESULTS:~ 说明的table或list. ~#+BEGIN_EXAMPLE~ 块,其他代码块以及其他代码块的运行结果.
+  *需要注意的是,让引用另外的代码块时,被引用的代码块会被执行,除非被引用的代码块已经被缓存了运行结果*
+
+  ~:var~ 的格式为 ~:var name=assign~ 其中 ~assign~ 可以是
+
+- table的引用
+
+    #+BEGIN_SRC org
+      ,#+NAME: example-table
+      | 1 |
+      | 2 |
+      | 3 |
+      | 4 |
+
+      ,#+NAME: table-length
+      ,#+BEGIN_SRC emacs-lisp :var table=example-table
+        (length table)
+      ,#+END_SRC
+
+      ,#+RESULTS: table-length
+      : 4
+    #+END_SRC
+
+  - list的引用
+
+    #+BEGIN_SRC org
+      ,#+NAME: example-list
+      - simple
+        - not
+        - nested
+      - list
+                    
+      ,#+BEGIN_SRC emacs-lisp :var x=example-list
+        (print x)
+      ,#+END_SRC
+        
+      ,#+RESULTS:
+      | simple | list |
+    #+END_SRC
+
+  - 不带参数的代码块
+
+    #+BEGIN_SRC org
+      ,#+BEGIN_SRC emacs-lisp :var length=table-length()
+        (* 2 length)
+      ,#+END_SRC
+
+      ,#+RESULTS:
+      : 8
+    #+END_SRC
+
+  - 带参数的代码块
+
+    #+BEGIN_SRC org
+      ,#+NAME: double
+      ,#+BEGIN_SRC emacs-lisp :var input=8
+        (* 2 input)
+      ,#+END_SRC
+
+      ,#+RESULTS: double
+      : 16
+
+      ,#+NAME: squared
+      ,#+BEGIN_SRC emacs-lisp :var input=double(input=1)
+        (* input input)
+      ,#+END_SRC
+
+      ,#+RESULTS: squared
+      : 4
+    #+END_SRC
+
+  - example块
+
+    #+BEGIN_SRC org
+      ,#+NAME: literal-example
+      ,#+BEGIN_EXAMPLE
+        A literal example
+        on two lines
+      ,#+END_EXAMPLE
+
+      ,#+NAME: read-literal-example
+      ,#+BEGIN_SRC emacs-lisp :var x=literal-example
+        (concatenate 'string x " for you.")
+      ,#+END_SRC
+
+      ,#+RESULTS: read-literal-example
+      : A literal example
+      :   on two lines for you.
+
+    #+END_SRC
+
+  - 可索引的变量值
+
+    可以通过索引来切取变量的部分值. 索引从0开始,且支持负数,表示从后往前算.
+
+    org支持嵌套索引,其意义类似于多重数组的索引,方法是在索引与索引之间用`,'分隔
+    #+BEGIN_SRC org
+      ,#+NAME: example-table
+      | 1 | a |
+      | 2 | b |
+      | 3 | c |
+      | 4 | d |
+
+      ,#+BEGIN_SRC emacs-lisp :var data=example-table[0,-1]
+        data
+      ,#+END_SRC
+
+      ,#+RESULTS:
+      : a
+
+
+      ,#+NAME: 3D
+      ,#+BEGIN_SRC emacs-lisp
+        '(((1  2  3)  (4  5  6)  (7  8  9))
+         ((10 11 12) (13 14 15) (16 17 18))
+         ((19 20 21) (22 23 24) (25 26 27)))
+      ,#+END_SRC
+
+      ,#+BEGIN_SRC emacs-lisp :var data=3D[1,,1]
+        data
+      ,#+END_SRC
+
+      ,#+RESULTS:
+      | 11 | 14 | 17 |
+
+    #+END_SRC
+    
+    org还支持切片操作,方法是在两个索引之间使用`:'分隔
+    #+BEGIN_SRC org
+      ,#+NAME: example-table
+      | 1 | a |
+      | 2 | b |
+      | 3 | c |
+      | 4 | d |
+      | 5 | 3 |
+
+      ,#+BEGIN_SRC emacs-lisp :var data=example-table[1:3]
+        data
+      ,#+END_SRC
+
+      ,#+RESULTS:
+      | 2 | b |
+      | 3 | c |
+      | 4 | d |
+    #+END_SRC
+    
+    Additionally, an empty index, or the single character ‘*’, are both interpreted to mean the entire range and as such are equivalent to ‘0:-1’
+    #+BEGIN_SRC org
+      ,#+NAME: example-table
+       | 1 | a |
+       | 2 | b |
+       | 3 | c |
+       | 4 | d |
+
+       ,#+BEGIN_SRC emacs-lisp :var data=example-table[,0]
+         data
+       ,#+END_SRC
+
+       ,#+RESULTS:
+       | 1 | 2 | 3 | 4 |
+
+    #+END_SRC
+
+  - Emacs lisp代码
+
+    若变量的值是以 `(',`[',`''或``' 开头的,则它被认为是Emacs lisp代码,其代码的运行返回值才会作为变量真正的值. 例如:
+    #+BEGIN_SRC org
+      ,#+BEGIN_SRC sh :var filename=(buffer-file-name) :exports both
+         wc -w $filename
+      ,#+END_SRC
+    #+END_SRC
+    
+    需要注意的是,若是从table或list中读取到的值是以 `(',`[',`'',``'开头的, *也不会被认为是elisp代码*
+    #+BEGIN_SRC org
+      ,#+NAME: table
+       | (a b c) |
+
+       ,#+HEADERS: :var data=table[0,0]
+       ,#+BEGIN_SRC perl
+         $data
+       ,#+END_SRC
+
+       ,#+RESULTS:
+       : (a b c)
+    #+END_SRC
+
+**** results
+  
+有四种类型的 ~:result~ 参数. 对于某个代码块来说,每种类型的 ~:reslt~ 参数值只能有一个. 这四种类型分别为:
+
++ collection: specify how the results should be collected from the code block
+    
+  - value :: 默认值,表示result为代码块中最后一个语句的返回值
+
+  - output :: result为代码块输出到STDOUT中的结果.
+
++ type:  specify what type of result the code block will return—which has implications for how they will be processed before insertion into the Org mode buffer
+
+  默认情况下,result会以table或scalar的形式插入到org buffer中
+
+  - table/vector :: result一定以table的形式插入到org buffer中. 即使result的值是一个单值,也会被转换为一个单行单列的表格.
+
+  - list :: result会以org list的形式插入到org buffer中. 即使result的值是一个单值,也会转换为一个只有一个元素的list
+
+  - scalar/verbatim :: 直接插入result的字面量,不做任何转换
+
+  - file :: result的值被认为是一个指向file的路径. result的值会被转换为一个file link再插入到org buffer中
+
++ format:  specify what type of result the code block will return—which has implications for how they will be inserted into the Org mode buffer
+
+  - raw :: result的值被看成是raw org mode code,会被不做任何转换地插入org buffer中. 若result的值看起来是一个org table,则还会被自动排列整齐.
+
+  - org :: result的值会被包裹进 ~BEGIN_SRC org~ 代码块中(但默认情况下,result的值不会被逗号转义)
+
+  - html :: result的值被认为是一段html代码,因此会被包裹进 ~BEGIN_HTML~ 块中
+
+  - latex :: result的值被认为是一段latex代码,因此会被包裹进 ~BEGIN_LaTex~ 块中
+
+  - code :: result的值被认为是一段可解析的代码,因此会被包裹进代码块中.
+
+  - pp :: result的值被认为是一段可解析的代码,但在包裹进代码块之前会进行格式美化操作(converted to pretty-printed code). 目前只支持Python与Ruby
+
+  - drawer :: result的值会被包裹进一个 ~RESULTS~ drawer中
+
++ handing: specify how the results of evaluating the code block should be handled.
+
+  - silent :: result会显示在minbuffer中,而不会插入到org buffer中
+
+  - replace :: 默认值. 之前插入的的result会被删除,然后插入新的result结果
+
+  - append :: 新的result会插入到之前result的后面
+
+  - prepend :: 新的result会插入到之前result的前面.
+    
+    
+**** file
+
+~:file~ 参数用于指定将代码块的result保存到哪个文件中. 常与 ~:results file~ 配合使用
+
+代码块执行后,会插入一条 =\[[file:]\]= 的链接到org buffer中.
+
+~:file~ 的参数值可以有两种格式:
+
++ 一个表示文件路径的字符串
++ 一个由连个字符串组成的list. 其中第一个字符串为保存的文件路径,第二个字符串为链接的描述
+
+**** file-desc
+
+~:file-desc~ 参数常与 ~:file~ 参数配合使用,用于提供链接的描述
+
+**** dir
+
+~:dir~ 参数指定了代码块执行的工作目录. 同时它也常常与 ~:file~ 参数联用用于指明输出文件的相对路径. 默认情况下为org buffer的当前目录. 例如:
+#+BEGIN_SRC org
+  ,#+BEGIN_SRC R :file myplot.png :dir ~/Work
+     matplot(matrix(rnorm(100), 10), type="l")
+  ,#+END_SRC
+#+END_SRC
+
+~:dir~ 甚至还支持tramp格式的远程路径,这表示代码块是在远程机器上执行的. 例如
+#+BEGIN_SRC org
+  ,#+BEGIN_SRC R :file plot.png :dir /dand@yakuba.princeton.edu:
+  plot(1:10, main=system("hostname", intern=TRUE))
+  ,#+END_SRC
+#+END_SRC
+上面这段代码,会在org buffer中插入这么一条链接 
+#+BEGIN_SRC org
+  [[file:/scp:dand@yakuba.princeton.edu:/home/dand/plot.png][plot.png]]
+#+END_SRC
+
+~:dir~ 参数的实现原理实际上就是更改 ~default-directory~ 的值
+
+**** exports
+
+~:exports~ 参数指定了当将org file导出为HTML或LaTex时,是否包含代码块或其result
+
++ code :: 默认值,包含代码块的内容
++ results :: 包含代码块的results
++ both :: 包含代码块及其results
++ none :: 都不包括
+
+**** tangle
+
+~:tangle~ 参数指定代码块是否tangle到源代码文件中
+
++ no :: 默认值,表示不抽取出该代码块中的代码
++ yes :: 抽取出代码块中的代码,存放的文件命为将该org文件后的 =.org= 替换为代码块语言后缀后的名称
++ filename :: 抽取出代码块中的代码,存放在filename中
+
+**** mkdirp
+
+~:mkdirp~ 用于决定当tangled file中的目录不存在时,是否创建该目录
+
++ yes :: 主动创建不存在的目录
++ no :: 不自动创建不存在的目录
+
+**** comments
+
+默认情况下tangle的过程只会把源代码的内容插入到外部文件中. 使用 ~:comments~ 参数可以让代码在tangle的过程中插入额外的注释信息
+
++ no :: 默认情况,表示不插入额外的注释
++ link :: 插入额外的注释,一遍从源代码中能够链接回原org文件
++ yes :: 与 =link= 一样,只是为了向后兼容
++ org :: 将一部分org文件中的内容作为注释插入源文件中.The text is picked from the leading context of the tangled code and is limited by the nearest headline or source block as the case may be
++ both :: link + org
++ noweb :: 开启link,同时 wraps expanded noweb references in the code block body in link comments.
+
+**** padline
+
+~:padline~ 参数决定了tangle时,是否在各个代码块之间使用空行间隔
+
++ yes :: 在各代码块之间使用空行间隔
++ no :: 代码块之间不使用空行间隔
+
+**** no-expand
+
+默认情况下,代码块中的代码需要先经过 ~org-babel-expand-src-block~ 的扩展后再tangle到源文件中. 这一过程涉及到替换 ~:var~ 中定义的参数与 ~noweb~ 引用
+
+~:no-expand~ 则会禁止这项操作
+
+**** session
+
+~:session~ 会让运行代码块的进程保持不关闭. 该功能只能对解析型的语言有效.
+
+默认情况下,进程运行代码块后会自动退出
+
+传递給 ~:session~ 的字符串会作为session的名称.
+
+**** noweb
+
+~:noweb~ 参数控制了在执行,tangle和export代码块时,如何展开noweb引用
+
++ no :: 默认值,并不展开noweb引用
++ yes :: 在evaluated,tangled和exported前,展开noweb引用
++ tangle :: 只有tangle前,才展开noweb引用
++ no-export :: tangle或evalute前才展开noweb引用
++ strip-export :: evalute或tangle前才会展开noweb引用,且 *export* 前会把noweb引用删除
++ eval :: 只有在evaluate前才展开noweb引用
+
+**** noweb-ref
+
+当扩展"noweb"引用时, 会扩展为任何名字或 ~:noweb-ref~ 参数为引用名字的代码块的内容的和. 例如
+#+BEGIN_SRC org
+  ,#+BEGIN_SRC sh :tangle yes :noweb yes :shebang #!/bin/sh
+    <<fullest-disk>>
+  ,#+END_SRC
+
+  ,#+RESULTS:
+  : 83% /cygdrive/d
+
+  ,* the mount point of the fullest disk
+    :PROPERTIES:
+    :noweb-ref: fullest-disk
+    :END:
+
+  ,** query all mounted disks
+  ,#+BEGIN_SRC sh
+    df \
+  ,#+END_SRC
+
+  ,** strip the header row
+  ,#+BEGIN_SRC sh
+    |sed '1d' \
+  ,#+END_SRC
+
+  ,** sort by the percent full
+  ,#+BEGIN_SRC sh
+    |awk '{print $5 " " $6}'|sort -n |tail -1 \
+  ,#+END_SRC
+
+  ,** extract the mount point
+  ,#+BEGIN_SRC sh
+    |awk '{print $2}'
+        #+END_SRC
+#+END_SRC
+当tangle最上面那个代码块时,实际的内容整合了"the mount point of the fullest disk" headline下的所有代码块的内容
+
+**** noweb-sep
+
+~:noweb-sep~ 参数设置了整合各个代码块内容时,各代码块之间使用哪个字符串来分隔,默认为一个空行
+
+**** cache
+
+~:cache~ 参数决定了是否缓存代码块的执行结果. *但当对带有:session参数的代码块无效*
+
++ no :: 默认,不对代码块的执行结果进行缓存
++ yes :: 对代码块的结果进行缓存.org会将代码块的内容做一个SHA1哈希计算,并在计算前做一次比较,若代码块并未改变则直接使用该缓存值.
+
+下面是一个例子:
+#+BEGIN_SRC org
+  ,#+NAME: random
+  ,#+BEGIN_SRC R :cache yes
+  runif(1)
+  ,#+END_SRC
+
+  ,#+RESULTS[a2a72cd647ad44515fab62e144796432793d68e1]: random
+  0.4659510825295
+
+  ,#+NAME: caller
+  ,#+BEGIN_SRC emacs-lisp :var x=random :cache yes
+  x
+  ,#+END_SRC
+
+  ,#+RESULTS[bec9c8724e397d5df3b696502df3ed7892fc4f5f]: caller
+  0.254227238707244
+#+END_SRC
+
+**** sep
+
+The ‘:sep’ header argument can be used to control the delimiter used when writing tabular results out to files external to Org mode. 
+This is used either when opening tabular results of a code block by calling the ‘org-open-at-point’ function bound to ‘C-c C-o’ on the code block, or when writing code block results to an external file (see *note file::) header argument.
+
+By default, when ‘:sep’ is not specified output tables are tab delimited.
+
+**** hlines
+
+~:hline~ 参数决定了当使用一个table作为输入时,是否去掉table中的hline. 默认为no,因为table总的hline会被转换为 =hline= symbol. 而这常常是一种干扰.
+
++ no :: 去除input table中的横线
++ yes :: 保留input table总的横线
+
+下面是一个例子
+#+BEGIN_SRC org
+  ,#+NAME: many-cols
+  | a | b | c |
+  |---+---+---|
+  | d | e | f |
+  |---+---+---|
+  | g | h | i |
+
+  ,#+NAME: echo-table-1
+  ,#+BEGIN_SRC python :var tab=many-cols
+    return tab
+  ,#+END_SRC
+
+  ,#+RESULTS: echo-table-1
+  | a | b | c |
+  | d | e | f |
+  | g | h | i |
+
+
+  ,#+NAME: echo-table-2
+  ,#+BEGIN_SRC python :var tab=many-cols :hlines yes
+    return tab
+  ,#+END_SRC
+
+  ,#+RESULTS: echo-table-2
+  | a | b | c |
+  |---+---+---|
+  | d | e | f |
+  |---+---+---|
+  | g | h | i |
+#+END_SRC
+
+**** colnames
+
+~:colnames~ 参数决定了当使用一个table作为输入时,是否将第一行的值看成是列名而去除.
+
++ nil :: 默认值. 当第二行是一个hline时,则认为第一行为列名去除掉.
++ no :: 第一行不是列名,不要去除
++ yes :: 第一行作为列名去掉,然后 *再按照nil来处理*
+
+#+BEGIN_SRC org
+  ,#+NAME: less-cols
+  | a |
+  |---|
+  | b |
+  | c |
+
+  ,#+NAME: echo-table-again
+  ,#+BEGIN_SRC python :var tab=less-cols
+    return [[val + '*' for val in row] for row in tab]
+  ,#+END_SRC
+
+  ,#+RESULTS: echo-table-again
+  | b* |
+  | c* |
+
+#+END_SRC
+  
+请注意, *去除列名的动作发生在使用index切片之前*
+
+**** rownames
+
+~:rownames~ 参数决定了当使用一个table作为输入时,是否将第一列的值看成是行名而去除. 默认为no
+
++ no :: 第一列不是行名
++ yes :: 第一列是行名
+
+#+BEGIN_SRC org
+  ,#+NAME: with-rownames
+  | one | 1 | 2 | 3 | 4 |  5 |
+  | two | 6 | 7 | 8 | 9 | 10 |
+
+  ,#+NAME: echo-table-once-again
+  ,#+BEGIN_SRC python :var tab=with-rownames :rownames yes
+    return [[val + 10 for val in row] for row in tab]
+  ,#+END_SRC
+
+  ,#+RESULTS: echo-table-once-again
+  | one | 11 | 12 | 13 | 14 | 15 |
+  | two | 16 | 17 | 18 | 19 | 20 |
+#+END_SRC
+  
+请注意, *去除行名的动作发生在使用index切片之前*
+
+**** shebang
+
+~:shebang~ 参数设置shebang行,它在tangling时会将值插入到tangled file中的第一行去,并将其标识为可执行的.
+
+**** tangle-mode
+
+~:tangle-mode~ 参数设置tangled file的权限模式. 它的值会被传递给函数 ~set-file-modes~. 它的值会覆盖 ~:shebang~ 的效果
+
+当多个代码块tangling到同一个file,而各代码块的 ~:tangle-mode~ 不相同的话,其结果是未知的.
+
+**** eval
+
+~:eval~ 参数决定了什么情况下可以执行代码块中的代码. 默认情况下的行为由变量 ~org-confirm-babel-evaluate~ 的值决定
+
++ never/no :: 任何条件下都不能执行
++ query :: 询问是否执行
++ never-export/no-export :: 在export时不能执行,但可以手工执行
++ query-export :: export时询问是否执行
+
+**** wrap
+
+~:wrap~ 用于决定将代码块的执行结果用什么标识符包裹起来.
+
+任意传递給 ~:wrap~ 的<string>,都会将结果包裹在 ~#+BEGIN_<string>~ 与 ~#+END_<string>~ 中
+
+若只有一个单独的 ~:wrap~,则结果会包裹在 ~#+BEGIN~ 与 ~#+END_RESULTS~ 中
+
+**** post
+
+~:post~ 参数用于决定了得到代码块的result后,该result要传递到哪个代码块中作进一步的处理. 这时,result的值临时绑定到 =*this*= 变量中. 例如
+#+BEGIN_SRC org
+  ,#+name: attr_wrap
+  ,#+begin_src sh :var data="" :var width="\\textwidth" :results output
+    echo "#+ATTR_LATEX :width $width"
+    echo "$data"
+  ,#+end_src
+
+  ,#+header: :file /tmp/it.png
+  ,#+begin_src dot :post attr_wrap(width="5cm", data=*this*) :results drawer
+    digraph{
+            a -> b;
+            b -> c;
+            c -> a;
+    }
+  ,#+end_src
+
+  ,#+RESULTS:
+  :RESULTS:
+  ,#+ATTR_LATEX :width 5cm
+  [[file:/tmp/it.png]]
+  :END:
+#+END_SRC
+
+**** prologue
+
+~:prologue~ 参数决定了在执行代码块中的代码之前,作什么初始化操作
+
+**** epilogue
+
+~:epilogue~ 参数决定了在执行代码块中的代码之后,作什么清理操作
+
+** 处理代码块的运行结果
+~:session~ 与 ~:results~ 为 =value= 还是 =output= 共同决定了results的结果
+
+|                 | Non-session      | session          |
+|-----------------+------------------+------------------|
+| :results value  | 最后语句的返回值 | 最后语句的返回值 |
+| :results output | STDOUT的输出     | 解释器的输出结果         |
+
+*当 =:results value= 时,无论是否开启 =:session= ,results都会尽可能的以table的方式展示出来*
+
+*当 =:results value= 时,代码块的内容会被包含在一个函数中,然后执行该函数. 因此对于像Python这样的语言来说,若最后语句不是return,则一定返回None*
+
+*注意 =:results output= 在session与non-session时的不同*
+#+BEGIN_SRC org
+  ,#+BEGIN_SRC python :results output
+   print "hello"
+   2
+   print "bye"
+  ,#+END_SRC
+
+  ,#+RESULTS:
+  : hello
+  : bye
+
+
+  ,#+BEGIN_SRC python :results output :session
+   print "hello"
+   2
+   print "bye"
+  ,#+END_SRC
+
+  ,#+RESULTS:
+  : hello
+  : 2
+  : bye
+
+#+END_SRC
+** Noweb引用语法--org mode下的文学编程
+[[http:www.cs.tufts.edu/~nr/noweb/][noweb]] 文学编程系统允许使用类似 ~<<code-block-name>>~ 的格式来引用一段命名的代码块.
+
+当代码块被tangled或执行时,是否将noweb引用扩展为对应代码的行为由代码块的 ~:noweb~ 决定. ~:noweb yes~ 表示代码块执行前,其中的noweb引用会被扩展. 默认值为 ~:noweb no~ 表示不会扩展.
+
+也可以引用命名代码块的执行结果而不是代码内容. 语法是 ~<<code-block-name(optional arguments)>>~ 
+
+*若org文件特别大,则noweb tangle起来会很缓慢,则考虑设置 ~org-babel-use-quick-and-dirty-noweb-expansion~ 为t,但代价是无法正确识别继承的 ~:noweb-ref~ 参数*
+** 代码块相关快捷键与函数
+在代码块中
+| ‘C-c C-c’  | ‘org-babel-execute-src-block’     |
+| ‘C-c C-o’  | ‘org-babel-open-src-block-result’ |
+| ‘M-<up>’   | ‘org-babel-load-in-session’       |
+| ‘M-<down>’ | ‘org-babel-switch-to-session’     |
+
+** 在命令行中调用代码块中的函数
+下面这段代码会针对每个传递给它的参数调用 =org-babel-tangle=
+
+#+BEGIN_SRC sh
+  #!/bin/sh
+  # -*- mode: shell-script -*-
+  #
+  # tangle files with org-mode
+  #
+  DIR=`pwd`
+  FILES=""
+
+  # wrap each argument in the code required to call tangle on it
+  for i in $@; do
+      FILES="$FILES \"$i\""
+  done
+
+  emacs -Q --batch \
+        --eval "(progn
+       (add-to-list 'load-path (expand-file-name \"~/src/org/lisp/\"))
+       (add-to-list 'load-path (expand-file-name \"~/src/org/contrib/lisp/\" t))
+       (require 'org)(require 'org-exp)(require 'ob)(require 'ob-tangle)
+       (mapc (lambda (file)
+              (find-file (expand-file-name file \"$DIR\"))
+              (org-babel-tangle)
+              (kill-buffer)) '($FILES)))" 2>&1 |grep tangled
+
+#+END_SRC
 * Footnotes
 
 [fn:1] install-info的输出也是系统依赖的. 在特定的Debian及其衍生系统中使用两种不同版本的install-info程序.如果你看到
