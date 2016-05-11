@@ -2968,6 +2968,187 @@
 ** Custom agenda views :自定义搜索规则和显示方法
 ** Exporting Agenda Views :导出视图到文件中
 ** Agenda column view :使用column视图显示agenda中的事物
+* Publishing
+org-mode还允许将一系列项目内相关的org文件发布为一系列的HTML文件,并且可以自动上传这些HTML及相关附件(例如图片,源代码文件等)到web服务器上.
+** 配置
+配置发布时,主要配置的就是 ~org-publish-project-alist~ 这个变量. 每个元素配置一个project的内容,且可能为以下两种格式中的一种
+#+BEGIN_SRC emacs-lisp
+  ("project-name" :property value :property value ...)
+  ;; i.e., a well-formed property list with alternating keys and values
+  ;; or
+  ("project-name" :components ("sub-project-name" "sub-project-name" ...))
+#+END_SRC
+其中,第二种格式表明"project-name"是由"sub-project-name"组成的,当publish "project-name"时,会逐个publish各个"sub-project-name"
+*** Sources and destinations for files
+这些属性指定了要发布哪些org文件,发布到哪个地方去.
+
++ :base-directory :: 包含源org文件的目录
++ :publishing-directory :: 发布后的产出文件存放的目录,支持通过tramp直接发布到远程主机上
++ :preparation-functiion :: 在真正发布之前被调用的函数/函数列表. 在这些函数内,可以使用变量 =project-plist= 来引用project property list
++ :completion-function :: 在发布动作完成之后被调用的函数/函数列表. 在这些函数内,可以使用变量 =project-plist= 来引用project property list
+*** selecting files
+默认情况下, ~:base-directory~ 中的所有以 =.org= 结尾的文件都被认为是项目的源文件. 但可以通过以下属性修改:
+
++ :base-extension :: 该变量可以为一个正则表达式表示以哪些后缀的源文件(不包含.)被认为是项目的源文件. 若值为符号'any,则表示 ~:base-directory~ 中的所有文件(甚至哪些无后缀的文件)
++ :exclude :: 匹配该正则表达式的文件不会被发布
++ :include :: 这时一个文件的列表,表示无论 ~:base-extension~ 和 ~:exclude~ 怎么设置,这些文件都会被发布
++ :recursive :: 表示是否递归发布 ~:base-directory~ 中的子目录下的文件
+*** Publishing action
+发布的过程通常分为两个步骤, 第一步先将org文件转换为目标格式的文件,第二步将转换后的文件拷贝到目的目录中.
+
+默认,会使用 =org-html-publish-to-html= 导出为html文件.
+
+但是你也可以通过配置 ~:publishing-function~ 的值来设置将org文件导出为其他格式的文件. 
+
++ org-latex-publish-to-pdf :: 导出为pdf
++ org-org-publish-to-org :: 导出为org,但是会把已归档的,已注释的以及tag-excluded的树給删掉
++ org-publish-attachment :: 并不会对文件作什么转换,因为对于类似图片这种附件来说,发布过程只需要直接拷贝到目标目录就行了
+
+~:publishing-function~ 的值为一个函数的list,则其中的函数会被依次调用. 且该函数应该接受三个参数:
+
+1. 一个至少包含 ~:publishing-directory~ 的属性列表
+2. 待发布的文件名称
+3. 输出文件存储的目录路径
+
+这些函数要实现的功能为: 转换指定的文件并将结果文件放到目标目录下.
+
+~:htmlized-source~ 的值决定了发布时,是否对代码块中的代码进行作色
+*** 其他影响export的属性
+
+下面列出其他会影响export的属性,这些属性的默认值与org的特定变量有关
+
+| export的属性                         | org buffer对应变量                      |
+|--------------------------------------+-----------------------------------------|
+| ‘:archived-trees’                  | ‘org-export-with-archived-trees’      |
+| ‘:exclude-tags’                    | ‘org-export-exclude-tags’             |
+| ‘:headline-levels’                 | ‘org-export-headline-levels’          |
+| ‘:language’                        | ‘org-export-default-language’         |
+| ‘:preserve-breaks’                 | ‘org-export-preserve-breaks’          |
+| ‘:section-numbers’                 | ‘org-export-with-section-numbers’     |
+| ‘:select-tags’                     | ‘org-export-select-tags’              |
+| ‘:with-author’                     | ‘org-export-with-author’              |
+| ‘:with-creator’                    | ‘org-export-with-creator’             |
+| ‘:with-drawers’                    | ‘org-export-with-drawers’             |
+| ‘:with-email’                      | ‘org-export-with-email’               |
+| ‘:with-emphasize’                  | ‘org-export-with-emphasize’           |
+| ‘:with-fixed-width’                | ‘org-export-with-fixed-width’         |
+| ‘:with-footnotes’                  | ‘org-export-with-footnotes’           |
+| ‘:with-latex’                      | ‘org-export-with-latex’               |
+| ‘:with-planning’                   | ‘org-export-with-planning’            |
+| ‘:with-priority’                   | ‘org-export-with-priority’            |
+| ‘:with-special-strings’            | ‘org-export-with-special-strings’     |
+| ‘:with-sub-superscript’            | ‘org-export-with-sub-superscripts’    |
+| ‘:with-tables’                     | ‘org-export-with-tables’              |
+| ‘:with-tags’                       | ‘org-export-with-tags’                |
+| ‘:with-tasks’                      | ‘org-export-with-tasks’               |
+| ‘:with-timestamps’                 | ‘org-export-with-timestamps’          |
+| ‘:with-toc’                        | ‘org-export-with-toc’                 |
+| ‘:with-todo-keywords’              | ‘org-export-with-todo-keywords’       |
+| ‘:html-doctype’                    | ‘org-html-doctype’                    |
+| ‘:html-container’                  | ‘org-html-container-element’          |
+| ‘:html-html5-fancy’                | ‘org-html-html5-fancy’                |
+| ‘:html-xml-declaration’            | ‘org-html-xml-declaration’            |
+| ‘:html-link-up’                    | ‘org-html-link-up’                    |
+| ‘:html-link-home’                  | ‘org-html-link-home’                  |
+| ‘:html-link-org-as-html’           | ‘org-html-link-org-files-as-html’     |
+| ‘:html-link-use-abs-url’           | ‘org-html-link-use-abs-url’           |
+| ‘:html-head’                       | ‘org-html-head’                       |
+| ‘:html-head-extra’                 | ‘org-html-head-extra’                 |
+| ‘:html-inline-images’              | ‘org-html-inline-images’              |
+| ‘:html-extension’                  | ‘org-html-extension’                  |
+| ‘:html-preamble’                   | ‘org-html-preamble’                   |
+| ‘:html-postamble’                  | ‘org-html-postamble’                  |
+| ‘:html-table-attributes’           | ‘org-html-table-default-attributes’   |
+| ‘:html-table-row-tags’             | ‘org-html-table-row-tags’             |
+| ‘:html-head-include-default-style’ | ‘org-html-head-include-default-style’ |
+| ‘:html-head-include-scripts’       | ‘org-html-head-include-scripts’       |
+
+写在org 文件中的option的优先级 > =org-publish-project-alist= 中配置的优先级 > org相关变量的值
+*** Links between published files
+在org文件中可以使用下面两种方式创建连接到另一个org文件中的链接. 
+#+BEGIN_SRC org
+  [[file:foo.org][The foo]] 
+  file:foo.org
+#+END_SRC
+
+当发布这种org文件时,这种连接到org的链接会自动转换为连接到对应的html文件.
+
+若你不希望进行这种转换,则需要使用 =http:= 协议而不能是 =file:= 协议.
+*** Generating a sitemap
++ :auto-sitemap :: 若为非nil,则在 `org-publish-current-project' 或 `prg-publish-all' 时自动发布sitemap
++ :sitemap-filename :: sitemap的输出文件名,默认为`sitemap.org'(发布后变成sitemap.html)
++ sitemap-title :: sitemap网页的title. 默认为sitemap的文件名
++ sitemap-function :: 用来生成sitemap的函数. 默认为 =org-publish-org-sitemap=,它会生成一个系列连接到项目内其他文件的链接列表
++ sitemap-sort-folders :: sitemap中文件夹的存放位置. 默认是 =first=,表示将文件夹放在最前面. 也可以设置成 =last=,表示将文件夹放在最后面. 其他的值则表示交叉放置
++ sitemap-sort-files :: sitemap中文件的排序方式. 默认为 =alphabetically=,还可以是 =chronologically= 或 =anti-chronologically=
++ sitemap-ignore-case :: sitemap中文件排序时,是否忽略大小写,默认为nil表示不忽略
++ sitemap-file-entry-format :: 指定sitemap中链接的格式. 其中 =%t= 表示title, =%a= 表示author, =%d= 表示date,该date由函数 =org-publish-find-date= 获取,并经由 =org-publish-sitemap-date-format= 格式化
++ :sitemap-date-format :: 指定了sitemap entry中的date的显示格式
++ :sitemap-sans-extension :: 若为非nil,则在产生sitemap时会删除掉文件名的后缀. 默认为nil
+*** Generating an index
+org-mode发布时,可以自动产生index文件.
+
++ :makeindex :: 若为非nil,则会产生 =theindex.org= 并发布为 =theindex.html= 
+
+The file will be created when first publishing a project with the =:makeindex= set. The file only contains a statement =#+INCLUDE: theindex.inc=.  
+You can then build around this include statement by adding a title, style information, etc.
+
+** 发布相关命令
++ C-c C-e P x (org-publish) :: 选择并发布项目
++ C-c C-e P p (org-publish-current-project) :: 发布当前文件所属的项目
++ C-c C-e P f (org-publish-current-file) :: 只发布当前文件
++ C-c C-e P a (org-publish-all) :: 发布所有项目
+
+org根据时间戳来决定文件是否被修改. 一般情况下,上面的函数只会发布已经更改过的文件. 但可以通过以下几种方法来强制发布所有文件
++ 调用上面函数时,带上前缀参数
++ 设置变量 =org-publish-use-timestamps-flag= 为nil
+
+** 例子
+*** 一个单组件项目的发布
+下面的例子中,将一些org文件发布到本机的 =~/public_html= 目录中
+#+BEGIN_SRC emacs-lisp
+  (setq org-publish-project-alist
+           '(("org"
+              :base-directory "~/org/"
+              :publishing-directory "~/public_html"
+              :section-numbers nil
+              :with-toc nil
+              :html-head "<link rel=\"stylesheet\"
+                         href=\"../other/mystyle.css\"
+                         type=\"text/css\"/>")))
+
+#+END_SRC
+
+*** 一个多组件项目的发布
+下面是一个复杂的多的项目发布例子. 除了将org文件发布成html文件外,还包括图片,源代码和样式文件的发布.
+#+BEGIN_SRC emacs-lisp
+  (setq org-publish-project-alist
+        '(("orgfiles"
+            :base-directory "~/org/"
+            :base-extension "org"
+            :publishing-directory "/ssh:user@host:~/html/notebook/"
+            :publishing-function org-html-publish-to-html
+            :exclude "PrivatePage.org"   ;; regexp
+            :headline-levels 3
+            :section-numbers nil
+            :with-toc nil
+            :html-head "<link rel=\"stylesheet\"
+                    href=\"../other/mystyle.css\" type=\"text/css\"/>"
+            :html-preamble t)
+
+           ("images"
+            :base-directory "~/images/"
+            :base-extension "jpg\\|gif\\|png"
+            :publishing-directory "/ssh:user@host:~/html/images/"
+            :publishing-function org-publish-attachment)
+
+           ("other"
+            :base-directory "~/other/"
+            :base-extension "css\\|el"
+            :publishing-directory "/ssh:user@host:~/html/other/"
+            :publishing-function org-publish-attachment)
+           ("website" :components ("orgfiles" "images" "other"))))
+#+END_SRC
 * Working with source code
 org提供了对代码块的多种处理方式,比如使用原生的major-mode编辑代码块,执行代码块,将代码块抽取到其他源文件中去,导出代码块及其结果为其他格式的文档.
 ** 代码块的结构
