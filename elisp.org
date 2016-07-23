@@ -1,3 +1,4 @@
+# -*- coding: utf-8; -*-
 #+TITLE: elisp
 #+AUTHOR: DarkSun
 #+OPTIONS: ^:{}
@@ -6891,6 +6892,58 @@ Tabulated List Mode继承至Special mode,且同时被多个子mode继承,例如P
 
   若参数REMEMBER-POS为非nil,则该函数在刷新buffer前会记住当前行的ID,并在刷新后自动定位到该ID行
 
++ (tabulated-list-print-entry id cols)
+
+  在光标处插入新entry,entry信息由ID和COLS决定
+
+  其中ID是一个用于标示entry的lisp对象,而COLS为一个由各列信息组成的vector
+
++ (tabulated-list-print-col n col-desc x) ??
+  
+  为光标处entry插入一个特定的entry列
+
+  其中N为列编号,COL-DESC为列描述,X为光标处的列编号
+
+  该函数在插入后,返回列编号
+
+** 其他函数
++ (tabulated-list-get-id &optional POS)
+  
+  返回POS位置entry的ID. POS默认为光标当前位置
+
++ (tabulated-list-get-entry &optional POS)
+  
+  返回POS位置entry的信息. 返回的格式为一个由列信息组成的vector
+
+  POS默认为光标当前位置
+
++ (tabulated-list-delete-entry)
+
+  删除光标所在位置的entry. 并返回一个(ID COLS...)的列表来暂时被删除entry的信息.
+
+  *该函数同时会将光标移动到entry的最开头位置*
+
+  *该函数只会更改buffer内容,而不会更改`tabulated-list-entries'的值*
+
++ (tabulated-list-set-col COL DESC &optional CHANGE-ENTRY-DATA)
+
+  更改当前位置的entry中第COL列的内容为DESC
+
+  COL可以是列的位置,也可以是列的名称.
+
+  CHANGE-ENTRY-DATA指示了是否同时更改`tabulated-list-entries'的值
+
++ (tabulated-list-put-tag tag &optional advance)
+  
+  将TAG放入当前entry的padding区域
+
+  TAG为字符串,且大小不能大于`tabulated-list-padding'的值
+
+  若ADVANCE为非nil,则光标同时移动到下一行
+
++ tabulated-list-padding
+
+  每个entry前预留于padding的字符个数
 
 
   
@@ -6898,6 +6951,9 @@ Tabulated List Mode继承至Special mode,且同时被多个子mode继承,例如P
 
 * Desktop Save Mode
 
+* Emacs Display
+** The Display Property
+** Images
 * Number相关函数
   * 判断是否为自然数(0+正整数)
 
@@ -8470,27 +8526,169 @@ buffer-string to get the whole buffer content.
 	 (save-excursion
 	     reset body
          )
-* 窗口
+* Window
+** 基本概念
+*** live window
+
+有buffer显示的window被称为live window, 可以通过 ~(window-livep object)~ 来判断
+
+*** valid window
+valid window可能是live window或internal window. 要注意它与live window的区别.
+一个valid window可能被删除,则变成invalid window,但它仍可能被其他lisp对象所引用.
+并且一个被删除的window可能通过恢复之前报错的window configuration变回valid window
+
+使用 ~(window-valid-p object)~ 来判断是否为valid window
+
+*** selected-window
+
+任何时候,不管有多少个frame,只有唯一一个selected window
+
+一般来说,selected window的buffer就是"current buffer",但有一种情况例外,就是使用 ~set-buffer~ 之后.
+
+** window与frame的关系
+
+一个window只可能属于一个frame. 
+
++ (window-frame &optional window)
+  
+  该函数获取指定window所属的frame
+
++ (window-list &optional frame minibuffer window)
+  
+  该函数获取指定frame的所有 *live window* 列表.
+
+  MINIBUFFER参数指定了返回的live window列表是否包含minibuffer window.
+
+  - t :: 包含minbuffer window
+
+  - nil :: 当minibuffer被激活时才包含
+
+  - 其他 :: 不包含
+
+  WINDOW参数指定了live window列表中的第一个window,它应该是指定frame中的一个live window.
+
+  若未指定WINDOW参数,则selected window作为列表的第一个window
+  
+
+window在每个frame中都是以window tree的形式被组织起来的. 
+#+BEGIN_EXAMPLE
+  ______________________________________
+  | ______ ____________________________ |
+  ||      || __________________________ ||
+  ||      |||                          |||
+  ||      |||                          |||
+  ||      |||                          |||
+  ||      |||____________W4____________|||
+  ||      || __________________________ ||
+  ||      |||                          |||
+  ||      |||                          |||
+  ||      |||____________W5____________|||
+  ||__W2__||_____________W3_____________ |
+  |__________________W1__________________|
+#+END_EXAMPLE
+
+每个window tree的叶节点都是live window组成的.
+window tree的中间节点则是由internal window组成,即哪些不显示buffer的window
+internal window存在的目的是为了组织live window之间的关系.
+window tree的root节点被称为root window. 它可以是live window也可以是internal window
+
+*一般来说,window tree并不包含minibuffer window,除非整个frame只有这个minibuffer window*
+
+当分割一个window后,分割出来的两个live window中有一个 *就是之前被分割的那个window对象*. 
+emacs会新建两个window对象:一个是分割出来的另一个live window,还有一个是internel window作为分割出两个live window的父window
+
+每个internal window最少具有两个子窗口,若某internal window的子窗口数降为1,则Emacs自动删除该internal window.
+
+
 ** 获得窗口对象
-   * 得到当前光标所在的窗口对象
+
++ (frame-root-window &optional frame-or-window)
+  
+  该函数返回FRAME-OR-WINDOW的root window
+
+  参数FRAME-OR-WINDOW若为nil则表示返回当前选中frame的root window
+
++ (window-parent &optional window)
+  
+  WINDOW的父window, 默认为选中窗口的父window
+
++ (window-top-child &optional window)
+  
+  返回指定WINDOW的最上方的子window
+
+  当然WINDOW必须是是internal window且其子窗口应是垂直组合的,否则该函数返回nil
+
++ (window-left-child *optional window)
+
+  返回指定WINDOW的最左方的子window
+
+  当然WINDOW必须是是internal window且其子窗口应是水平组合的,否则该函数返回nil
+
++ (window-child window)
+  
+  该函数返回指定WINDOW的第一个子window.
+
+  该函数自动判断WINDOW中子window的排列方式,并返回最上方会最左方的子window
+
+  WINDOW必须是internal window,否则返回nil
+
++ (window-combined-p &optional window horizontal)
+  
+  判断WINDOW是否与其他WINDOW垂直/水平排列.
+
+  参数HORIZONTAL为nil表示判断是否垂直排列,否则判断是否水平排列
+
++ (window-next-sibling &optional window)
+  
+  返回WINDOW的下一个兄弟window
+
++ (window-prev-sibling &optional window)
+  
+  返回WINDOW的上一个兄弟window
+
++ (frame-first-window &optional frame-or-window)
+  
+  返回指定FRAME中的最最上方的live window
+
++ (window-in-direction direction &optional window ignore sign wrap mini)
+  
+  返回与WINDOW在DIRECATION方向上相邻的live window
+
+  参数DIRECTION可能是above,below,left,right
+
+  参数WINDOW必须是live window,且默认为选中的window
+
+  一般情况下, *该函数会跳过那些参数`no-other-window'为非nil的window*,但若参数IGNORE为非nil,则该函数不跳过
+  
+  If the optional argument sign is a negative number, it means to use the right or bottom edge ofwindowas reference position instead ofwindow-point. If sign is a positive number, it means to use the left or top edge ofwindowas reference position.
+  
+  参数WRAP若为非nil,则表示允许越过frame边界,例如最右边的右边调到了最左边.
+
+  参数mini指定了什么情况下返回minibuffer window,且若WRAP为非nil,则该函数只有在minibuffer被激活状态才返回minibuffer window
+
++ (window-tree &optional frame)
+  
+  返回指定frame的window-tree
+
++ 得到当前光标所在的窗口对象
 
      selected-window
-   * 得到当前frame里的所有窗口
++ 得到当前frame里的所有窗口
 
      window-list
-   * window-lists里排在某个window之后/之前的窗口对象
++ window-lists里排在某个window之后/之前的窗口对象
 
      next-window / previous-window
-   * 查找符合某个条件的窗口
++ 查找符合某个条件的窗口
 
      get-window-with-predicate
-   * 根据buffer获得window(如果有多个窗口显示同一个缓冲区,那么函数由window-list决定返回哪个).
++ 根据buffer获得window(如果有多个窗口显示同一个缓冲区,那么函数由window-list决定返回哪个).
 
      get-buffer-window
-   * 根据buffer获得全部的相应window
++ 根据buffer获得全部的相应window
 
      get-buffer-window-list
-   * 根据给定的文件名,返回缓冲区
++ 根据给定的文件名,返回缓冲区
 
      find-buffer-visiting
 ** 窗口操作
@@ -10800,14 +10998,17 @@ Emacs在不同类型的终端下启动时,都会加载不同的终端相关的li
 
 	(insert-register ?1 t)
 * Org相关函数
-** 取entry属性
-   (org-entry-get nil "属性名" 是否继承属性)
-** 取entry的tag list
-   (org-get-tags)
-** 取entry的TODO state
-   变量`org-get-tags`
-** 判断哪些state是完成状态
-   变量`org-done-keywords`
++ 取entry属性 :: (org-entry-get nil "属性名" 是否继承属性)
++ 取entry的tag list :: (org-get-tags)
++ 取entry的TODO state :: org-get-tags
++ 判断哪些state是完成状态 :: org-done-keywords
++ 跳转到headline :: (org-back-to-heading)
++ 判断是否处于clockin状态 :: org-clock-clocking-in
++ clock in :: (org-clock-in)
++ clock out :: (org-clock-out)
++ 当前clock entry的headline :: org-clock-heading
++ clock out触发的hook :: org-clock-out-hook
++ 更新mode-line的内容 :: (org-clock-update-mode-line)
 * 版本信息
   * 变量emacs-version
   * 变量emacs-major-version
