@@ -1,0 +1,358 @@
+#+TITLE: WanderLust
+#+AUTHOR: LdBeth
+#+STARTUP: showall
+
+#+begin_quote 
+All mail clients suck. -cira, the author of another mail client, mutt
+#+end_quote
+
+#+begin_quote 
+但是后来我发现其它 email 程序都有某种我不喜欢的怪毛病。-- 《Mutt 使用指南》
+#+end_quote
+
+* 目录                                                                  :TOC:
+- [[#简介][简介]]
+  - [[#wanderlust-的特点][WanderLust 的特点]]
+    - [[#超强的信件分类功能][超强的信件分类功能]]
+    - [[#信件打分排序功能][信件打分排序功能]]
+    - [[#几乎任意条件的彩色设置][几乎任意条件的彩色设置]]
+    - [[#可以随意绑定热键][可以随意绑定热键]]
+    - [[#设置条件挂钩][设置条件挂钩]]
+    - [[#批量邮件处理][批量邮件处理]]
+    - [[#_任选编辑器_][_任选编辑器_]]
+    - [[#高级的-mime-支持][高级的 MIME 支持]]
+    - [[#支持-pgp-加密][支持 PGP 加密]]
+    - [[#_mutt_-wanderlust-是免费的][_Mutt_ WanderLust 是免费的]]
+- [[#开始][开始]]
+- [[#配置收信方式][配置收信方式]]
+  - [[#一个相对复杂的范例][一个相对复杂的范例]]
+  - [[#举例][举例]]
+- [[#配置发信方式][配置发信方式]]
+  - [[#使用内置-smtp-发信][使用内置 SMTP 发信]]
+  - [[#使用-sendmailmsmtp][使用 =sendmail/msmtp=]]
+- [[#maildir-设置][MailDir 设置]]
+- [[#faq][FAQ]]
+  - [[#密码][密码]]
+  - [[#邮件头显示了一大堆乱七八糟的东西][邮件头显示了一大堆乱七八糟的东西]]
+  - [[#如何在读信时显示邮件列表][如何在读信时显示邮件列表]]
+  - [[#自动删除邮件和自动归类邮件][自动删除邮件和自动归类邮件]]
+  - [[#如何插入附件][如何插入附件]]
+  - [[#如何利用-org-mode-发送-html-邮件][如何利用 Org-mode 发送 html 邮件]]
+
+* 简介
+  WanderLust 是一个完全用 Emacs Lisp 实现的一个不需要在 Emacs 之外进行配置的邮件客
+  户端。难能可贵的是，即使作为和 GNUS 同样的一个单线程应用，IMAP 收信速度仍然碾压
+  绝大部分其它客户端。
+
+  和 Mew 一样，这个包最早是由日本人构建的，所以不需要额外配置字体就能正常显示中文。
+  同时 WanderLust 也支持 NNTP，MailDir，POP，RSS 等多种协议。
+
+  兼顾了 GNUS 的纯 Emacs Lisp 实现和 Mew 的 IMAP 优化、强大的邮件分类功能，同时
+  还具备一个优秀的邮箱界面，这就是 WanderLust。
+
+  为了向《Mutt 使用指南》致敬，我在这里列出了一些不错的特性。
+
+** WanderLust 的特点
+  WanderLust 具有以下特点：
+
+*** 超强的信件分类功能
+   这也是和 Mew/Mutt 相似的地方。
+
+*** 信件打分排序功能
+   令人惊讶的是，和 Mutt 一样，它也有这种功能。
+
+*** 几乎任意条件的彩色设置
+   是的。
+
+*** 可以随意绑定热键
+   因为你在用 Emacs！
+
+*** 设置条件挂钩
+   同样这也仰仗于 Emacs。
+
+*** 批量邮件处理
+   当然可以了！
+
+*** _任选编辑器_
+   额，这个好像做不到。不过你用的 Emacs 已经是最好的编辑器（为了防止被打我得加个
+   “之一”）了，而且你也可以用 Evil。
+
+*** 高级的 MIME 支持
+   WangderLust 依赖于用 Emacs Lisp 实现的 MIME，能够很好地处理各种文件。
+
+*** 支持 PGP 加密
+   我得说 Emacs 本来就支持。你可以用 =mailcrypt= 来用 GPG 加密邮件。
+
+*** _Mutt_ WanderLust 是免费的
+   听了上面那么多好处之后，还有比这更好的消息吗？
+   
+
+* 开始
+  好吧，实际上这个插件极度缺少说明，你几乎无法找到任何介绍这个包的中文资料，甚至
+  英文资料也几乎仅限于 EmacsWiki 上模糊不清的几段说明。
+
+  但是至少有自带的 Emacs Manual 可以看。据说日文版的使用手册比英文版的还要详细一
+  点。
+  
+  因为这个包可以直接在 melpa 上找到，安装部分就略过。唯一值得注意的是因为依赖包
+  比较多，可能要重启几次 Emacs 才能保证安装成功。
+
+  然后，和 Mew 一样，记得在 =init.el= 里面加几行：
+
+  #+begin_src emacs-lisp
+    (if (boundp 'mail-user-agent)
+        (setq mail-user-agent 'wl-user-agent))
+    (if (fboundp 'define-mail-user-agent)
+        (define-mail-user-agent
+          'wl-user-agent
+          'wl-user-agent-compose
+          'wl-draft-send
+          'wl-draft-kill
+          'mail-send-hook))
+  #+end_src
+  
+
+* 配置收信方式
+  WanderLust 用 =~/.folders= 来配置收信方式。非常令人无语的是，这个文件是
+  unix-rc 格式的。但是不要被吓退，其实这是很容易弄懂的。
+
+  #+begin_src conf-unix
+    %INBOX:johndoe/clear@mail.domain.com:993! "收件箱"
+    INBOX {
+      %INBOX/Family:johndoe/clear@mail.domain.com:993! "家庭"
+      %INBOX/Work:johndoe/clear@mail.domain.com:993! "工作"
+      Work {
+        .inbox "Bug Reports"
+      }
+    }
+  #+end_src
+  
+  明白了吗？这就是一个邮箱入口列表了，用不同的标记来告诉 WanderLust 到哪里取邮件。
+  =%= 表示 IMAP 信箱， =.= 表示本地 MailDir 格式的信箱， =&= 表示 POP 信箱。这甚
+  至比用 Emacs Lisp 配置还要直观，让我想起了用 Org-mode 来配置 RSS Feeds 的
+  =org-elfeed= 。（说实话我觉得 elfeed 的中文支持差爆了，甚至还不如那个性能比较
+  低的 newsticker。）具体格式参照 Manual。
+
+  生成的邮件列表结构是这样的：
+
+  #+begin_example 
+        总邮箱
+         |-收件箱（一个实际邮件文件夹）
+         `-INBOX（这个则是用来分类的一个文件夹）
+           |-家庭
+           |-工作
+           `-Work
+             `-Bug Reports（本地 MailDir）
+  #+end_example
+  
+  你应该可以看出来，通过这种方式很容易就能同时收取多个邮箱。
+
+** 一个相对复杂的范例
+   （来自 Emacs Wiki）
+   #+begin_src conf-unix
+    # -*- conf-unix -*-
+    GMAIL{
+       %INBOX:myname/clear@imap.gmail.com:993!         "In"
+       %[Gmail]/Sent:myname/clear@imap.gmail.com:993!  "Sent"
+       %[Gmail]/Draft:myname/clear@imap.gmail.com:993! "Draft"
+       %[Gmail]/Trash:myname/clear@imap.gmail.com:993! "Trash"
+       %[Gmail]/Spam:myname/clear@imap.gmail.com:993!  "Spam"
+
+       Buy{
+          %buy/ebay:myname/clear@imap.gmail.com:993!     "E-bay"
+          %buy/records:myname/clear@imap.gmail.com:993!  "Records"
+          %buy/books:myname/clear@imap.gmail.com:993!    "Books"
+       }
+
+       Friends{
+          %friends/work:myname/clear@imap.gmail.com:993!       "work friends"
+          %friends/university:myname/clear@imap.gmail.com:993! "university friends"
+          %friends/college:myname/clear@imap.gmail.com:993!    "old friends"
+          %friends/highschool:myname/clear@imap.gmail.com:993! "very old friends"
+       }
+    }
+
+    #Note: usernames with "strange" characters (like "@") must be written 
+    #like: "myname@company.com". Folders at my work are delimited by dot '.'.
+    WORK{
+       %INBOX:"myname@company.com"/clear@mail.company.com        "Inbox"
+       %INBOX.Sent:"myname@company.com"/clear@mail.company.com   "Sent"
+       %INBOX.Drafts:"myname@company.com"/clear@mail.company.com "Draft"
+       %INBOX.Trash:"myname@company.com"/clear@mail.company.com  "Trash"
+
+       Projects{
+          %INBOX.Project1:"myname@company.com"/clear@mail.company.com "Project 1"
+          %INBOX.Project2:"myname@company.com"/clear@mail.company.com "Project 2"
+       }
+    }
+
+   #+end_src
+
+   虽然其实也可以直接用 WanderLust 的文件夹管理器来设置，但在第一次启动时最好还是
+   了解一下如何配置。
+  
+** 举例
+  如果你需要马上上手的话，我就用比较常见的 QQ 邮箱举例了。
+
+  #+BEGIN_SRC conf-unix
+    %inbox:7XXXXXXX9/login@imap.qq.com:993!  "QQ Mail"
+    路径:用户名/验证方式（QQ 邮箱需要设为 login）@服务器:端口!加上感叹号表示要使用 SSL "用于显示的名称，可以不设"
+  #+END_SRC
+
+  需要注意的是，用户名用 =john@gmail.com= 之类的，也就是中间有@符号的，会导致
+  无法正确连接到服务器。这时候你需要用 =""= 把用户名包起来。
+
+  下面是一个 Gmail 的例子。（注意：中国大陆地区 Gmail 服务已经不可用，包括网页和
+  POP、IMAP、SMTP 服务。）
+
+  #+BEGIN_SRC conf-unix
+    %inbox:"john@gmail.com"/clear@imap.gmail.com:993!  "Gmail"
+  #+END_SRC
+  
+  当然你也可以用 Emacs Lisp 来配置，不过一般不推荐这样做。
+
+  #+BEGIN_SRC emacs-lisp
+    (setq elmo-imap4-default-server "imap.gmail.com"
+          elmo-imap4-default-user "<accountname>@gmail.com"
+          elmo-imap4-default-authenticate-type 'clear
+          elmo-imap4-default-port '993
+          elmo-imap4-default-stream-type 'ssl)
+  #+END_SRC
+
+* 配置发信方式
+** 使用内置 SMTP 发信
+  下方是一个 SMTP 配置的范例，你应该放在 =.wl= 里，或者其它合适的地方。
+
+  #+begin_src emacs-lisp
+    (setq wl-smtp-connection-type 'starttls
+          wl-smtp-posting-port 587
+          wl-smtp-authenticate-type "plain"
+          wl-smtp-posting-user "myname"
+          wl-smtp-posting-server "smtp.gmail.com"
+          wl-local-domain "gmail.com"
+          wl-message-id-domain "smtp.gmail.com")
+
+
+
+    ;; 更加复杂的多账号设置
+    (setq wl-user-mail-address-list (quote ("myname@gmail.com" "myname@company.com")))
+
+    ;;(NOTE: "M-: wl-draft-parent-folder" => %INBOX:myname/clear@imap.gmail.com:993)
+    (setq wl-draft-config-alist
+          '(((string-match "company.com" wl-draft-parent-folder)
+             (template . "work"))
+            ((string-match "gmail.com" wl-draft-parent-folder)
+             (template . "gmail"))
+            ;; automatic for replies
+            (reply "\\(To\\|Cc\\|Delivered-To\\): .*company.com.*"
+             (template . "work"))
+            (reply "\\(To\\|Cc\\|Delivered-To\\): .*gmail.com.*"
+             (template . "gmail"))))
+
+    ;;choose template with C-c C-j
+    (setq wl-template-alist
+          '(("gmail"
+             (wl-from . "My Name <myname@gmail.com>")
+             (wl-smtp-posting-user . "myname")
+             (wl-smtp-posting-server . "smtp.gmail.com")
+             (wl-smtp-authenticate-type ."plain")
+             (wl-smtp-connection-type . 'starttls)
+             (wl-smtp-posting-port . 587)
+             (wl-local-domain . "gmail.com")
+             (wl-message-id-domain . "smtp.gmail.com"))
+            ("work"
+             ("Fcc" . "%INBOX.Sent:\"myname@company.com\"/clear@mail.company.com")
+             (wl-from . "My Name <myname@company.com>")
+             (wl-smtp-posting-user . "myname@company.com")
+             (wl-smtp-posting-server . "mail.company.com")
+             (wl-local-domain . "mail.company.com"))
+             ("From" . wl-from)))
+  #+end_src
+
+** 使用 =sendmail/msmtp=
+   如果你已经安装并设置过 =sendmail= 或者 =msmtp= ，你当然也可以用这两个 MUA 来发件。
+
+   #+BEGIN_SRC emacs-lisp
+     (setq wl-draft-send-mail-function 'wl-draft-send-mail-with-sendmail)
+   #+END_SRC
+   
+   如果用的是 =msmtp= ，还需要一些额外配置，详见 [[https://www.emacswiki.org/emacs/GnusMSMTP][EmacsWiki]] 。
+  
+* MailDir 设置
+  尽管 WanderLust 是一个 IMAP 客户端，它也支持用 MailDir。而且不像 GNUS 是把邮件
+  全部导入到本地文件夹，WanderLust 是直接对 MailDir 进行读写操作，这使得它可以和
+  我很喜欢的 CLT 邮件客户端 Mutt 共存。我使用 WanderLust 其中之一的原因也是我至
+  今还没找到 Mew 如何使用 MailDir（后来发现其实和 WanderLust 差不多）。
+
+* FAQ
+  在这里我会对几个常见的问题进行说明。
+
+** 密码
+  不像 Mew 那样需要用那种奇怪的方式来避免每次进入邮箱都要输入密码，WanderLust 支
+  持用 =elmo-passwd-alist-save= 来在第一次登陆输入密码后保存密码。密码通常被保存
+  在 =~/.elmo/passwd= 。不用担心安全问题，因为密码当然不是明文，而是被加密处理后
+  保存的。
+
+** 邮件头显示了一大堆乱七八糟的东西
+   #+BEGIN_SRC emacs-lisp
+     (setq wl-message-ignored-field-list
+           '(".")
+           wl-message-visible-field-list
+           '("^\\(To\\|Cc\\):"
+             "^Subject:"
+             "^\\(From\\|Reply-To\\):"
+             "^\\(Posted\\|Date\\):"
+             "^Organization:"
+             "^X-\\(Face\\(-[0-9]+\\)?\\|Weather\\|Fortune\\|Now-Playing\\):")
+           wl-message-sort-field-list
+           (append wl-message-sort-field-list
+                   '("^Reply-To" "^Posted" "^Date" "^Organization")))
+   #+END_SRC
+   
+** 如何在读信时显示邮件列表
+   #+BEGIN_SRC emacs-lisp
+     (setq wl-stay-folder-window t)
+   #+END_SRC
+   
+** 自动删除邮件和自动归类邮件
+   #+BEGIN_SRC emacs-lisp
+     ;; Refile rule
+     (setq wl-refile-rule-alist
+           '(("to"
+              ("splab-ml@do-johodai.ac.jp" . "+ml/splab")
+              ("doluc@ncjoho.co.jp" . "+ml/linux-jp/doluc")
+              ("debian-users@debian.or.jp" . "+ml/linux-jp/debian-users")
+              ("mule-ja@m17n.org" . "+ml/emacsen/mule-ja")
+              ("semi-gnus-ja@meadowy.org" . "+ml/emacsen/emacs-mime-ja")
+              ("wl@lists.airs.net" . "+ml/emacsen/wl")
+              ("skk@ring.gr.jp" . "+ml/emacsen/skk")
+              ("emacs-w3m@namazu.org" . "+ml/emacsen/emacs-w3m")
+              ("bbdb@tutrp.tut.ac.jp" . "+ml/emacsen/bbdb")
+              ("yatex@yatex.org" . "+ml/emacsen/yatex"))))
+
+     ;; Expire
+     (setq wl-expire-alist
+           `((,(concat "^\\" wl-trash-folder "$") (date 7) remove)
+             ("^\\+mag/" (date 30) remove)
+             ("^\\.ads$" (date 15) remove)
+             ;;("^@" (date 30) remove)
+             ("^\\+ml/linux-jp/doluc$" (number 300 500) hide)
+             ("^\\+ml/splab$" (number 300 500) hide)
+             ))
+     (add-hook 'wl-summary-prepared-hook 'wl-summary-expire)
+   #+END_SRC
+
+** 如何插入附件
+   WandeLust 用 =SEMI= 这个包处理 MIME。如果你对 MIME 没有概念的话，简单来说就是
+   附件处理。你只要在 =wl-draft-mode= 下按 ~C-c C-x TAB~ =mime-edit-insert-file=
+   就可以插入附件了。
+
+** 如何利用 Org-mode 发送 html 邮件
+   先做如下配置：
+
+   #+BEGIN_SRC emacs-lisp
+     (setq org-mime-library 'semi)
+   #+END_SRC
+
+   然后只需要在 =org-mode= 中写好邮件内容后运行 ~M-x~
+   =org-mime-org-buffer-htmlize= ，就会新建一封 html 格式的邮件。
