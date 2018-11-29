@@ -1,0 +1,317 @@
+#+TITLE: 文件
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#文件][文件]]
+  - [[#文件读写][文件读写]]
+  - [[#文件信息][文件信息]]
+  - [[#文件名相关函数][文件名相关函数]]
+  - [[#文件操作][文件操作]]
+  - [[#临时文件][临时文件]]
+  - [[#神奇的handler][神奇的handler]]
+
+* 文件
+
+** 文件读写
+
+   * 打开一个文件
+
+
+
+   (find-file myPath)
+
+
+
+   * 改变缓冲区关联的文件
+
+
+
+   set-visited-file-name
+
+
+
+   * 保存当前文件
+
+
+
+   (save-buffer)
+
+
+
+   * 另存为文件
+
+
+
+   (write-file myPath)
+
+
+
+   * 把文本块追加到文件后
+
+
+
+   (append-to-file startPos endPos filePath)
+
+
+
+   * 把缓冲区当中的一部分写入到指定文件中
+
+
+
+   wirte-region
+
+   #+BEGIN_SRC elisp
+
+     (write-region start end filename &optional append visit lockname mustbenew)
+
+   #+END_SRC
+
+   如果指定append则是添加到文件末尾。
+
+   visit参数也会把缓冲区和文件关联，
+
+   lockname 则是文件锁定的名字
+
+   mustbenew(保文件存在时会要求用户确认操作。
+
+
+
+** 文件信息
+
+   * 判断文件是否存在,对于目录和一般文件都能用这个函数进行判断,但是符号链接只有当目标文件存在时才返回t
+
+
+
+   file-exists-p
+
+   * 文件属性判断
+
+
+
+   file-readable-p / file-writable-p / file-executable-p / file-modes
+
+   * 判断文件类型是普通文件/目录/符号链接,其中file-symlink-p返回目标文件名
+
+
+
+   file-regular-p / file-directory-p / file-symlink-p
+
+   * 文件的详细信息
+
+
+
+   file-attributes
+
+   * 设置文件修改时间
+
+
+
+   set-file-times
+
+   * 设置文件位模式
+
+
+
+   set-file-modes
+
+
+
+   * 除去链接后的真实文件名
+
+
+
+   file-truename
+
+
+
+** 文件名相关函数
+
+   * 分解文件路径各部分
+
+
+
+   file-name-directory / file-name-nodirectory / file-name-sans-extension / file-name-extension / file-name-sans-versions
+
+   #+BEGIN_SRC elisp
+
+     (file-name-directory "~/temp/test.txt") ; => "~/temp/"
+
+     (file-name-nondirectory "~/temp/test.txt") ; => "test.txt"
+
+     (file-name-sans-extension "~/temp/test.txt") ; => "~/temp/test"
+
+     (file-name-extension "~/temp/test.txt") ; => "txt"
+
+     (file-name-sans-versions "~/temp/test.txt~") ; => "~/temp/test.txt"
+
+     (file-name-sans-versions "~/temp/test.txt.~1~") ; => "~/temp/test.txt"
+
+   #+END_SRC
+
+
+
+   * 测试一个路径是否是绝对路径
+
+
+
+   file-name-absolute-p
+
+
+
+   * 得到绝对路径
+
+
+
+   (expand-file-name myFilePath)
+
+
+
+   * 把绝对路径转换成相对路径
+
+
+
+   (file-relative-name myFilePath dirPath)
+
+
+
+   * 把路径转换为目录形式,也就是确保它是以路径分隔符结束的
+
+
+
+   file-name-as-directory
+
+   #+BEGIN_SRC elisp
+
+     (file-name-as-directory "~rms/lewis") ; => "~rms/lewis/"
+
+   #+END_SRC
+
+
+
+   * 获得目录名
+
+
+
+   directory-file-name
+
+   #+BEGIN_SRC elisp
+
+     (directory-file-name "~lewis/") ; => "~lewis"
+
+   #+END_SRC
+
+   * 得到所在系统使用的文件名
+
+
+
+   convert-standard-filename
+
+   #+BEGIN_SRC elisp
+
+     (convert-standard-filename "c:/windows") ;=> "c:\\windows"
+
+   #+END_SRC
+
+   * 得到某个目录的全部或者符合某个正则表达式的文件名,directory-files-attributes返回的列表包含了file-attributes得到的信息
+
+
+
+   directory-files / directory-files-and-attributes
+
+   * 得到某个文件在目录中的所有版本
+
+
+
+   file-name-all-versions
+
+   * 得到通配符扩展厚的文件列表
+
+
+
+   file-expand-wildcards
+
+** 文件操作
+
+   * 重命名 拷贝 删除文件
+
+
+
+   (rename-file fileName newName)
+
+
+
+   (copy-file sourcName desName)
+
+
+
+   (delete-file fileName)
+
+
+
+   (copy-directory dirPath newDirPath)
+
+
+
+   * 删除目录
+
+
+
+   (delete-directory dirPath 是否循环删除子目录的标记 是否放入Trash的标记)
+
+
+
+   * 设置文件MODE
+
+
+
+   (set-file-mode FILE MODE)
+
+
+
+   * 获取目录中的文件列表
+
+
+
+   (directory-files DIR &optional FULL MATCH NOSORT)
+
+
+
+   * 创建目录
+
+
+
+   (make-dirctory DIR &optional PARENTS)
+
+
+
+   *
+
+** 临时文件
+
+   * 这个函数按给定前缀产生一个不和现有文件冲突的文件，并返回它的文件名。如果给定的名字是一个相对文件名，则产生的文件名会用temporary-file-directory 进行扩展。也可以用这个函数产生一个临时文件夹。
+
+
+
+   make-temp-file
+
+   #+BEGIN_SRC elisp
+
+     (make-temp-file "foo") ; => "/tmp/foo5611dxf"
+
+   #+END_SRC
+
+   * 产生一个不存在的文件名
+
+
+
+   make-temp-name
+
+   #+BEGIN_SRC elisp
+
+     (make-temp-name "foo") ; => "foo5611q7l"
+
+   #+END_SRC
+
+** 神奇的handler
+
+   * 在Emacs里，底层的文件操作函数都可以托管给elisp中的函数，这样只要用elisp实现了某种类型文件的基本操作，就能像编辑本地文件一样编辑其它类型文件了

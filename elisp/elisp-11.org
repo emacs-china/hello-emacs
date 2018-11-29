@@ -1,0 +1,276 @@
+#+TITLE: Elisp中的异常机制
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#elisp中的异常机制][Elisp中的异常机制]]
+  - [[#使用singalerrorcondition-case模拟try-catch语句][使用singal/error/condition-case模拟try catch语句]]
+    - [[#error类型][error类型]]
+    - [[#抛出error][抛出error]]
+    - [[#处理error][处理Error]]
+  - [[#使用unwind-protect模拟finally语句][使用unwind-protect模拟finally语句]]
+
+* Elisp中的异常机制
+
+** 使用singal/error/condition-case模拟try catch语句
+
+   elisp中也提供了类似C++中的异常机制,在elisp中,其被称为error.
+
+
+
+   大多数的error会在调用primitive function时自动抛出. 当然你也可以使用函数`error`和`signal`手工抛出error.
+
+
+
+   需要注意的是,C-g触发的quitting,它的处理方式跟error类似,但并不是error
+
+
+
+   每个error都需要一个错误说明信息,来说明抛出error的原因.
+
+*** error类型
+
+    就好像C++有各种不同类型的异常一样,elisp也有不同类型的error. error的类型使用error symbol来标识. 每个error有且仅有一个error symbol
+
+
+
+    同样的,跟C++类似,error处于一种被称为error-condition的继承体系内,每个error-condition由condition-name来标识,一个error可以属于多个error-condition.
+
+
+
+    理论上,`'error`处于error-condition的最顶端,但quit是个例外,quit属于一种error-condition但它不是一种error,它的父类就是quit自己
+
+
+
+    若要定义自己的error,可以使用define-error函数.
+
+    * (define-error symbol message &optional parent)
+
+
+
+    定义一个新error,它的error-symbol为参数symbol. 它继承于参数parent所表示的error-condition(默认为error),
+
+
+
+    参数message需要是一个字符串,当该error被抛出,而没有handler捕获时,elisp使用该字符串作为error message.
+
+
+
+    下面是一个定义error的例子
+
+    #+BEGIN_SRC emacs-lisp
+
+      (define-error 'new-error "A new error" 'my-own-errors) ;error message一般第一个字母是大写的
+
+    #+END_SRC
+
+
+
+*** 抛出error
+
+
+
+    * (error format-string &rest args)
+
+
+
+    抛出一个error,该error的错误说明信息为(format format-string args)
+
+
+
+    * (signal error-symbol data)
+
+
+
+    signal函数抛出一个名为error-symbol的error.
+
+
+
+    参数error-symbol必须是由`define-error`定义的symbol.
+
+    data参数则是与error环境相关的一系列lisp object,其lisp object中的个数和意义,对不同的error-symbol有不同的要求
+
+
+
+    若抛出的error没有被处理,则error-symbol和data这两个参数被用来输出出错信息.
+
+
+
+    一般情况下,出错信息由error-symbol的error-message property来提供. data则一般用来提供产生error的上下文环境.
+
+    但若error-symbol为error,则错误信息为(car data),且(car data)必须为string型. file-error类则有其特殊的处理模式.
+
+    #+BEGIN_SRC emacs-lisp
+
+      (signal 'error '("asdbs" (car 1) (cas 1))) ;error--> asdbs: (car 1), (cas 1)
+
+      (signal 'wrong-number-of-arguments '(x y)) ; error--> Wrong number of arguments: x, y
+
+      (signal 'no-such-error '("My unknown error condition")) ; error--> peculiar error: "My unknown error condition"
+
+    #+END_SRC
+
+
+
+    * (user-error format-string &rest args)
+
+
+
+    user-error跟error函数类似,但是它使用user-error作为error-symbol而不是error.
+
+
+
+    如名称所示,一般用该函数抛出用户级的error,而不是代码级的error,即它不会进入debug模式(即使debug-on-error为非nil)
+
+*** 处理Error
+
+    类似C++中的异常机制,elisp中的error也可以定义多个error-handler来捕获它,但只有最靠近error发源地的error-handler会用来处理该error.
+
+
+
+    若抛出的error,没有对应的error handler来处理它,则根据变量`debug-on-error`来决定是调用debug来处理该error(t),还是直接终止程序输出error(nil).
+
+
+
+    * (condition-case var protected-form error-handler-bodys)
+
+
+
+    可以使用condition-case来定义error handler.例如
+
+    #+BEGIN_SRC emacs-lisp
+
+      (condition-case nil
+
+          (delete-file filename)
+
+        (error nil))
+
+    #+END_SRC
+
+
+
+    condition-case的第一个参数var是一个变量,当参数protected-form正常执行时,该变量只能在error-handler的代码中才能被使用,这时该变量的值为'(error-symbol . data)'. error-handler可以根据该变量中所描述的错误信息来进行操作.
+
+    var参数也可以是nil,表示没有这样一个描述error信息的变量.
+
+    就像写C++代码一样,有时候,需要重新抛出error,以便让外面的代码捕获到该error,则可以这样做:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (signal (car var) (cdr var))
+
+    #+END_SRC
+
+
+
+    我们称呼condition-case的第二个参数为"protected form"(在上例中,就是(delete-file filename))
+
+
+
+    "protected form"后面的参数则为定义的error handlers. 每个error-handler的格式为(condition-names handler-bodys).
+
+    这里,conditon-names可以是一个error-condition名称或一个由error-condition名称组成成列表. 在上面的例子中,`error`为conditon-name表示所有类型的error.
+
+
+
+    捕获到error后,condition-case的返回值为error-handler的执行结果. 若没有error发生,则返回protectd-form的计算结果.
+
+    下面是一些error-handler的例子
+
+    #+BEGIN_SRC emacs-lisp
+
+      (error nil)
+
+
+
+      (arith-error (message "Division by zero"))
+
+
+
+      ((arith-error file-error)
+
+       (message
+
+        "Either division by zero or failure to open a file"))
+
+    #+END_SRC
+
+
+
+
+
+    一般情况下,若抛出的error被error-handler所捕获,则不会进入debug模式,但若希望调试那些被condition-case捕获的error,可以设置变量`debug-on-signal`为非nil.
+
+    你也可以设置某些特定的error在捕获前,先进入debug模式,方法是在error-handler的conditon-name前加上`debug`,例如:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (condition-case nil
+
+          (delete-file filename)
+
+        ((debug error) nil))
+
+    #+END_SRC
+
+    需要注意的是,这里condition-name前的debug并不意味着一定会进入debug模式,还需要将`debug-on-error`设置为非nil才行.
+
+
+
+    * (condition-case-unless-debug var protected-form error-handler-bodys)
+
+
+
+    类似condition-case,但只在不启用debug的情况下才其作用(即`debug-on-error`为nil)
+
+
+
+    * (error-message-string error-descriptor)
+
+
+
+    输出error-descriptor(即condition-case中的第一个参数var)所表示的字符串.
+
+
+
+    * (ignore-errors body)
+
+
+
+    执行body语句,并忽略任何抛出的error. 若body执行时不抛error,则返回body的计算结果,否则返回nil
+
+
+
+    * (with-demoted-errors format bodys)
+
+
+
+    该宏就像是ignore-error的温和版本. 它不会直接忽略掉error的发生,相反,它会使用format来将error转换为一条message输出.
+
+
+
+    参数format必须为格式字符串,且必须有且仅有一个"%S"作为占位符.
+
+
+
+    需要注意的是,在with-demoted-errors宏中,它是使用conditon-case-unless-debug来捕获error,而不是conditon-case. 因此需要在关闭debug-on-error,才能起作用.
+
+** 使用unwind-protect模拟finally语句
+
+   类似java中的finally语句,elisp也提供了unwind-protect来保证清理动作一定会执行.
+
+
+
+   * (unwind-protect body-form cleanup-forms...)
+
+
+
+   unwind-protect保证执行完body-form后,无论执行过程中是否直接调用throw跳出body-form,还是抛出error,还是正常执行,都会执行cleanup-forms中的语句.
+
+
+
+   与finally类似,unwind-protect语句只保证body-form执行失败后会执行cleanup-forms中的语句,而不能保证cleanup-forms中如果出了问题,还会执行后面的语句.
+
+
+
+   与finally不同的是,若body-form正常结束,则unwind-protect的返回值为 *body-form* 的计算结果,而若body-form非正常退出,则不返回任何值(??),而不是返回cleanup-forms的值.

@@ -1,0 +1,2196 @@
+#+TITLE: Keymaps
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#keymaps][Keymaps]]
+  - [[#key-sequences][Key Sequences]]
+  - [[#keymaps的内部结构][Keymaps的内部结构]]
+  - [[#创建keymap][创建keymap]]
+  - [[#keymap的继承][keymap的继承]]
+  - [[#标准emacs-prefix-key-keymap][标准Emacs prefix key keymap]]
+  - [[#active-keymaps][Active Keymaps]]
+  - [[#key-lookup][Key Lookup]]
+    - [[#相关函数][相关函数]]
+  - [[#changing-key-binding][Changing Key Binding]]
+  - [[#remapping-commands][Remapping Commands]]
+  - [[#用于转换event-sequence的keymap][用于转换event sequence的keymap]]
+  - [[#scanning-keymaps][Scanning keymaps]]
+  - [[#menu-keymaps][Menu Keymaps]]
+    - [[#defining-menus][Defining Menus]]
+      - [[#simple-menu-items][Simple Menu Items]]
+      - [[#extended-menu-item][Extended Menu Item]]
+      - [[#menu-separator][Menu Separator]]
+    - [[#menu-and-the-mouse][Menu and the Mouse]]
+    - [[#menus-and-the-keyboard][Menus and the Keyboard]]
+    - [[#the-menu-bar][The Menu Bar]]
+    - [[#tool-bars][Tool bars]]
+    - [[#modifying-menus][Modifying Menus]]
+    - [[#easy-menu][Easy Menu]]
+
+* Keymaps
+
+  input event与command的对应关系被记录在名为"keymaps"的结构体中. 每个event type对应一个command或另一个keymap.
+
+
+
+  当一个event type绑定到另一个keymap时,这个keymap被用于查找下一个input event的对应关系.
+
+
+
+  若某个event sequence找到的是一个keymap,则我们称该key sequence为"prefix key". 否则则为"complete key".
+
+
+
+  这个从event sequence一直找到某个command的过程,被成为"key lookup"
+
+
+
+  Emacs中有三类keymap:
+
+
+
+  * global map
+
+
+
+  由所有buffer所共享
+
+
+
+  * local keymap
+
+
+
+  由buffer指定的major mode所决定,会覆盖global map的key sequence
+
+
+
+  * minor mode keymaps
+
+
+
+  由buffer所开启的minor mode所决定,会覆盖global map和local keymap的key sequence
+
+** Key Sequences
+
+
+
+   "Key sequence",简称为"key",是指一个或多个input event做组成的序列集合. input event包括characters,function keys,mouse actions或system events
+
+
+
+   当用vector来表示key sequences时,每个vector的元素都是character,每个character表示一个input event. 例如`[?\C-x ?l]'表示key sequence `C-x l'
+
+
+
+   * (kbd keyseq-text)
+
+
+
+   将string类型的keyseq-text转换为key sequence.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (kbd "C-x") => "\C-x"
+
+     (kbd "C-x C-f") => "\C-x\C-f"
+
+     (kbd "C-x 4 C-f") => "\C-x4\C-f"
+
+     (kbd "X") => "X"
+
+     (kbd "RET") => "\^M"
+
+     (kbd "C-c SPC") => "\C-c "
+
+     (kbd "<f1> SPC") => [f1 32]
+
+     (kbd "C-M-<down>") => [C-M-down]
+
+   #+END_SRC
+
+** Keymaps的内部结构
+
+   keymap是一个list,它的car为'keymap. 剩下的元素可以是如下格式:
+
+
+
+   * '(EVENT-TYPE . BINDING)
+
+
+
+   该EVENT-TYPE对应着BINDING
+
+
+
+   * '(EVENT-TYPE ITEM-NAME . BINDING)
+
+
+
+   该event-type对应着binding,同时该binding也是一个名为ITEM-NAME的simple menu item
+
+
+
+   * '(EVENT-TYPE ITEM-NAME HELP-STRING . BINDING)
+
+
+
+   该event-type对应着binding,同时该bingding也是一个名为ITEM-NAME的菜单项,而带有help string
+
+
+
+   * '(EVENT-TYPE menu-item . DETAILS)
+
+
+
+   EVENT-TYPE对应着的绑定,同时也是一个extended menu item
+
+
+
+   * '([t] . BINDING)
+
+
+
+   设置BINDING为"default key binding". 任何不能找到对应项的event-type都执行该binding
+
+
+
+   * 某char-table
+
+
+
+   * 某string
+
+
+
+   * 某parent-keymap
+
+
+
+   若元素为keymap,则表示该keymap所定义的绑定关系都嵌入到包含该keymap的keymap中来.
+
+
+
+
+
+   有一点需要注意:key `M-a'在keymap中被分拆表示为`<ESC> a'(只有在meta与另一个普通字符关联时,才被分拆),而`M-<end>'直接存储为`M-<end>'
+
+
+
+   * (keymapp object)
+
+
+
+   判断object是否为keymap,若object为symbol,则判断该symbol对应的function definition是否为keymap
+
+   #+BEGIN_SRC emacs-lisp
+
+     (keymapp '(keymap))                     ; => t
+
+     (fset 'foo '(keymap))
+
+     (keymapp 'foo)                          ; => t
+
+     (keymapp (current-global-map))          ; => t
+
+   #+END_SRC
+
+** 创建keymap
+
+
+
+   * (make-sparse-keymap &optional prompt)
+
+
+
+   创建一个空的keymap
+
+
+
+   若传递了参数prompt,则其称为keymap的overall prompt string. 你只能为menu keymap设置该值,因为任何被设了overall prompt string的keymap都被认为是menu
+
+
+
+   * (make-keymap &optional prompt)
+
+
+
+   类似(make-spare-keymap),但是它所创建的不是空keymap,而是包含了一个char-table,这个char-table包含了所有的不带modifier的characters
+
+
+
+   新产生的keymap绑定所有这些characters到nil
+
+
+
+   * (copy-keymap keymap)
+
+
+
+   深拷贝keymap.  However, recursive copying does not take place when the definition of a character is a symbol whose function definition is a keymap; the same symbol appears in the new copy.
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq map (copy-keymap (current-local-map)))
+
+     => (keymap
+
+         ;; (This implements meta characters.)
+
+         (27 keymap
+
+             (83 . center-paragraph)
+
+             (115 . center-line))
+
+         (9 . tab-to-tab-stop))
+
+
+
+     (eq map (current-local-map))
+
+     => nil
+
+     (equal map (current-local-map))
+
+     => t
+
+
+
+   #+END_SRC
+
+** keymap的继承
+
+   若keymap中的element为某keymap,则该被包含的keymap的内容会被内嵌到包含的keymap中,即实现了keymap的继承机制.
+
+
+
+   我们称被包含的keymap为parent-keymap
+
+
+
+   如果parent-keymap中的绑定关系被更改了,则这些改变也会影响到继承keymap(因为keymap中的元素为指向parent-keymap的引用). 反过来则不会影响parent-keymap,这是因为使用define-key更改的绑定是直接记录在继承的keymap中的
+
+
+
+   * (keymap-parent keymap)
+
+
+
+   获取keymap中的parent-keymap
+
+
+
+   * (set-keymap-parent keymap parent-keymap)
+
+
+
+   设置参数parent-keymap为keymap的parent keymap,若参数parent-keymap为nil,则清空keymap的所有parent keymap
+
+
+
+   该函数返回参数parent-keymap
+
+
+
+   若keymap本身为其他sub-keymap的parent keymap,则该操作也会影响到sub-keymap
+
+
+
+   * (make-composed-keymap maps &optional parent)
+
+
+
+   若希望创建一个keymap,这个keymap继承于多个keymap, 则需要使用该函数
+
+
+
+   该函数创建一个keymap,该keymap集合了maps中的所有keymap的绑定信息. 还可以为它设置一个parent keymap
+
+
+
+   参数maps可以是单个的keymap,或者一个由keymap组成的list.
+
+
+
+   当Emacs在创建的这个keymap中搜索event type的绑定信息时,Emacs会按顺序搜索maps中的keymap,最后搜索parent. 以找到的第一个符合条件的绑定为准.
+
+
+
+   需要注意的是: *maps中的nil绑定会覆盖parent中的绑定信息,但是不会覆盖maps中的其他keymap的绑定信息*
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defvar help-mode-map
+
+       (let ((map (make-sparse-keymap)))
+
+         (set-keymap-parent map
+
+                            (make-composed-keymap button-buffer-map special-mode-map))
+
+         ... map) ... )
+
+
+
+   #+END_SRC
+
+** 标准Emacs prefix key keymap
+
+
+
+   * esc-map
+
+
+
+   global keymap. 默认绑定到<ESC>
+
+
+
+   * help-map
+
+
+
+   global keymap. 默认绑定到C-h
+
+
+
+   * mode-specific-map
+
+
+
+   global keymap. 默认绑定到C-c
+
+
+
+   * ctl-x-map
+
+
+
+   global keymap. 默认绑定到C-x
+
+
+
+   * mule-keymap
+
+
+
+   global keymap. 默认绑定到C-x <RET>
+
+
+
+   * ctl-x-4-map
+
+
+
+   global keymap. 默认绑定到C-x 4
+
+
+
+   * ctl-x-5-map
+
+
+
+   global keymap. 默认绑定到C-x 5
+
+
+
+   * 2C-mode-map
+
+
+
+   global keymap. 默认绑定到C-x 6
+
+
+
+   * vc-prefix-map
+
+
+
+   global keymap. 默认绑定到C-x v
+
+
+
+   * goto-map
+
+
+
+   global keymap. 默认绑定到M-g
+
+
+
+   * search-map
+
+
+
+   global keymap. 默认绑定到M-s
+
+
+
+   * facemenu-keymap
+
+
+
+   global keymap. 默认绑定到M-o
+
+
+
+   * (define-prefix-command symbol &optioinal mapvar prompt)
+
+
+
+   该函数创建一个sparse keymap并存储在symbol的function definition中, 这样绑定到该symbol的key sequence就称为了"prefix key"
+
+
+
+   该函数返回symbol
+
+
+
+   该函数同时也会设置symbol的value为该keymap,但若参数mapvar为非nil,则symbol的值为mapvar
+
+
+
+   若参数prompt为非nil,则它称为该keymap的overall prompt string. 同样的,请只有当该keymap为menu时才这么做
+
+** Active Keymaps
+
+
+
+   active keymaps按照优先级从高到底以此为:
+
+
+
+   1. 由光标/鼠标点所在的string的keymap property指定的keymap
+
+
+
+   2. minor mode开启的keymap
+
+
+
+   由变量`emulation-mode-map-alists',`minor-mode-overriding-map-alist'和`minor-mode-map-alist'决定
+
+
+
+   3. 当前buffer的local keymap
+
+
+
+   一般由buffer的major mode决定
+
+
+
+   4. global keymap
+
+
+
+   由变量`global-map'决定
+
+
+
+   除了上面的常见keymaps外,Emacs还提供了一些方法让程序员激活其他的keymaps.
+
+
+
+   1. 变量`overriding-local-map'指定的keymap会替代除了globa keymap之外的其他三种常见keymap
+
+
+
+   2. `overriding-terminal-local-map'指定的keymap的优先级高过其他任何keymaps(包括`overriding-local-map'指定的keymap),
+
+      *常用于临时修改keybinding(参见函数`set-transient-map')*
+
+
+
+   总结来说,搜索active keymap的顺序为:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (or (if overriding-terminal-local-map
+
+             (FIND-IN overriding-terminal-local-map))
+
+         (if overriding-local-map
+
+             (FIND-IN overriding-local-map)
+
+           (or (FIND-IN (get-char-property (point) 'keymap))
+
+               (FIND-IN-ANY emulation-mode-map-alists)
+
+               (FIND-IN-ANY minor-mode-overriding-map-alist)
+
+               (FIND-IN-ANY minor-mode-map-alist)
+
+               (if (get-text-property (point) 'local-map)
+
+                   (FIND-IN (get-char-property (point) 'local-map))
+
+                 (FIND-IN (current-local-map)))))
+
+         (FIND-IN (current-global-map)))
+
+
+
+     ;; In the above pseudo-code, if a key sequence starts with a mouse event (*note Mouse Events::), that event's position is used instead of point, and the event's buffer is used instead of the current buffer.
+
+   #+END_SRC
+
+   下面是一些相关函数与变量:
+
+
+
+   * (current-active-maps &optional olp position)
+
+
+
+   当前环境下处于激活状态的keymap的list.
+
+
+
+   正常情况下,该函数的返回值会忽略掉`overriding-local-map'和`overriding-terminal-local-map'的值,但若参数olp为非nil,则不会忽略掉这俩个变量的值.
+
+
+
+   参数position可以是`event-start'函数返回的event position或buffer position,表示使用position所在的string的keymap property指定的keymap代替光标或鼠标点所在的stirng的keymap property
+
+
+
+   * (key-binding key &optional accept-defaults no-remap position)
+
+
+
+   该函数根据key在当前active 的keymaps中查找对应的binding.
+
+
+
+   参数accept-default控制是否检查default binding,即keymap中格式为(t . binding)的元素
+
+
+
+   当command被重映射过,key-binding默认会查找被重新映射过的binding,但若参数no-remap为非nil,则`key-binding'会忽略重映射
+
+
+
+   参数position可以是`event-start'函数返回的event position或buffer position,表示使用position所在的string的keymap property指定的keymap代替光标或鼠标点所在的stirng的keymap property
+
+   #+BEGIN_SRC emacs-lisp
+
+     (key-binding "\C-x\C-f")                ; => find-file
+
+   #+END_SRC
+
+
+
+   * global-map
+
+
+
+   改变量额值为默认的global keymap
+
+
+
+   * (current-global-map)
+
+
+
+   返回当前global keymap的 *引用而不是拷贝*.
+
+
+
+   * (current-local-map)
+
+
+
+   该函数返回当前buffer的local keymap的 *引用而不是拷贝*
+
+
+
+   * (current-minor-mode-maps)
+
+
+
+   返回当前minor mode开启的keymaps的list
+
+
+
+   * (use-global-map keymap)
+
+
+
+   设置keymap为global keymap
+
+
+
+   * (use-local-map keymap)
+
+
+
+   设置keymap为当前buffer的local keymap(大多数major mode命令都使用该函数来设置local keymap)
+
+
+
+   参数keymap可以为nil,表示不设置local keymap
+
+
+
+   * minor-mode-map-alist
+
+
+
+   该变量是一个由元素'(variable . keymap)组成的alist.
+
+
+
+   它表示,当变量variable的值为非nil时,对应的keymap处于激活状态,否则若变量variable的值为nil,则keymap被禁用. 这里keymap可以是一个keymap或者一个function definition为keymap的symbol
+
+
+
+   通常情况下变量variable被用于控制是否启用某个minor mode
+
+
+
+   * minor-mode-overriding-map-alist
+
+
+
+   该变量运行major mode覆盖特定minor mode的key binding.
+
+
+
+   该alist的元素跟`minor-mode-map-alist'类似,也是(VARIABLE . KEYMAP)
+
+
+
+   若统一变量variable,同时在`minor-mode-overriding-map-alist'和`minor-mode-map-alist'中出现,则使用`minor-mode-overriding-map-alist'中的对应keymap覆盖`minor-mode-map-alist'中的keymap
+
+
+
+   * overriding-local-map
+
+
+
+   该值若为nil,则该值所指定的keymap会覆盖除了global map外的所有keymap
+
+
+
+   * overriding-terminal-local-map
+
+
+
+   若为非nil,则该变量所表示的keymap,会优先于`overriding-local-map',buffer的local keymap,text property或overlay keymap和其他所有的minor mode keymap
+
+
+
+   改变了为terminal local variable,不能设置为buffer-local
+
+
+
+   * overriding-local-map-menu-flag
+
+
+
+   若该值为非nil,则表示`overriding-local-map'和`overriding-terminal-local-map'的值可以影响到menu bar的显示, 默认为nil
+
+
+
+   需要注意的是,无论是否影响menu bar的显示,`overriding-local-map'和`overriding-terminal-local-map'依然会影响到通过menu bar产生的key sequence的执行情况
+
+
+
+   * special-event-map
+
+
+
+   存放special event与command对应关系的keymap.
+
+
+
+   若某event type在该keymap中有binding,则该event type被认为是特殊的,并且该event所对应的绑定command会直接被函数`read-event'所执行
+
+
+
+   * emulation-mode-map-alist
+
+
+
+   This variable holds a list of keymap alists to use for emulation modes.
+
+   It is intended for modes or packages using multiple minor-mode keymaps.
+
+   Each element is a keymap alist which has the same format and meaning as `minor-mode-map-alist', or a symbol with a variable binding which is such an alist.
+
+   The "active" keymaps in each alist are used before `minor-mode-map-alist' and `minor-mode-overriding-map-alist'.
+
+
+
+   * (set-transient-map keymap &optional keep-pred on-exit)
+
+
+
+   该函数临时增加keymap作为优先级最高的keymap
+
+
+
+   正常情况下,keymap只会被使用一次,来查找紧接着的下一个key sequence的binding. 但若参数keep-pred为t则keymap一直有效,直到某个key sequence在keymap中找不到binding为止.
+
+
+
+   参数on-exit,若为非nil,则需要是一个不带参数的回调函数,会在map失效时调用该函数.
+
+   .
+
+** Key Lookup
+
+
+
+   根据key sequence在指定keymap中查找binding的过程,称为"Key lookup"
+
+
+
+   key lookup的过程只使用key sequence中各event的event type作为查找的条件,而忽略event的其他部分. 当event为mouse event时,甚至可以使用symbol类型的mouse event type来代替list类型的整个event.
+
+
+
+   通过key lookup找到的binding,我们称之为"keymap entry".
+
+
+
+   这里的BINDING可以是以下几种类型的对象
+
+
+
+   * nil
+
+
+
+   * command/lambda表达式
+
+
+
+   * string/vector
+
+
+
+   bingding为keyboard macro
+
+
+
+   * keymap
+
+
+
+   * list
+
+
+
+   这时list的格式应该为'(other-keymap . other-event-type),表示为"indirect entry"
+
+
+
+   即,它会在other-keymap中搜索other-event-type表示的binding
+
+
+
+   该功能重用与为某个key创建其他key的引用.
+
+
+
+   * symbol
+
+
+
+   使用symbol的function definition
+
+
+
+   * 其他类型
+
+
+
+   上面几种类型的binding找到回,都会当成command被execute-command执行.
+
+
+
+   但若不是上面几种类型的其他类型,则不会被当成command看待
+
+*** 相关函数
+
+    * (lookup-key keymap key &optional accept-defaults)
+
+
+
+    返回key在keymap中的binding
+
+    #+BEGIN_SRC emacs-lisp
+
+      (lookup-key (current-global-map) "\C-x\C-f") ; => find-file
+
+      (lookup-key (current-global-map) (kbd "C-x C-f")) ; => find-file
+
+      (lookup-key (current-global-map) "\C-x\C-f12345") ; => 2
+
+    #+END_SRC
+
+
+
+    If the string or vector KEY is not a valid key sequence according to the prefix keys specified in KEYMAP, it must be "too long" and have extra events at the end that do not fit into a single key sequence.
+
+    Then the value is a number, the number of events at the front of KEY that compose a complete key.
+
+
+
+    若参数accept-defaults不为nil,则`lookup-key'在找不到key的binding是,会使用default binding
+
+
+
+    若key为meta character+普通character则会被分拆为一个由两个character组成的sequence:`meta-prefix-char'表示的值+普通character
+
+    #+BEGIN_SRC emacs-lisp
+
+      (lookup-key (current-global-map) "\M-f") ; => forward-word
+
+      (lookup-key (current-global-map) "\ef")  ; => forward-word
+
+    #+END_SRC
+
+
+
+    Unlike `read-key-sequence', this function does not modify the specified events in ways that discard information .
+
+    In particular, it does not convert letters to lower case and it does not change drag events to clicks.
+
+
+
+    * (undefined)
+
+
+
+    该函数常用于keymap中用于undefine某个key.
+
+
+
+    它调用`ding',但是不会引发error
+
+
+
+    * (local-key-binding key &optional accept-default)
+
+
+
+    该函数在当前的local keymap(由major-mode决定的)中查找key的binding
+
+
+
+    参数accept-defaults决定了是否检查default binding
+
+
+
+    * (global-key-binding key &optional accept-defaults)
+
+
+
+    该函数在global keymap中查找key的binding
+
+
+
+    参数accept-defaults决定了是否检查default binding
+
+
+
+    * (minor-mode-key-binding key &optional accept-defaults)
+
+
+
+    该函数返回所有active minor mode中key所对应的binding.
+
+
+
+    返回的值为由'(MODENAME . BINDING)组成的alist
+
+
+
+    若第一个找到的binding不是prefix definition(即binding不为keymap或function definition不为keymap的symbol),则接下来的其他minor mode中的binding都会忽略掉,因为他们都会被找到的该binding所屏蔽掉.
+
+    Similarly, the list omits non-prefix bindings that follow prefix bindings.
+
+
+
+    参数accept-defaults决定了是否检查default binding
+
+
+
+    * 配置项meta-prefix-char
+
+
+
+    该变量为meta作为prefix时的character code,用于将代meta的character转换为一个由两个character组成的sequence. 默认为27,表示<ESC>的character code
+
+    #+BEGIN_SRC emacs-lisp
+
+      meta-prefix-char                    ; The default value.
+
+      => 27
+
+      (key-binding "\M-b")
+
+      => backward-word
+
+      ?\C-x                               ; The print representation
+
+      => 24                          ;   of a character.
+
+      (setq meta-prefix-char 24)
+
+      => 24
+
+      (key-binding "\M-b")
+
+      => switch-to-buffer            ; Now, typing `M-b' is
+
+                                              ;   like typing `C-x b'.
+
+
+
+      (setq meta-prefix-char 27)          ; Avoid confusion!
+
+      => 27                          ; Restore the default value!
+
+    #+END_SRC
+
+** Changing Key Binding
+
+
+
+   * (define-key keymap key binding)
+
+
+
+   该函数设置keymap中的key的对应binding.
+
+
+
+   若参数key为`[t]',则表示设置default binding
+
+
+
+   * (substitute-key-definition olddef newdef keymap &optional oldmap)
+
+
+
+   该函数扫描keymap中的所有binding为olddef的key,并rebind这些key到newdef. 该函数返回nil
+
+
+
+   若参数oldmap为非nil,则表示 *只有在oldmap中包含的key才参与替换.*
+
+
+
+   * (suppress-keymap keymap &optional nodigits)
+
+
+
+   该函数将keymap中的所有binding为`self-insert-command'的key都重映射到`undefined'上,使得插入文本变得不可能.
+
+
+
+   若nodigits为nil,则`suppress-keymap'重新映射数字的binding为`dgit-argument',重新映射`-'为`negative-argument'
+
+
+
+   若nodigits为非nil,则数字和`-'都跟字符一样映射为`undefined'
+
+
+
+   由于该函数会更改keymap的结构,因此当该keymap被其他keymap引用时,很容易产生问题,因此,一般参数keymap都为新创建的keymap
+
+
+
+   * (global-set-key key binding)
+
+
+
+   设置global keymap中key的绑定
+
+   #+BEGIN_SRC emacs-lisp
+
+     (global-set-key KEY BINDING)
+
+     ;; ==
+
+     (define-key (current-global-map) KEY BINDING)
+
+   #+END_SRC
+
+
+
+   * (global-unset-key key)
+
+
+
+   删除global-keymap中key的绑定
+
+   #+BEGIN_SRC emacs-lisp
+
+     (global-unset-key KEY)
+
+     ;; ==
+
+     (define-key (current-global-map) KEY nil)
+
+   #+END_SRC
+
+
+
+   * (local-set-key key binding)
+
+
+
+   设置local keymap中key的绑定
+
+   #+BEGIN_SRC emacs-lisp
+
+     (local-set-key KEY BINDING)
+
+     ;; ==
+
+     (define-key (current-local-map) KEY BINDING)
+
+   #+END_SRC
+
+
+
+   * (local-unset-key key)
+
+
+
+   取消local keymap中key的绑定
+
+   #+BEGIN_SRC emacs-lisp
+
+     (local-unset-key KEY)
+
+     ;; ==
+
+     (define-key (current-local-map) KEY nil)
+
+   #+END_SRC
+
+** Remapping Commands
+
+
+
+   A special kind of key binding can be used to "remap" one command to another, without having to refer to the key sequence(s) bound to the original command.
+
+
+
+   To use this feature, make a key binding for a key sequence that starts with the dummy event `remap', followed by the command name you want to remap;
+
+
+
+   例如,要用`my-kill-line'替代`kill-line',可以这样:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (define-key my-mode-map [remap kill-line] 'my-kill-line)
+
+   #+END_SRC
+
+
+
+   需要注意的是: *remap只对active keymap才生效*
+
+   另外, *不能对已经remap的binding再做remap*. 例如
+
+   #+BEGIN_SRC emacs-lisp
+
+     (define-key my-mode-map [remap kill-line] 'my-kill-line)
+
+     (define-key my-mode-map [remap my-kill-line] 'my-other-kill-line) ;不会生效
+
+   #+END_SRC
+
+
+
+   要取消remap,只需要remap到nil即可
+
+   #+BEGIN_SRC emacs-lisp
+
+     (define-key my-mode-map [remap kill-line] nil)
+
+   #+END_SRC
+
+
+
+   * (command-remapping command &optional position keymap)
+
+
+
+   该命令返回当前active-keymap中被remap的command(a symbol)被remap到什么binding
+
+
+
+   若command没有被remap,或者不是symbol类型,则该函数返回nil.
+
+
+
+   参数position可以通过指定buffer position或mouse event position来决定当前active的keymap
+
+
+
+   若指定了参数keymaps,则使用参数keymaps中的keymap代替但钱active keymaps. *该参数在position为非nil时被忽略*
+
+** 用于转换event sequence的keymap
+
+
+
+   当`read-key-sequence'函数读取key sequence时,它使用"translation keymaps"来转换特定的event sequence为其他的event sequence.
+
+
+
+   这些translation keymap按优先级排列分别为:`input-decode-map',`local-function-key-map'和`key-translation-map'
+
+
+
+   当读取key sequence时,Emacs会针对其中的每个event作一次检查,若在translation keymap中发现有对应的binding,则将该event转换为绑定的event
+
+
+
+   #+BEGIN_QUOTE
+
+For example, VT100 terminals send `<ESC> O P' when the keypad key
+
+<PF1> is pressed.  On such terminals, Emacs must translate that
+
+sequence of events into a single event `pf1'.  This is done by
+
+"binding" `<ESC> O P' to `[pf1]' in `input-decode-map'.  Thus, when you
+
+type `C-c <PF1>' on the terminal, the terminal emits the character
+
+sequence `C-c <ESC> O P', and `read-key-sequence' translates this back
+
+into `C-c <PF1>' and returns it as the vector `[?\C-c pf1]'.
+
+   #+END_QUOTE
+
+
+
+   Translation keymaps take effect only after Emacs has decoded the keyboard input (via the input coding system specified by `keyboard-coding-system').
+
+
+
+   * input-decode-map
+
+
+
+   该变量的keymap转换的是由功能键产生的key sequence(This variable holds a keymap that describes the character sequences sent by function keys on an ordinary character terminal.)
+
+
+
+   * local-function-key-map
+
+
+
+   This variable holds a keymap similar to `input-decode-map' except that it describes key sequences which should be translated to alternative interpretations that are usually preferred.
+
+   It applies after `input-decode-map' and before `key-translation-map'.
+
+
+
+   注意: *若`local-function-key-map'中的某个key与minior mode keymap,local keymap或global keymap有冲突,则该key会被忽略而不会作转换*
+
+
+
+   * key-translation-map
+
+
+
+   类似`input-decode-map'. 区别在于它的优先级比较低.
+
+
+
+   与`input-decode-map'类似,与`local-function-key-map'不同,该keymap不存在与其他普通keymap冲突就不生效的情况.
+
+
+
+   You can use `input-decode-map', `local-function-key-map', and `key-translation-map' for more than simple aliases, by using a function, instead of a key sequence, as the "translation" of a key. Then this function is called to compute the translation of that key.
+
+
+
+   The key translation function receives one argument, which is the prompt that was specified in `read-key-sequence'--or `nil' if the key sequence is being read by the editor command loop.  In most cases you can ignore the prompt value.
+
+
+
+** Scanning keymaps
+
+   * (accessible-keymaps keymap &optional prefix)
+
+
+
+   该函数返回指定keymap中所有可以到达的'(key . binding)的alist
+
+
+
+   * (map-keymap function keymap)
+
+
+
+   该函数对keymap中的每个binding都调用function执行一次. function接收两个参数:event type和binding
+
+
+
+   若keymap包含parent-keymap,该parent-keymap中的binding也被执行,这话似一个不断递归的过程.
+
+
+
+   * (where-is-internal comand &optional keymap firstonly noindirect no-remap)
+
+
+
+   该函数返回一个list,包含了在keymaps中绑定到command的所有key sequence.
+
+
+
+   *参数command可以任意object,该函数使用`eq'与keymap的binding进行比较*
+
+
+
+   若参数keymap为nil,则搜索范围为当前active的keymaps(不管`overriding-local-map'的值).
+
+
+
+   若参数keymap为keymap,则搜索范围为参数keymap和global keymap
+
+
+
+   若参数keymap为keymap组成的list,则搜索范围仅仅是指定的这些keymaps
+
+
+
+   * 命令(describe-binding &optional prefix buffer-or-name)
+
+
+
+   该命令列出当前key binding并显示在*Help*
+
+
+
+   若参数prefix为非nil,则只列出以prefix为prefix key的key sequence
+
+
+
+   默认绑定为`C-h b'
+
+
+
+** Menu Keymaps
+
+*** Defining Menus
+
+    一个menu其实就是带有prompt-string的keymap. 这个prompt-string是`make-keymap',`make-sparse-keymap'和`define-prefix-command'函数的最后一个参数.
+
+
+
+    需要注意的是,使用define-key为menu创建新绑定时,会将新绑定放在最前面,因此若关心menu项的顺序的话,要注意从最后项开始向最前项定义.
+
+
+
+    当然也可以使用`define-key-after'来指定新绑定的位置.
+
+
+
+    + (keymap-prompt keymap)
+
+
+
+    获取keymap中的prompt-string
+
+**** Simple Menu Items
+
+     定义menu item的原始方法是绑定event type(具体是什么event type无所谓)到如下格式的list
+
+     + (ITEM-STRING . REAL-BINDING)
+
+     + (ITEM-STRING HELP-STRING . REAL-BINDING)
+
+
+
+     例如:
+
+     #+BEGIN_SRC emacs-lisp
+
+       (defvar menu-lancher-keymap (make-sparse-keymap "menu-lancher"))
+
+
+
+       (define-key menu-lancher-keymap "C-c C-a"
+
+         '("menu-item" "menu-item-help" (lambda ()
+
+                                          (message "show menu-item"))))
+
+     #+END_SRC
+
+
+
+     需要注意的是, 使用lookup-key来查找键绑定时,只会返回real-binding这部分内容.
+
+     #+BEGIN_SRC emacs-lisp
+
+       (lookup-key menu-lancher-keymap "C-c C-a")
+
+       ;; => ((lambda nil (message "show menu-item")))
+
+     #+END_SRC
+
+
+
+     若real-binding为nil,则menu-item无法被选中.
+
+
+
+     若real-binding为symbol,且该symbol具有非nil的menu-enable属性(该属性需为一个S-表达式),则每次显示menu都会执行该S-表达式以决定该item是否可选.
+
+**** Extended Menu Item
+
+     定义Extended menu item的方法是绑定event type(具体是什么event type无所谓)到如下格式的list(*这些list的car都是menu-item*)
+
+     + (menu-item ITEM-NAME)
+
+
+
+     定义不可选中的menu item.
+
+
+
+     + (menu-item ITEM-NAME REAL-BINDING . ITEM-PROPERTY-LIST)
+
+
+
+     定义可选中的menu item. 其中
+
+
+
+     - ITEM-NAME为一个表达式,该表达式的运行结果必须返回一个string.
+
+
+
+     - REAL-BINDING为要执行的command
+
+
+
+     - ITEM-PROPERTY-LIST定义了menu item的其他信息
+
+
+
+     | :enable FORM               | FORM的计算结果决定了该menu item是否有用                                                                                                                                                                                                                        |
+
+     |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+     | :visible FORM              | FORM的计算结果决定了是否显示该menu item                                                                                                                                                                                                                        |
+
+     |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+     | :helper HELP-STR           | HELP-STR为固定字符串,其指定了help-echo的显示内容                                                                                                                                                                                                               |
+
+     |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+     | :button (TYPE . SELECTED)  | 该属性提供了一种定义radio button或toggle button的方式                                                                                                                                                                                                          |
+
+     |                            | TYPE表示button的类型,可以是:toggle或:radio                                                                                                                                                                                                                     |
+
+     |                            | SELECTED需要为一个FORM,该FORM的计算结果决定了是否选中该button                                                                                                                                                                                                  |
+
+     |                            | 对于toggle button来说,SELECTED的返回值决定了该button为on还是off                                                                                                                                                                                                |
+
+     |                            | 对于radio button来说,The SELECTED form for each radio button in the group should check whether the variable has the right value for selecting that button.  Clicking on the button should set the variable so that the button you clicked on becomes selected. |
+
+     |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+     | :key-sequence KEY-SEQUENCE | 该属性指定该menu item对应的command可能被分配到哪个键序列上.                                                                                                                                                                                                    |
+
+     |                            | 若分配的键序列与该command实际分配的键序列相同,则能够加快menu的显示速度                                                                                                                                                                                         |
+
+     |                            | 若分配的键序列与实际分配的键序列不同,则无效果                                                                                                                                                                                                                  |
+
+     |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+     | :key-sequence nil          | 表示该menu item对应的command可能没有对应的键绑定,这使得Emacs不用去搜索对应的键序列,从而加快menu的显示速度                                                                                                                                                      |
+
+     |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+     | :keys STRING               | STRING被显示为触发该menu item的键序列,可以在STRING中使用\\[...]格式                                                                                                                                                                                            |
+
+     |----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+     | :filter FILTER-FN          | 该属性提供了一种动态产生menu item的途径.                                                                                                                                                                                                                       |
+
+     |                            | FILTER-FN为一个函数,该函数接收REAL-BINDING作为唯一的参数,该函数的返回值会作为该menu item的真正READL-BINDING.                                                                                                                                                                                  |
+
+**** Menu Separator
+
+     所谓menu separator是一种特殊的menu item. 它被显示为一个横线,因此被用来将menu分隔成几个部分.
+
+
+
+     menu separator也是一个以symbol menu-item开头的list. 它的格式如下:
+
+     + (menu-item SEPARATOR-TYPE)
+
+       #+BEGIN_SRC emacs-lisp
+
+         (menu-item "--")
+
+       #+END_SRC
+
+
+
+     + (menu-item SEPARATOR-TYPE nil . ITEM-PROPERTY-LIST)
+
+       #+BEGIN_SRC emacs-lisp
+
+         (menu-item "--" nil :visible (boundp 'foo))
+
+       #+END_SRC
+
+
+
+     这里SEPARATOR-TYPE为一个以"--"开头的字符串. 它有如下几种类型
+
+
+
+     + "" / "-" / "--"
+
+
+
+     默认的seprator风格
+
+
+
+     + "--no-line" / "--space"
+
+
+
+     以空格分隔
+
+
+
+     + "--single-line"
+
+
+
+     以menu前景色着色的单行线
+
+
+
+     + "--double-line"
+
+
+
+     以menu前景色着色的双行线
+
+
+
+     + "--single-dashed-line"
+
+
+
+     以menu前景色着色的单行间断线
+
+
+
+     + "--double-dashed-line"
+
+
+
+     以menu前景色着色的双行间断线
+
+
+
+     + "--shadow-etched-in"
+
+
+
+     3D的凹入线
+
+
+
+     + "--shadow-etched-out"
+
+
+
+     3D的凸出线
+
+
+
+     + "--shadow-etched-in-dash"
+
+
+
+     3D的凹入间断线
+
+
+
+     + "--shadow-etched-out-dash"
+
+
+
+     3D的凸出间断线
+
+
+
+     + "--shadow-double-etched-in"
+
+
+
+     3D的凹入双行线
+
+
+
+     + "--shadow-double-etched-out"
+
+
+
+     3D的凸出双行线
+
+
+
+     + "--shadow-double-etched-in-dash"
+
+
+
+     3D的凹入双行间断线
+
+
+
+     + "--shadow-double-etched-out-dash"
+
+
+
+     3D的凸出双行间断线
+
+*** Menu and the Mouse
+
+    若一个menu keymap是由鼠标事件触发的,则会弹出一个menu,使得用户可以通过鼠标来选择菜单项.
+
+
+
+    the event generated is whatever character or symbol has the binding that brought about that menu item.
+
+
+
+    *比较常见的方式是使用button-down事件来触发menu,这样一释放鼠标就能触发menu item了*
+
+
+
+    一般情况下,若menu keymap的binding中有另一个keymap,则该keymap被认为是submenu. *但若被包含的keymap中无其他menu item,则会直接显示该keymap的内容,而不是作为submenu*
+
+
+
+    However, if Emacs is compiled without X toolkit support, or on text terminals, submenus are not supported.
+
+    Each nested keymap is shown as a menu item, but clicking on it does not automatically pop up the submenu.
+
+    If you wish to imitate the effect of submenus, you can do that by giving a nested keymap an item string which starts with ‘@’.
+
+    This causes Emacs to display the nested keymap using a separate "menu pane"; the rest of the item string after the ‘@’ is the pane label.
+
+    If Emacs is compiled without X toolkit support, or if a menu is displayed on a text terminal, menu panes are not used; in that case, a ‘@’ at the beginning of an item string is omitted when the menu label is displayed, and has no other effect.
+
+*** Menus and the Keyboard
+
+    若menu是由键盘事件触发的,则我们称这种menu为keyboard menu.
+
+
+
+    Emacs使用文本的方式,在echo area中显示菜单. 若在一次无法显示完整的菜单,可以通过按<SPC>(由变量`menu-prompt-more-char'决定)来显示下一屏菜单.
+
+
+
+*** The Menu Bar
+
+    要添加item到menu bar上,需要先创建自己的"function key"(例如KEY),然后为 =[menu-bar KEY]= 这样一个键序列添加绑定.
+
+
+
+    若为同一个 =[menu-bar KEY]= 绑定了多个不同的menu item,则只会创建一个menu,但包含了多个menu item的内容.
+
+
+
+    下面是一个例子:
+
+    #+BEGIN_SRC emacs-lisp
+
+      ;; Make a menu keymap (with a prompt string)
+
+      ;; and make it the menu bar item’s definition.
+
+      (define-key global-map [menu-bar words]
+
+        (cons "Words" (make-sparse-keymap "Words")))
+
+
+
+      ;; Define specific subcommands in this menu.
+
+      (define-key global-map
+
+        [menu-bar words forward]
+
+        '("Forward word" . forward-word))
+
+      (define-key global-map
+
+        [menu-bar words backward]
+
+        '("Backward word" . backward-word))
+
+    #+END_SRC
+
+
+
+    local keymap可以取消global keymap创建的menu bar item. 方法是重新绑定该item的key为'undefined.
+
+    例如:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (define-key dired-mode-map [menu-bar edit] 'undefined)
+
+    #+END_SRC
+
+
+
+    + menu-bar-final-items
+
+
+
+    默认情况下,menu bar先显示global-map中定义的menu item,再显示local-map中定义的menu item.
+
+
+
+    而该变量中包含着的多个item对应的fake function key. 这些item会显示在menubar的最后面.
+
+
+
+    + menu-bar-update-hook
+
+
+
+    在重新刷新menu bar之前会触发该hook.
+
+
+
+*** Tool bars
+
+
+
+    Tool-bar的定义与menu-bar的定义及其类似,只是fake "function key"由"menu-bar"变为了"tool-bar". 例如:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (define-key global-map [tool-bar KEY] ITEM)
+
+    #+END_SRC
+
+
+
+    同样,也可以通过为major mode的local map添加`[tool-bar FOO]'绑定来设置特定major-mode的tool-bar
+
+
+
+    你还可以为Modifier-key(shift,control,meta...)+鼠标点击定义不同的意义. 例如:
+
+    #+BEGIN_SRC emacs-lisp
+
+      ;; if the original item was defined this way,
+
+      (define-key global-map [tool-bar shell]
+
+        '(menu-item "Shell" shell
+
+                    :image (image :type xpm :file "shell.xpm")))
+
+
+
+      ;; here is how you can define clicking on the same tool bar image with the shift modifier:
+
+      (define-key global-map [tool-bar S-shell] 'some-command)
+
+    #+END_SRC
+
+
+
+    *但是ITEM中的REAL-BINDING必须是一个command,而不能是keymap*
+
+
+
+    ITEM中除了能使用一般的extended menu item中的属性外,还能使用`:image'属性来指定显示的图标.
+
+
+
+    + `:image IMAGE'
+
+
+
+    这里IMAGE可以是一个image对象,或一个由4个image对象组成的vector.
+
+
+
+    若IMAGE是一个由4个image对象组成的vector,则在不同的条件下会展示不同的image对象:
+
+    | item 0 | Used when the item is enabled and selected.    |
+
+    | item 1 | Used when the item is enabled and deselected.  |
+
+    | item 2 | Used when the item is disabled and selected.   |
+
+    | item 3 | Used when the item is disabled and deselected. |
+
+
+
+    若IMAGE为单个的image对象,则当该menu item disable时,Emacs自动使用edge-detection算法修改image的显示
+
+
+
+    + `:rtl IMAGE'
+
+
+
+    表示当使用right-to-left语言时,显示的图像内容.
+
+
+
+    相关函数与变量
+
+    + tool-bar-map
+
+
+
+    默认情况下,`[tool-bar]'的定义是通过如下代码实现的:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (global-set-key [tool-bar]
+
+                      `(menu-item ,(purecopy "tool bar") ignore
+
+                                  :filter tool-bar-make-keymap))
+
+    #+END_SRC
+
+
+
+    这里函数`tool-bar-make-keymap'会从变量`tool-bar-map'中动态派生出实际的tool-bar map.
+
+    因此可以通过修改该变量的值来修改默认的global tool-bar.
+
+    在某些Major mode中(例如Info mode)是通过将`tool-bar-map'设为buffer-local,再设置该值的方式来代替global tool bar的.
+
+
+
+    + (tool-bar-add-item icon def key &rest props)
+
+
+
+    通过修改`tool-bar-map'的方式,添加item到tool bar中. 其中
+
+
+
+    ICON为XPM,XBM或PBM文件的 *base name*. 例如若ICON为"exit",则emacs会依次查找exit.xpm,exit.pbm和exit.xbm
+
+
+
+    DEF为实际调用的命令
+
+
+
+    KEY为the fake function key symbol in the prefix keymap.
+
+
+
+    PROPS则为tool bar menu item的其他属性.
+
+
+
+    To define items in some local map, bind ‘tool-bar-map’ with ‘let’ around calls of this function:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (defvar foo-tool-bar-map
+
+        (let ((tool-bar-map (make-sparse-keymap)))
+
+          (tool-bar-add-item …)
+
+          …
+
+          tool-bar-map))
+
+    #+END_SRC
+
+
+
+    + (tool-bar-add-item-from-menu command icon &optional map &rest props)
+
+
+
+    用该函数可以将menu bar中的绑定添加到tool bar中来.
+
+
+
+    各参数说明与tool-bar-add-item icon类似.
+
+
+
+    The binding of COMMAND is looked up in the menu bar in MAP (default ‘global-map’)
+
+
+
+    MAP must contain an appropriate keymap bound to ‘[menu-bar]’.
+
+
+
+    该函数会修改`tool-bar-map',因此最好只在修改global tool bar item时才使用该函数
+
+
+
+    + (tool-bar-local-item-from-menu command icon in-map &optional from-map &rest prop)
+
+
+
+    该函数可以用来创建非全局的tool bar items.
+
+
+
+    使用方式类似`tool-baar-add-item-from-menu',只是多了个IN-MAP参数用来指明新加的tool bar item放在哪个keymap中.
+
+
+
+    + auto-resize-tool-bars
+
+
+
+    若该变量值为非nil,则tool bar会自动改变大小以便在一个frame中能显示出所有的tool bar item
+
+
+
+    若变量值为'grow-only,则tool bar只自动增大,而不自动缩小. 要想缩小tool bar,必须用户手工输入`C-l'
+
+
+
+    + auto-raise-tool-bar-buttons
+
+
+
+    若该变量为非nil,则当鼠标移到item上时,该item会凸起
+
+
+
+    + tool-bar-button-margin
+
+
+
+    指定了tool bar item的extra margin. 单位为像素
+
+
+
+    + tool-bar-button-relief
+
+
+
+    该变量值指定了tool bar item的阴影宽度,单位为像素
+
+
+
+    + tool-bar-border
+
+
+
+    This variable specifies the height of the border drawn below the tool bar area.  An integer specifies height as a number of pixels.
+
+
+
+    If the value is one of ‘internal-border-width’ (the default) or ‘border-width’, the tool bar border height corresponds to the corresponding frame parameter.
+
+
+
+*** Modifying Menus
+
+
+
+    当使用`define-key'往menu中添加item时,会把新加的item放到menu的第一项的位置.
+
+
+
+    若想指定新加item的位置,需要使用`define-key-after'
+
+
+
+    + (define-key-after map key binding &optional after)
+
+
+
+    与`define-key'类似,在MAP中将KEY绑定到BINDING. 但是位置由AFTER决定.
+
+
+
+    The argument KEY should be of length one—a vector or string with just one element.
+
+
+
+    But AFTER should be a single event type—a symbol or a character, not a sequence.
+
+
+
+    先加入的item位置在AFTER之后,若AFTER为t或nil,则表示新item会放在最后的位置.
+
+
+
+    下面是一些例子
+
+    #+BEGIN_SRC emacs-lisp
+
+      ;; makes a binding for the fake function key <DRINK> and puts it right after the binding for <EAT>.
+
+      (define-key-after my-menu [drink]
+
+        '("Drink" . drink-command) 'eat)
+
+
+
+
+
+      ;; Here is how to insert an item called ‘Work’ in the ‘Signals’ menu
+
+      ;; of Shell mode, after the item ‘break’:
+
+      (define-key-after
+
+        (lookup-key shell-mode-map [menu-bar signals])
+
+        [work] '("Work" . work-command) 'break)
+
+    #+END_SRC
+
+
+
+*** Easy Menu
+
+
+
+    使用宏`easy-menu-define symbol maps doc menu'可以很容易的定义pop-up-menu / menu-bar-menu
+
+
+
+    + (easy-menu-define symbol maps doc menu)
+
+
+
+    该宏定义一个pop-up-menu / menu-bar-menu,其内容由MENU决定.
+
+
+
+    若参数SYMBOL非空,则会生成一个名为SYMBOL的函数,该函数用来弹出该menu. 且该函数使用DOC作为其的doc-string.
+
+
+
+    参数SYMBOL不需要被引用.
+
+
+
+    MAPS可以为一个keymap,也可以为一个由keymap组成的list.
+
+    + if MAPS is a keymap, the menu is added to that keymap, as a top-level menu for the menu bar
+
+    + It can also be a list of keymaps, in which case the menu is added separately to each of those keymaps.
+
+
+
+    MENU参数的第一个元素必须为字符串,该字符串被作为menu label.
+
+
+
+    MENU参数中紧跟着的是以下的键值对的任意组合:
+
+
+
+    + :filter FUNCTION
+
+
+
+    FUNCTION会接收唯一的一个函数:其他menu item组成的列表. 其返回值作为menu中显示的真实item
+
+
+
+    + :visible VISIBLE-FORM
+
+
+
+    VISIBLE-FORM的执行结果决定了该item是否可见
+
+
+
+    + :active ENABLE-FORM
+
+
+
+    ENABLE-FORM的执行结果决定了该item是否可选.
+
+
+
+    参数MENU可以是如下几种形式:
+
+    + [NAME CALLBACK ENABLE]
+
+
+
+    NAME为一个字符串,表示menu item的名字
+
+
+
+    CALLBACK为点击该item时要运行的命令或S-表达式
+
+
+
+    ENABLE为一个S-表达式,其执行结果决定了该item是否可用.
+
+
+
+    + [MENU CALLBACK [KEYWORD ARG]...]
+
+
+
+    这里KEYWORD与ARG对必须是如下几种:
+
+
+
+    - :keys KEYS
+
+
+
+    KEYS为与menu item等价的keyboard键序列,它需为字符串格式
+
+
+
+    - :key-sequence KEYS
+
+
+
+    该KEYS用来加速Emacs第一次显示menu.
+
+
+
+    若你知道该menu item没有对应的keyboard键序列,则KEYS应该设成nil,否则它应该是表示该键序列的string或vector
+
+
+
+    - :active ENABLE
+
+
+
+    ENABLE为一个S表达式,其计算结果决定了该item是否可用
+
+
+
+    - :visible INCLUDE
+
+
+
+    INCLUDE为一个S表达式,其计算结果决定了该item是否可见
+
+
+
+    - :label FORM
+
+
+
+    FORM是一个S表达式,其计算结果作为该menu item的标签(默认为参数NAME)
+
+
+
+    - :suffix FORM
+
+
+
+    FORM是一个S表达式,其计算结果会作为后缀自动加到menu item标签后
+
+
+
+    - :style STYLE
+
+
+
+    STYLE为一个symbol,它决定了该item的类型.
+
+
+
+    它可以是以下几个值:
+
+    | 'toggle | checkbox           |
+
+    |---------+--------------------|
+
+    | 'radio  | radio button       |
+
+    |---------+--------------------|
+
+    | 其他    | ordinary menu item |
+
+
+
+    - :selected SELECTED
+
+
+
+    SELECTED为一个S表达式,其计算结果决定了该checkbox item或radio button item是否被选中
+
+
+
+    - :help HELP
+
+
+
+    HELP为一个字符串,描述了menu item
+
+
+
+    + menu-string
+
+
+
+    MENU也可以是一个字符串,则该字符串在menu中显示为一段不可用的文本.
+
+
+
+    若字符串以`-'开头,则解释为menu-separator
+
+
+
+    + (MENU1 MENU2 ...)
+
+
+
+    MENU还可以使上述MENU格式组成的list,则表示为submenu
+
+
+
+    下面是一个例子:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (easy-menu-define words-menu global-map
+
+        "Menu for word navigation commands."
+
+        '("Words"
+
+          ["Forward word" forward-word]
+
+          ["Backward word" backward-word]))
+
+    #+END_SRC

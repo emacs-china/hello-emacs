@@ -1,0 +1,111 @@
+#+TITLE: 环状结构体相关函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#环状结构体相关函数][环状结构体相关函数]]
+
+* 环状结构体相关函数
+
+  有时我们会使用一种环状结构体来存储数据,我们可以插入数据到环状结构体中,也可以删除,旋转环状结构中的数据,还可以遍历数据或者根据索引的模值访问数据(在这种环状结构体中,最新插入的数据索引为0,然后从新到就以此累加).
+
+
+
+  elisp提供了名为`ring`的package,供我们方便操作这种环状结构体.
+
+
+
+  * (make-ring size)
+
+  创建一个大小为size的环状结构
+
+
+
+  * (ring-p object)
+
+  判断object是否为环状结构体
+
+
+
+  * (ring-size ring)
+
+  获取该ring上实际包含了多少数据
+
+
+
+  * (ring-elements ring)
+
+  把ring中的数据,从新到旧,以list的形式返回
+
+
+
+  * (ring-emplty-p ring)
+
+  判断ring是否为空
+
+
+
+  * (ring-ref ring index)
+
+  根据索引,查找ring中相应的值.
+
+
+
+  最新插入的数据索引为0,然后从新到旧依次累加.
+
+
+
+  索引也可以为负数,-1表示最旧插入的数据,-2表示第二旧的数据,以此类推.
+
+
+
+  * (ring-insert ring object)
+
+  往ring中插入object,该object作为最新插入的数据,它的索引为0.
+
+
+
+  若ring中的数据已经满了,则该操作会同时删除最旧的那个数据
+
+
+
+  该函数的返回值为object
+
+
+
+  * (ring-insert-at-beginning ring object)
+
+  往ring中插入数据,但该数据被作为最旧的数据项来处理.
+
+
+
+  若ring中的数据已经满了,则该操作会删除最旧的那个数据.
+
+
+
+  * (ring-remove ring &optional index)
+
+  除并返回ring中的数据. index若为nil则表示最旧的数据
+
+
+
+  * 若能够保证不超出ring的容量,则可以使用ring结构体作为先进先出队列来使用.例如
+
+  #+BEGIN_SRC emacs-lisp
+
+    (let ((fifo (make-ring 5)))
+
+      (mapc (lambda (obj) (ring-insert fifo obj))
+
+            '(0 one "two"))
+
+      (list (ring-remove fifo) t
+
+            (ring-remove fifo) t
+
+            (ring-remove fifo)))
+
+    ;; => (0 t one t "two")
+
+
+
+  #+END_SRC

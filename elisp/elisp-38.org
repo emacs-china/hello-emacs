@@ -1,0 +1,334 @@
+#+TITLE: HashTable相关函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#hashtable相关函数][HashTable相关函数]]
+  - [[#判断函数][判断函数]]
+  - [[#创建hash-table][创建hash-table]]
+  - [[#添加item--修改item的值][添加item / 修改item的值]]
+  - [[#删除item][删除item]]
+  - [[#获取某item的值][获取某item的值]]
+  - [[#获取hash中的属性][获取hash中的属性]]
+  - [[#为hash-map中的所有键值对调用函数处理][为hash-map中的所有键值对调用函数处理]]
+  - [[#获取hash-map中的所有key值--value值][获取hash-map中的所有key值 / value值]]
+  - [[#修改hash-table的比较方法][修改Hash-table的比较方法]]
+
+* HashTable相关函数
+
+** 判断函数
+
+   * (hash-table-p table)
+
+   判断table是否为hash-table
+
+** 创建hash-table
+
+
+
+   (make-hash-table &rest keyword-args)
+
+
+
+   常用的keyword-args有:
+
+   * :test TEST
+
+
+
+   指定了用于测试相等的函数. 默认使用eq
+
+
+
+   * :weakness WEAK
+
+
+
+   指定了hash-table什么时候被垃圾回收机制回收. WEAK的可选参数为:
+
+        * nil(默认值)
+
+          表示key和value都不是弱引用,hash-table会保证key和value不会被垃圾回收机制回收
+
+
+
+        * key
+
+        表示key为弱引用,即若除了hash-table其他地方没有引用key的变量,则key变量所指的内存块被回收. 该key-value键值对从hash-table中被删除
+
+
+
+        * value
+
+        表示value为弱引用,即若除了hash-table其他地方没有引用value的变量,则value变量所指的内存块被回收. 该key-value键值对从hash-table中被删除
+
+
+
+        * key-or-value
+
+        表示若除了hash-table其他地方 *同时* 没有引用key或value的变量,则key和value变量所指的内存块被回收. 该key-value键值对从hash-table中被删除
+
+
+
+        * key-and-value / t
+
+        表示key和value都为弱引用,即若除了hash-table其他地方没有引用key或value的变量,则key或value变量所指的内存块被回收. 该key-value键值对从hash-table中被删除
+
+
+
+        * :size SIZE
+
+          指示大致上会有SIZE个数据存入hash-table,用于优化初始容量,默认为65
+
+
+
+        * :rehash-size REHASH-SIZE
+
+          指示当hash-table容量爆满后,怎么进行扩容.
+
+
+
+        若REHASH-SIZE为正整数,则每次扩容都增加REHASH-SIZE个容量
+
+
+
+        若REHASH-SIZE为正浮点数,则每次扩容都按照REHASH-SIZE的倍数来调整容量(因此REHASH-SIZE需要>1)
+
+
+
+        REHASH-SIZE默认为1.5
+
+
+
+        * :rehash-threshold THRESHOLD
+
+          该参数指明了什么时候hash-table进行扩容. 默认为0.8
+
+
+
+        THRESHOLD是一个不大于1的浮点数, 当hash-table中的元素个数>THRESHOLD乘与hash-table容量时,进行扩容
+
+
+
+        (copy-hash-table table)
+
+
+
+        创建table的副本,但 *它的key和value与原table共享*
+
+** 添加item / 修改item的值
+
+
+
+   (puthash myKey myVal myHash)
+
+
+
+** 删除item
+
+
+
+   (remhash myKey myHash)
+
+
+
+   删除myHash中索引为myKey的键值对. 该函数总是返回nil
+
+
+
+   (clrhash myHash)
+
+
+
+   清空myHash中的所有内容,该函数总是返回nil
+
+
+
+** 获取某item的值
+
+
+
+   (gethash myKey myHash &optional default)
+
+
+
+   若没key为myKey的item,则返回default,默认为nil
+
+
+
+** 获取hash中的属性
+
+   * 获取hash中的key-value键值对个数
+
+     (hash-table-count myHash)
+
+
+
+   * 获取hash中的查询机制(即:test属性的值)
+
+     (hash-table-test myHashTable)
+
+
+
+   * 获取hash-table中:weak属性的值
+
+   (hash-table-weakness myHash)
+
+
+
+   * 获取hash-table中:rehash-size参数的值
+
+   (hash-table-rehash-size table)
+
+
+
+   * 获取hash-table中:rehash-threshold参数的值
+
+   (hash-table-rehash-threshold table)
+
+
+
+   * 获取hash-table中的:size参数的值
+
+   (hash-table-size table)
+
+
+
+** 为hash-map中的所有键值对调用函数处理
+
+
+
+   (maphash myFunc myHash)
+
+
+
+   myFunc接收两个参数,一个key,一个value.该函数总是返回nil
+
+
+
+** 获取hash-map中的所有key值 / value值
+
+
+
+   * 在emacs24.4之后,可以使用
+
+   #+BEGIN_SRC elisp
+
+     ;; get all keys
+
+     (require 'subr-x)
+
+     (hash-table-keys myHash) ;
+
+     (hash-table-values myHash) ;
+
+   #+END_SRC
+
+
+
+   * 在emacs24.3可以自定义函数
+
+
+
+   #+BEGIN_SRC elisp
+
+     (defun get-hash-keys (hashtable)
+
+       "Return all keys in hashtable."
+
+       (let (allkeys)
+
+         (maphash (lambda (kk vv) (setq allkeys (cons kk allkeys))) hashtable)
+
+         allkeys
+
+         )
+
+       )
+
+
+
+     (defun get-hash-values (hashtable)
+
+       "Return all values in HASHTABLE."
+
+       (let (allvals)
+
+         (maphash (lambda (kk vv) (setq allvals (cons vv allvals))) hashtable)
+
+         allvals
+
+         )
+
+       )
+
+   #+END_SRC
+
+
+
+** 修改Hash-table的比较方法
+
+   要修改Hash-table中的查询机制,需要同时修改计算Hash Code的方法和比较key值的方法.
+
+
+
+   * (define-hash-table-test name test-fn hash-fn)
+
+   定义一个名为name的hash-table查询机制.
+
+
+
+   当定义了查询机制后,该查询机制就可以传给make-hash-table中的:test参数用于新生成的hash-table了.
+
+
+
+   test-fn需要接收两个key作为参数,并在认为两个key相等时返回非nil
+
+
+
+   hash-fn则需要接收一个key作为参数,并返回一个整数(可以为负数)作为它的hash值.
+
+
+
+   elisp提供了一个函数用于根据object的内容来生成hash值:sxhash
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun case-fold-string= (a b)
+
+       (eq t (compare-strings a nil nil b nil nil t)))
+
+     (defun case-fold-string-hash (a)
+
+       (sxhash (upcase a)))
+
+
+
+     (define-hash-table-test 'case-fold
+
+       'case-fold-string= 'case-fold-string-hash)
+
+
+
+     (make-hash-table :test 'case-fold)
+
+   #+END_SRC
+
+
+
+   * (sxhash obj)
+
+
+
+   根据obj的内容生成hash code,若两个obj是equal的,则该函数返回相等的hashcode
+
+   #+BEGIN_SRC emacs-lisp
+
+     (define-hash-table-test 'contents-hash 'equal 'sxhash)
+
+
+
+     (make-hash-table :test 'contents-hash)
+
+
+
+   #+END_SRC

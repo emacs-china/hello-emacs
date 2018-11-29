@@ -1,0 +1,247 @@
+#+TITLE: 宏
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#宏][宏]]
+  - [[#宏与函数的不同][宏与函数的不同]]
+  - [[#定义宏][定义宏]]
+  - [[#宏扩展][宏扩展]]
+  - [[#宏的工作模式][宏的工作模式]]
+
+* 宏
+
+** 宏与函数的不同
+
+   * 宏的参数在传递給宏前并不会作计算处理,也就是说宏看到的是传递给它的原始参数. 而函数参数传递給函数时是已经经过计算的结果,也就是说函数看到的是参数的计算结果.
+
+   * 宏的计算结果需要是一个S表达式(这个过程被称为宏扩展),Elisp会再计算这个返回的S表达式以算出最终结果.
+
+** 定义宏
+
+   定义宏的格式与定义函数的格式一样,只是用defmacro替代defun
+
+   #+BEGIN_EXAMPLE
+
+        (defmacro macro-name (参数列表...)
+
+                [函数描述字符串]
+
+                [declare-form]
+
+                [交互模式声明]
+
+                函数体...)
+
+   #+END_EXAMPLE
+
+
+
+   destructuring-bind宏接受一个匹配模式,一个求值到列表的实参,以及一个表达式体，然后在求值表达式时将模式中的参数绑定到列表的对应元素上.例如
+
+   #+BEGIN_SRC emacs-lisp :results drawer :exports both
+
+     (destructuring-bind (x (y) . z) '(a (b) c d)
+
+       (list x y z))
+
+   #+END_SRC
+
+
+
+   #+RESULTS:
+
+   :RESULTS:
+
+(a b (c d))
+
+   :END:
+
+
+
+   defmacro宏允许任意列表结构作为参数列表.当宏调用被展开时,宏调用中的各部分将会以类似destructuring-bind的方式被赋值到宏的参数上面
+
+   例如,可以这样定义dolist宏
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defmacro our-dolist ((var list &optional result) &body body)
+
+       `(progn
+
+          (mapc #'(lambda (,var) ,@body)
+
+                ,list)
+
+          (let ((,var nil))
+
+            ,result)))
+
+   #+END_SRC
+
+
+
+** 宏扩展
+
+   调用宏会将传递給宏的参数扩展成一个S表达式,这个过程称为宏扩展过程.
+
+
+
+   + (macroexpand macro-form &optional environment)
+
+
+
+   递归扩展macro-form直到结果中不再为宏调用为止(不代表结果中就不包含宏了,只是第一个元素不为宏而已). 然后返回扩展结果.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defmacro inc (var)
+
+       (list 'setq var (list '1+ var)))
+
+
+
+     (macroexpand '(inc r))                  ; => (setq r (1+ r))
+
+
+
+     (defmacro inc2 (var1 var2)
+
+       (list 'progn (list 'inc var1) (list 'inc var2)))
+
+
+
+     (macroexpand '(inc2 r s))               ; => (progn (inc r) (inc s))  ; `inc'并没有扩展
+
+   #+END_SRC
+
+
+
+   environment参数为一个包含宏定义的alist. macroexpand在扩展宏时会使用environment中的宏定义替代当前环境下的宏定义.
+
+
+
+   + (macroexpand-all macro-form &optional environment)
+
+
+
+   类似macroexpand,但会递归扩展直到结果中不再包含宏为止.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defmacro inc (var)
+
+       (list 'setq var (list '1+ var)))
+
+
+
+     (macroexpand '(inc r))                  ; => (setq r (1+ r))
+
+
+
+     (defmacro inc2 (var1 var2)
+
+       (list 'progn (list 'inc var1) (list 'inc var2)))
+
+
+
+     (macroexpand-all '(inc r s))           ; => (progn (setq r (1+ r)) (setq s (1+ s))) inc也扩展了
+
+   #+END_SRC
+
+
+
+   当对程序进行编译时,编译器在遇到宏调用时,会对宏进行扩展,因此:
+
+
+
+   + 要注意分清哪些操作应该放在宏扩展的过程中完成,哪些操作放在宏扩展后的结果中进行. 例如
+
+     #+BEGIN_SRC emacs-lisp
+
+       (defmacro my-set-buffer-multibyte (arg)
+
+         (if (fboundp 'set-buffer-multibyte)
+
+             (set-buffer-multibyte arg)))      ;在编译期执行该操作其实是没有意义的,应该改为`(set-buffer-multibyte ,arg)
+
+     #+END_SRC
+
+
+
+   + 不要在宏中对宏参数进行eval操作. 因为这时候宏参数还并未绑定任何实际参数.
+
+
+
+   + 由于编译器只对宏进行一次扩展,在其他使用宏的地方不再进行扩展动作,而在解释执行时会在每次宏调用时都对宏进行扩展. 因此宏扩展的过程,不能产生副作用,否则就会发生编译和解释执行结果不一致的情况. 例如:
+
+     #+BEGIN_SRC emacs-lisp
+
+       (defmacro empty-object ()
+
+         (list 'quote (cons nil nil)))
+
+
+
+       ;; 上面的宏在解释执行时,每次都会生成一个新的(nil).
+
+       ;; 但在编译执行时,会在编译器生成一个(nil),然后每次都使用它
+
+     #+END_SRC
+
+
+
+   + 如果我们在主调函数编译以后，重定义那个宏. 由于对最初的宏调用的无迹可寻，所以函数里的展开式无法更新。该函数的行为将继续反映出宏的原来的定义
+
+
+
+   此外,如果在定义宏之前，就已经编译了宏的调用代码，也会发生类似的问题.
+
+
+
+   为了避免这类问题,我们需要
+
+
+
+   1. 在调用宏之前，先定义它。
+
+
+
+   2. 一旦重定义一个宏，就重新编译所有直接(或通过宏间接)调用它的函数(或宏)。
+
+
+
+** 宏的工作模式
+
+   下面是一个宏的模拟实现
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defmacro our-expander (name) `(get ,name 'expander))
+
+     (defmacro our-defmacro (name parms &body body)
+
+       (let ((g (gensym)))
+
+         `(progn
+
+            (setf (our-expander ',name)
+
+                  #'(lambda (,g)
+
+                      (block ,name
+
+                        (destructuring-bind ,parms (cdr ,g)
+
+                          ,@body))))
+
+            ',name)))
+
+     (defun our-macroexpand-1 (expr)
+
+       (if (and (consp expr) (our-expander (car expr)))
+
+           (funcall (our-expander (car expr)) expr)
+
+         expr))
+
+   #+END_SRC

@@ -1,0 +1,45 @@
+#+TITLE: 执行命令
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#执行命令][执行命令]]
+
+* 执行命令
+
+  * 执行shell命令并等待shell命令结束
+
+
+
+  (shell-command "shell命令")
+
+
+
+  * 执行shell命令,等待shell命令结束,并获得命令的输出
+
+
+
+  (shell-command-to-string "shell命令")
+
+
+
+  * 使用外部命令对所选择Region进行处理
+
+
+
+  shell-command-on-region
+
+
+
+  * 执行shell命令,但是不等待shell命令结束
+
+
+
+  start-process
+
+
+
+  start-process-shell-command
+
+
+
+  call-process-region

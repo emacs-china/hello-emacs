@@ -1,0 +1,11 @@
+#+TITLE: 使用eval-after-load可以推迟一段代码的执行
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#使用eval-after-load可以推迟一段代码的执行][使用eval-after-load可以推迟一段代码的执行]]
+
+* 使用eval-after-load可以推迟一段代码的执行
+
+  (eval-after-load "触发条件的文件" 待执行的代码)
+
+  这里，第一个参数的值必须跟上面三种方式加载文件时的值一模一样

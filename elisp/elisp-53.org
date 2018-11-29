@@ -1,0 +1,350 @@
+#+TITLE: Package相关说明
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#package相关说明][Package相关说明]]
+  - [[#package的分类][Package的分类]]
+    - [[#单文件package][单文件Package]]
+    - [[#多文件package][多文件Package]]
+      - [[#define-package-name-version-optional-docstring-requirements][(define-package name version &optional docstring requirements)]]
+  - [[#package的属性][Package的属性]]
+  - [[#package的安装说明][package的安装说明]]
+  - [[#package的加载过程][package的加载过程]]
+    - [[#package-initialize-optional-no-activate][(package-initialize &optional no-activate)]]
+  - [[#package-archives][Package Archives]]
+
+* Package相关说明
+
+** Package的分类
+
+   package可以分为单文件package和多文件package. 其中单文件package在package archive中以单个elisp文件形式存在,而多文件package以tar文件形式存在.
+
+
+
+*** 单文件Package
+
+    单文件package中elisp文件必须遵循[[info:elisp:Library%20Headers][elisp library header conventions]]
+
+    下面是一个例子
+
+    #+BEGIN_SRC emacs-lisp
+
+      ;;; superfrobnicator.el --- Frobnicate and bifurcate flanges
+
+
+
+      ;; Copyright (C) 2011 Free Software Foundation, Inc.
+
+
+
+      ;; Author: J. R. Hacker <jrh@example.com>
+
+      ;; Version: 1.3
+
+      ;; Package-Requires: ((flange "1.0"))
+
+      ;; Keywords: multimedia, frobnicate
+
+      ;; URL: http://example.com/jrhacker/superfrobnicate
+
+
+
+
+
+      ;;; Commentary:
+
+
+
+      ;; This package provides a minor mode to frobnicate and/or
+
+      ;; bifurcate any flanges you desire.  To activate it, just type
+
+
+
+    #+END_SRC
+
+
+
+    package的名称与elisp文件的base name必须一致. package名称被写到第一行. 在上例中为"superfrobnicator"
+
+
+
+    单行描述也放在第一行,在上例中为"Frobnicate and bifurcate flange"
+
+
+
+    package的版本号,通过`Package-Version' header表示,若不存在`Package-Version' header则通过`Version' header标识. 该属性必须存在. 在上例中为1.3
+
+
+
+    若文件中有`;;; Commentary:'部分,则该部分内容作为package的详细描述.
+
+
+
+    若文件中有`Package-Requires' header,则该部分标识了package的依赖包有哪些. 若没有该header表示package不依赖其他包.
+
+
+
+    `Keywords'与`URL'也是可选的,但一般建议添加这两个header. `describe-package'函数会展示这两个header中的值.
+
+    `Keywords' header应该至少包含一个`finder-known-keywrods'中的标准keyword
+
+
+
+*** 多文件Package
+
+    多文件package不像单文件package那样有那么多的规范.
+
+
+
+    多文件package在package archive中以一个tar文件的形式存在. 该tar文件的名称必须是`package名-package版本.tar'.
+
+
+
+    多文件package的content directory中必须有一个名为`package名-pkg.el'的文件.
+
+    该文件的内容为一个`define-package'函数的调用form. `define-package'函数定义了package的版本,单行描述和依赖包.
+
+
+
+    若content directory中包含名为`README'的文件,则该文件的内容作为package的详细描述
+
+
+
+    若content directory中包含名为`dir'的文件,则该文件被认为是通过命令`install-info'生成的Info directory文件. 同时,相关的Info文件也必须在content directory中.
+
+    这中情况下,当激活该package后,Emacs会自动将content directory添加到`Info-directory-list'中.
+
+
+
+    *不要在package中包含任何.elc文件,它们是由package安装时自动生成的.且无法控制各文件编译的顺序*
+
+
+
+    *不要包含名为`package名-autoloads.el'的文件,它也是由package安装时自动生成的.*
+
+
+
+    若package中包含其他格式的文件(例如图片等),则在elisp源代码中,可以使用`load-file-name'变量值来引用存放这些文件的目录. 例如
+
+    #+BEGIN_SRC emacs-lisp
+
+      (defconst superfrobnicator-base (file-name-directory load-file-name))
+
+
+
+      (defun superfrobnicator-fetch-image (file)
+
+        (expand-file-name file superfrobnicator-base))
+
+    #+END_SRC
+
+
+
+**** (define-package name version &optional docstring requirements)
+
+
+
+     该函数定义了一个名为`NAME'的package.
+
+
+
+     参数`VERSION'为一个表示版本的字符串,该字符串的格式必须被`version-to-list'所认识.
+
+
+
+     参数`DOCSTRING'为单行描述
+
+
+
+     参数`REQUIREMENTS'为一个由依赖包和最低版本组成的list. 该list的每个元素应该是(DEP-NAME-symbol DEP-VERSION-string)
+
+
+
+** Package的属性
+
+   每个package都具有如下一些属性:
+
+
+
+   + Name
+
+
+
+   pacakge name,常在程序中作为变量/函数名的前缀.
+
+
+
+   + Version
+
+
+
+   版本号,其格式必须被函数`version-to-list'所知. 每次release package都应该增加该版本号属性
+
+
+
+   + 单行简洁描述
+
+
+
+   该描述应该只占一行,最好不超过36个字符. 该描述会在list package时展示
+
+
+
+   + 详细描述
+
+
+
+   常常包含该package的用处,以及使用方法. 该描述会在`describe-package'中展示
+
+
+
+   + Dependencies
+
+
+
+   依赖关系, 该属性值为其他package的list. 该list中的每个元素可以是一个表示package的symbol或一个(package min-version)的列表.
+
+** package的安装说明
+
+
+
+   通过`pacakge-install-file'可以安装一个package. 安装package包含以下几个步骤:
+
+
+
+   1. 在`package-user-dir'目录下创建一个名为`package名称-package版本'的目录.
+
+
+
+   该目录用于存放package的内容的,因此也被称为"content direcotry"
+
+
+
+   2. Emacs搜索content directory中的所有elisp文件,并查找里面的autoload magic comments
+
+
+
+   这些autoload定义被保存在名为`package名称-autoloads.el'的文件中.
+
+
+
+   这些autoload定义通常用来自动加载package中定义的供用户使用的主要command,但也能用来作其他事情,例如王`auto-mode-alist'中添加内容
+
+
+
+   3. Emacs编译package中的所有elisp文件
+
+
+
+** package的加载过程
+
+
+
+   Emacs启动过程中,当Emacs加载完初始化完init file及abbrev file后,在触发`after-init-hook'前,Emacs会自动调用`package-initialize'函数来加载安装的package.
+
+
+
+   但是Emacs加载package的过程,在变量`package-enable-at-startup'为nil时会被禁止.
+
+
+
+   Emacs加载package的过程由两个步骤组成
+
+
+
+   1. 添加package的content directory到`load-path'中
+
+
+
+   2. 执行`package名-autoloads.el'中的autoload定义.
+
+
+
+*** (package-initialize &optional no-activate)
+
+
+
+    该函数初始化Emacs用于记录哪些package已经安装的内部变量并加载这些package.
+
+
+
+    用户配置项`package-load-list'指明了哪些package会被加载,默认是所有已经安装的package.
+
+
+
+    参数`NO-ACTIVATE'若为非nil,则表示只更新已安装package的记录,而不加载这些package
+
+
+
+** Package Archives
+
+   + 配置项package-archives
+
+
+
+   该配置项为一个alist,指明了Emacs包管理系统从哪些archive中搜索package
+
+
+
+   该alist的每个元素的格式为(ID . LOCATION),这里ID为表示archive名称的字符串,LOCATION为表示archive地址的字符串.
+
+   目前LOCATION只能为http url或一个本地目录的路径.
+
+
+
+   一个package archive只是一个包含了package源代码文件及其相关文件的目录而已.
+
+   若希望可以通过http获取该archive,则需要把该目录放在web server上.
+
+
+
+   一种设置和更新package archive的比较方便的方式是使用库`package-x',该库是Emacs自带的,但是默认情况下并不加载.
+
+
+
+   `package-x'的相关命令与变量如下:
+
+
+
+   + 配置项pacakge-archive-upload-base
+
+
+
+   该变量的值应为一个目录的名称,它将作为package archive的base location.
+
+
+
+   该变量的值必须是一个 *绝对路径*.
+
+
+
+   若package archive不在本地,可以使用类似`/ssh:foo@example.com:/var/www/packages/' 的形式来设置
+
+
+
+   + (package-upload-file filename)
+
+
+
+   该命令上传FILENAME到`package-archive-upload-base'中.
+
+
+
+   FILENAME必须是单文件package(el文件),多多文件package(tar文件),否则会抛出错误.
+
+
+
+   若`package-archive-upload-base'中的路径非法,则会提示用户重新输入,若路径不存在,则会自动创建该目录
+
+
+
+   + (package-upload-buffer)
+
+
+
+   类似`package-upload-file',只不过是将当前buffer的内容上传上去.
+
+
+
+   该buffer必须访问一个单文件package(el文件)或多文件pacakge(tar文件),否则会抛出错误

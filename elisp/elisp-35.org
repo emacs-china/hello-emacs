@@ -1,0 +1,676 @@
+#+TITLE: list相关函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#list相关函数][list相关函数]]
+  - [[#判断函数][判断函数]]
+  - [[#获取list中的元素][获取list中的元素]]
+  - [[#创建cons-cell和list][创建cons cell和list]]
+  - [[#修改list变量][修改list变量]]
+    - [[#会破坏原参数中的值][会破坏原参数中的值]]
+    - [[#不破坏原参数的值][不破坏原参数的值]]
+  - [[#alist相关函数][alist相关函数]]
+    - [[#获取alist][获取alist]]
+    - [[#根据key取key-value键值对][根据key取key-value键值对]]
+    - [[#根据value查找key-value键值对][根据value查找key-value键值对]]
+    - [[#更新新值添加新值][更新新值/添加新值]]
+    - [[#删除键值对][删除键值对]]
+  - [[#property-list相关函数][Property list相关函数]]
+
+* list相关函数
+
+** 判断函数
+
+   * (consp object)
+
+   object是否为cons cell. 一般情况下,list就是cons cell,但nil比较特殊,虽然它是list,但不是cons clell
+
+   * (atom object)
+
+   nil即是atom,也是list
+
+   * (listp object)
+
+   object是否为list
+
+   * (nlistp object)
+
+   object是否不是list
+
+   * (null object)
+
+   * (memq object list)
+
+   判断list中是否包含object,它返回list中第一次出现object的位置.函数名中的q表示使用 *eq* 作为比较函数.
+
+   * (memql object list)
+
+   类似memq,但是函数名中的ql表示使用 *eql* 作为比较函数.
+
+   * (member object list)
+
+   类似memq,但是使用 *equal* 作为比较函数
+
+   * (member-ignore-case str list)
+
+   类似member,但参数str必须是string类型,并且比较时不区分大小写,单字节字符串也被转换为多字符串进行比较.
+
+** 获取list中的元素
+
+   * (car-safe object)
+
+   它与car不同点在于,若object不是cons ceil,则car会报错,而car-safe只是返回nil
+
+   * (cdr-safe object)
+
+   它与cdr不同点在于,若object不是cons ceil,则cdr会报错,而cdr-safe只是返回nil
+
+   * (pop list)
+
+   弹出list中的第一个元素
+
+   * (nth n list)
+
+   返回list中的第n个元素(从0开始计算), 若n为负数,则返回list中的第一个元素.
+
+   * (nthcdr n list)
+
+   返回第n个cdr后的list,若n为0或负数,则返回原list
+
+   #+BEGIN_SRC emacs-lisp
+
+     (nthcdr 2 '(1 2 3 4))                   ;=>(3 4)
+
+     (nthcdr 10 '(1 2 3 4))                  ;=>nil
+
+     (nthcdr -3 '(1 2 3 4))                  ;=>(1 2 3 4)
+
+   #+END_SRC
+
+   * (last list &optional n)
+
+   返回list中最后n个元素组成的list,默认n=1
+
+   #+BEGIN_SRC emacs-lisp
+
+     (last '(1 2 3 4 5) )                    ;=>(5)
+
+     (last '(1 2 3 4 5) 3 )                  ;=>(3 4 5)
+
+   #+END_SRC
+
+   * (safe-length list)
+
+   对于circular list,只能表示list的长度最大不会超过safe-length返回的值,而不是实际值.
+
+   * (butlast l &optional n)
+
+   返回l去掉了后面n个元素后的列表,默认n为1
+
+   #+BEGIN_SRC emacs-lisp
+
+     (butlast '(1 2 3 4) 1)                  ;=>(1 2 3)
+
+     (butlast '(1 2 3 4) 2)                  ;=>(1 2)
+
+   #+END_SRC
+
+   * (nbutlast l &optional n)
+
+   类似(butlast,但是会同时更改l的值
+
+** 创建cons cell和list
+
+   * (cons obj1 obj2)
+
+   cons一般用来将一个元素添加到某个list中的头部.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (cons 1 '(2 3 4))                       ;=>(1 2 3 4)
+
+   #+END_SRC
+
+   * (list &rest objects)
+
+   * (make-list n object)
+
+   返回由n个object组成的list
+
+   #+BEGIN_SRC emacs-lisp
+
+     (make-list 3 2)                         ;=>(2 2 2)
+
+   #+END_SRC
+
+   * (append &rest sequences)
+
+   将所有的sequences中的元素串在一起组成一个list, 需要注意的是,出了最后一个参数以外,其他的参数都被copy一份,用于与最后那个参数进行连接.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq trees '(pine oak))                ;=>(pine oak)
+
+     (setq more-trees (append '(maple birch) trees)) ;=>(maple birch pine oak)
+
+     (eq trees (last more-trees 2))                  ;=>t
+
+   #+END_SRC
+
+
+
+   通过在最后的参数后添加nil,可以让所有的参数都强制copy
+
+
+
+   最后的参数在处理上会有些特殊,最后一个参数只是单纯的被安置到前面参数组成list的cdr位置,例如
+
+   #+BEGIN_SRC emacs-lisp
+
+     (append '(x y) [z])                     ;=>(x y . [z]),最后的参数只是放在cdr的位置而已,因此最终结果不是(x y z)
+
+   #+END_SRC
+
+   * (reverse list)
+
+   * (copy-tree tree *optional vecp)
+
+   * (number-sequence from &optional to step)
+
+   返回一个number list,值的范围为从from开始到to结束,步进为step(默认为1)
+
+   #+BEGIN_SRC emacs-lisp
+
+     (number-sequence 4 9)                   ;=>(4 5 6 7 8 9)
+
+   #+END_SRC
+
+
+
+   若to为nil或与from相等,则返回单元素列表(from)
+
+
+
+   若step为0,且to不为nil或与from的值相等,则elisp会报出错误,因为这会产生一个死循环
+
+
+
+   若step不为0,而from累加step永远不会超过或到达to,则函数返回nil
+
+   #+BEGIN_SRC emacs-lisp
+
+     (number-sequence 8 5 1)                 ;nil
+
+     (number-sequence 5 8 -1)                    ;nil
+
+   #+END_SRC
+
+** 修改list变量
+
+*** 会破坏原参数中的值
+
+    这里的函数都会直接修改参数中的list
+
+
+
+    + (push element list)
+
+
+
+    把element放在list的第一位,作用类似cons
+
+
+
+    + (add-to-list listname element &optional append compare-fn)
+
+
+
+    类似push,但若list中已经有了element,则保持list不变
+
+
+
+    若append为非nil,则将element放在list的最后位置
+
+
+
+    compare-fn默认使用equal进行比较
+
+
+
+    + (add-to-ordered-list listname element &optional order)
+
+
+
+    这里的order需要是number类型,
+
+
+
+    order的值决定了element的位置,若order为nil,则将element放在list中最后带order的元素后面
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq foo nil)
+
+      (add-to-ordered-list 'foo 'a 1)         ;=>(a)
+
+      (add-to-ordered-list 'foo 'c 3)         ;=>(a c)
+
+      (add-to-ordered-list 'foo 'b 2)         ;=>(a b c)
+
+      (add-to-ordered-list 'foo 'b 4)         ;=>(a c b)  若element已经存在,且设定了order,则使用新orde放置element的位置
+
+      (add-to-ordered-list 'foo 'd)           ;=>(a c b d)
+
+      (add-to-ordered-list 'foo 'e)           ;=>(a c b e d)
+
+      (add-to-ordered-list 'foo 'f)           ;=>(a c b f e d)  若order为nil,则将element放在list中最后带order的元素后面
+
+
+
+    #+END_SRC
+
+
+
+    + (setcar cons-ceil object) / (setcdr cons-ceil object)
+
+
+
+    修改cons-ceil的car/cdr部分,并返回参数object作为返回值
+
+
+
+    通过setcdr可以实现删除/添加list中element的目的
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq x1 '(a b c d))
+
+      (setcdr x1 (cddr x1));=>'(a c d)
+
+      (setcdr x1 (append '(1 2) (cdr x1)))    ;=> (a 1 2 c d)
+
+    #+END_SRC
+
+
+
+    + (nconc &rest lists)
+
+
+
+    类似append,所不同的是它直接修改所有参数的last element的cdr,而不会先做copy-sequence操作.
+
+
+
+    由于除了最后一个参数不用被修改之外,其他参数的结构都会被修改,因此除了最后一个参数可以是const list外,其他参数必须是个变量.
+
+
+
+    跟append一样的,最后一个参数可以不是list
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq x '(1 2 3))                       ; => (1 2 3)
+
+      (nconc x 'z)                            ; => (1 2 3 . z)
+
+      x                                       ; => (1 2 3 . z)
+
+    #+END_SRC
+
+
+
+    + (nreverse list)
+
+
+
+    翻转参数list
+
+
+
+    + (sort list predicate-less)
+
+
+
+    使用predicate-less进行从小到大的排序,若存在相等的值,则保持相等值的位置不变
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq x1 '(1 2 4 3 7 6 5));=>(1 2 4 3 7 6 5)
+
+      (sort x1 '<)     ;=>(1 2 3 4 5 6 7)
+
+    #+END_SRC
+
+
+
+    这里的predicate-less为比较函数,它接收两个参数,并判断第一个参数是否小于第二个参数.
+
+
+
+    predicate-less函数必须有下面两个特性:
+
+    1. A<B,则B!<A
+
+
+
+    2. 若A>B,B>C,则A>C
+
+
+
+    *注意:*
+
+
+
+    sort有一个很变态的特性:sort函数会让参数list依然指向原来的哪个cons-cell的位置,而不管这个cons-cell是否在sort后依然是处于第一个元素的位置. 例如
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq x1 '(9 8 7 2 3))
+
+      (sort x1 '<)                            ;=>(2 3 7 8 9)
+
+      x1                                      ;=>(9),注意,x1实际上依然指向了9这个cons cell的位置
+
+    #+END_SRC
+
+
+
+    *因此一般情况下,都需要把sort的返回结果赋值回参数list*
+
+
+
+    + (delq object list)
+
+
+
+    移除list中所有与object相等的element,函数中的q表示使用eq作为比较函数.
+
+
+
+    由于delq在删除list头部的element时,仅仅是返回跳过头部element的cdr位置,而不会改变list参数所指向的位置.
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq x1 '(a b c))
+
+      (delq 'a x1)                            ;=>(b c)
+
+      x1                                      ;=>(a b c)
+
+    #+END_SRC
+
+
+
+    *因此使用delq,一般我们也需要将返回值赋值回参数list*
+
+
+
+    + (delete object seq)
+
+
+
+    delete函数比较特殊,它根据seq的类型不同而有不同的行为.
+
+
+
+    当seq为list类型时,它跟delq一样会修改seq的值,所不同的是它使用equal作为比较函数.
+
+
+
+    当seq为vector或string,则delete不会修改原seq的值
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq l '((2) (1) (2)))
+
+      (delete '(2) l)                         ; => ((1))
+
+      l                                       ; => ((2) (1))
+
+      ;; If you want to change `l' reliably,
+
+      ;; write `(setq l (delete '(2) l))'.
+
+      (setq l '((2) (1) (2)))
+
+      (delete '(1) l)                         ; => ((2) (2))
+
+      l                                       ; => ((2) (2))
+
+      ;; In this case, it makes no difference whether you set `l',
+
+      ;; but you should do so for the sake of the other case.
+
+      (setq v [(2) (1) (2)])
+
+      (delete '(2) v)             ; => [(1)]
+
+      v                           ; => [(2) (1) (2)]
+
+    #+END_SRC
+
+
+
+    + (delete-dups list)
+
+
+
+    删除list中所有重复的元素,使用equal作为比较函数.
+
+
+
+    当list中有多个重复元素时,delete-dups保留第一个元素.
+
+*** 不破坏原参数的值
+
+    + (remq object list)
+
+      类似delq,但不改变原参数list的值. 这里的q也表示使用eq作为判断函数.
+
+
+
+    + (remove object seq)
+
+      类似函数delete,但它保证不修改参数seq的值
+
+
+
+** alist相关函数
+
+*** 获取alist
+
+    * (copy-alist alist)
+
+    拷贝alist的一个副本(two-level deep copy)
+
+*** 根据key取key-value键值对
+
+    * (assoc key alist)
+
+
+
+    当使用assoc在alist中取键值对时,只会取发现的第一个符合条件的键值对. 因此可以直接用push命令将要修改为的新键值对放到alist的前面,以此来模拟对老键值对的修改,同时保留了老键值对的历史.
+
+    #+BEGIN_SRC lisp
+
+      (assoc 'garden *nodes*)
+
+    #+END_SRC
+
+
+
+    assoc使用equal函数作为比较函数
+
+
+
+    * (assq key alist)
+
+      类似assoc,但函数名中的q表示使用eq作为比较函数. 一般用于key为symbol类似时,因为eq速度比equal快得多.
+
+
+
+*** 根据value查找key-value键值对
+
+
+
+    * (rassoc value alist)
+
+
+
+    rassoc也使用equal作为比较函数.
+
+
+
+    * (rassq value alist)
+
+
+
+    类似rassoc,但是函数名中的q标识用eq作为比较函数
+
+
+
+    * (assoc-default key alist &optional test default)
+
+
+
+    assoc-default与其他assoc系列函数不同之处在于, *它直接返回key部分,而且它也比较不为cons cell的element*.
+
+
+
+    若alist中某element为atom,则该element整个被用于与可以进行比较,且使用default作为返回值.
+
+    否则若element为cons cell,则使用(car element)进行比较. 使用(cdr element)作为返回值.
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq x1 '(0 (1 "one") (2 "two")(3 "three" )))
+
+      (assoc-default 1 x1);=>("one")
+
+      (assoc-default 0 x1 'equal "zero") ;=>"four"
+
+      (assoc-default 4 x1) ;=>nil
+
+    #+END_SRC
+
+
+
+    test为比较函数,默认为equal
+
+
+
+*** 更新新值/添加新值
+
+
+
+    使用push将新键值对放入alist中即可
+
+    #+BEGIN_SRC elisp
+
+      (push '(old-key new-value) *alist*)
+
+      (push '(new-key new-value) *alist*)
+
+    #+END_SRC
+
+
+
+*** 删除键值对
+
+
+
+    * 根据key删除
+
+      (assq-delete-all key alist)
+
+
+
+    类似delq的alist版,他可能会也可能不会修改原alist的结构,因此 *需要将返回值赋值回原参数alist*
+
+
+
+    函数名中的q表示比较时使用eq函数
+
+
+
+    * 根据value删除
+
+      (rassq-delete-all value alist)
+
+
+
+    类似assq-delete-all,但是它比较value而不是key
+
+
+
+** Property list相关函数
+
+   * 判断plist中是否存在指定的property
+
+   (plist-member plist property)
+
+
+
+   返回plist中指向property的位置. 使用eq作为
+
+   #+BEGIN_SRC emacs-lisp
+
+     (plist-member '((1) "one" 2 two) 2)     ;=>(2 two)
+
+   #+END_SRC
+
+
+
+   * 返回plist中匹配参数property的value值
+
+     (plist-get plist property)
+
+
+
+   该函数使用eq作为比较函数
+
+   #+BEGIN_SRC emacs-lisp
+
+     (plist-get '(foo 4) 'foo)               ; => 4
+
+     (plist-get '(foo 4 bad) 'foo)           ; => 4
+
+     (plist-get '(foo 4 bad) 'bad)           ; => nil
+
+     (plist-get '(foo 4 bad) 'bar)           ; => nil
+
+   #+END_SRC
+
+
+
+   (lax-plist-get plist property)
+
+
+
+   类似plist-get,但是该函数使用equal来作为比较函数
+
+
+
+   * 增加/修改plist中的键值对
+
+   (plist-put plist peroperty value)
+
+
+
+   该函数可能/可能不会修改原参数plist的结构.因此你需要把返回值重新赋值回原plist中
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq my-plist '(bar t foo 4))               ; => (bar t foo 4)
+
+     (setq my-plist (plist-put my-plist 'foo 69)) ; => (bar t foo 69)
+
+     (setq my-plist (plist-put my-plist 'quux '(a))) ; => (bar t foo 69 quux (a))
+
+   #+END_SRC
+
+
+
+   (lax-plist-put plist property value)
+
+   类似plist-put函数,但是使用equal作为比较函数来决定是添加还是更新值

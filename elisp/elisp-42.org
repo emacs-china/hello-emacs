@@ -1,0 +1,503 @@
+#+TITLE: 缓冲区
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#缓冲区][缓冲区]]
+  - [[#获取buffer对象][获取buffer对象]]
+  - [[#buffer操作][buffer操作]]
+  - [[#获取缓冲区内容][获取缓冲区内容]]
+  - [[#buffer内容处理相关函数][buffer内容处理相关函数]]
+    - [[#删除操作][删除操作]]
+    - [[#插入操作][插入操作]]
+    - [[#查找替换操作][查找/替换操作]]
+  - [[#保存现场][保存现场]]
+
+* 缓冲区
+
+** 获取buffer对象
+
+   * 得到当前buffer对象
+
+
+
+   current-buffer(*当前buffer不一定是在屏幕上显示的哪个缓冲区,另外,当命令执行完成后,光标所在的buffer自动成为当前buffer* )
+
+
+
+   * 若缓冲区存在则返回该缓冲区对象,否则新建缓冲池对象返回
+
+
+
+   get-buffer-create
+
+
+
+   * 若有同名缓冲区存在,则新建的缓冲区后会加上后缀
+
+
+
+   generate-new-buffer
+
+
+
+   * 获得所有buffer的列表
+
+
+
+   buffer-list
+
+
+
+   * 获得窗口对应的buffer
+
+
+
+   window-buffer
+
+
+
+** buffer操作
+
+   * 返回当前buffer的文件全路径
+
+
+
+   buffer-file-name
+
+
+
+   * 获得指定/当前buffer的名字
+
+
+
+   buffer-name
+
+   #+begin_src elisp
+
+     (buffer-name [buffer对象])
+
+   #+end_src
+
+   * 重命名缓冲区
+
+
+
+   rename-buffer
+
+
+
+   * 产生一个唯一的缓冲区名
+
+     generate-new-buffer-name
+
+
+
+   * 设置指定buffer为当前buffer
+
+
+
+   (set-buffer myBuffer)
+
+
+
+   * 保存当前buffer到文件
+
+
+
+   save-buffer
+
+
+
+   * 在不改变当前状态下,临时用另一buffer的变量代替现有变量执行语句
+
+
+
+   with-current-buffer
+
+   #+begin_src elisp
+
+     (with-current-buffer buffer对象或buffer名称
+
+       表达式)
+
+   #+end_src
+
+
+
+   * 关闭缓冲区
+
+
+
+   (kill-buffer myBuffer) ;如果要用户确认是否要关闭缓冲区，可以加到kill-buffer-query-functions里。如果要作善后处理，可以用kill-buffer-hook
+
+
+
+   * 关闭当前buffer
+
+
+
+   (kill-this-buffer)
+
+
+
+   * 确认缓冲区是否存在
+
+
+
+   buffer-live-p
+
+
+
+   * 使用临时buffer执行相应代码
+
+
+
+   with-temp-buffer
+
+   #+BEGIN_SRC elisp
+
+     ;; use a temp buffer to manipulate string
+
+     (with-temp-buffer
+
+       (insert myStr)
+
+       ;; manipulate the string here
+
+       (buffer-string) ; get result
+
+       )
+
+   #+END_SRC
+
+
+
+   * 创建新的空标记
+
+
+
+   make-marker
+
+   #+begin_src elisp
+
+     (make-marker)
+
+   #+end_src
+
+
+
+   * 设置标记的位置和缓冲区
+
+
+
+   set-marker
+
+   #+begin_src elisp
+
+     (set-marker foo (point))
+
+   #+end_src
+
+
+
+   * 得到point处的标记
+
+
+
+   point-marker
+
+   #+begin_src elisp
+
+     (point-marker)
+
+   #+end_src
+
+   * 复制标记或直接用位置生成一个标记
+
+
+
+   copy-marker
+
+   #+begin_src elisp
+
+     (copy-marker 位置/marker对象)
+
+   #+end_src
+
+
+
+   * 得到一个marker的内容
+
+
+
+   maker-position / marker-buffer
+
+   #+begin_src elisp
+
+     (maker-position marker对象)
+
+     (marker-buffer marker对象)
+
+   #+end_src
+
+
+
+   * buffer大小
+
+
+
+   buffer-size
+
+
+
+   * mark-marker
+
+
+
+   point /point-max /point-min
+
+   返回当前缓冲区的mark(*注意mark与marker的区别,mark是用来与point一起定义一个region的,而marker是一个标记位置*)
+
+
+
+   * 设置mark的值,并激活mark
+
+
+
+   set-mark
+
+
+
+   * 加入/删除mark-ring的元素
+
+
+
+   push-mark / pop-mark
+
+
+
+   * 取得region的起点和终点
+
+
+
+   region-beginning / region-end
+
+
+
+   * 让某个缓冲区可见
+
+
+
+   display-buffer
+
+
+
+   * 判断buffer是否被修改
+
+
+
+   (buffer-modified-p)
+
+
+
+   * 选中的window切换到上一个/下一个buffer
+
+
+
+   (previous-buffer)
+
+
+
+   (next-buffer)
+
+   *
+
+** 获取缓冲区内容
+
+   * 得到整个缓冲区的文本
+
+
+
+   buffer-string
+
+   * 得到buffer某个区间的文本
+
+
+
+   buffer-substring
+
+   * 得到point附件的字符
+
+
+
+   char-after / char-before
+
+   * point处的词
+
+
+
+   current-word
+
+   * 得到point处的其他类型的文本
+
+
+
+   thing-at-point
+
+
+
+** buffer内容处理相关函数
+
+*** 删除操作
+
+    * 删除从当前光标开始的N个字符
+
+
+
+    (delete-char N)
+
+
+
+    * 删除光标前的N个字符
+
+
+
+    (delete-backward-char N)
+
+
+
+    * 删除region
+
+
+
+    (delete-region sartPos endPos)
+
+
+
+    * 清空整个buffer
+
+
+
+    (erase-buffer)
+
+*** 插入操作
+
+    * 在光标处插入文字
+
+
+
+    (insert str)
+
+
+
+    * 在光标处插入某buffer的一部分文本
+
+
+
+    (insert-buffer-substring-no-properties myBuffer myStartPos myEndPos)
+
+
+
+    * 插入文件中某部分到当前缓冲区中
+
+
+
+    (insert-file-contents myPath)
+
+    #+BEGIN_SRC elisp
+
+      (insert-file-contents filename &optional visit beg end replace)
+
+    #+END_SRC
+
+    如果指定visit则会标记缓冲区的修改状态并关联缓冲区到文件，一般是不用的。
+
+    replace是指是否要删除缓冲区里其它内容，这比先删除缓冲区其它内容后插入文件内容要快一些，但是一般也用不上。
+
+    insert-file-contents会处理文件的编码，如果不需要解码文件的话，可以用insert-file-contents-literally。
+
+*** 查找/替换操作
+
+    * 改变大小写
+
+
+
+    (capitalize-region startPos endPos)
+
+
+
+    * 替换操作
+
+
+
+    变量`case-fold-search`决定是否大小写敏感
+
+
+
+    replace-match,需要与其他的search类函数配合,它替代上次search匹配的文本
+
+
+
+    (replace-match 字符串) 表示用字符串替代上次search匹配的文本呢
+
+
+
+    * 获取上次正则查询的分组内容
+
+
+
+    (match-string N) 返回上次正则查询的第N个分组的内容
+
+
+
+    * 获取上次正则查询分组的起始/结束电
+
+
+
+    (match-beginning N)
+
+
+
+    (match-end N)
+
+
+
+    *
+
+** 保存现场
+
+   * 保存当前buffer,执行其中的表达式,然后回复为原来的buffer
+
+
+
+   save-current-buffer
+
+   #+begin_src elisp
+
+     (save-current-buffer
+
+       表达式)
+
+   #+end_src
+
+
+
+   * 保存narrow-to-region
+
+
+
+   (save-restriction
+
+   (narrow-to-region pos1 pos2)
+
+   lisp代码)
+
+
+
+   * 保存buffer状态
+
+   (save-excursion
+
+   reset body
+
+   )

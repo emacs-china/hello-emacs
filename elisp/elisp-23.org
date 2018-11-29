@@ -1,0 +1,1550 @@
+#+TITLE: InputEvent
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#inputevent][InputEvent]]
+  - [[#keyboard-event][Keyboard Event]]
+    - [[#普通按键事件][普通按键事件]]
+    - [[#功能键事件][功能键事件]]
+    - [[#以字符串表示keyboard-event][以字符串表示keyboard event]]
+  - [[#mouse-events][Mouse Events]]
+    - [[#点击事件][点击事件]]
+    - [[#拖拽事件][拖拽事件]]
+    - [[#button-down事件][Button-Down事件]]
+    - [[#repeat-event][Repeat Event]]
+    - [[#motion-events][Motion Events]]
+    - [[#focus-events][Focus Events]]
+    - [[#其他system-event][其他System Event]]
+  - [[#特殊events][特殊Events]]
+  - [[#区分events][区分Events]]
+  - [[#获取mouse-events中的信息][获取Mouse Events中的信息]]
+  - [[#获取scroll-bar-event中的信息][获取scroll bar event中的信息]]
+  - [[#捕获input-event][捕获Input Event]]
+  - [[#modifying-and-translating-input-events][Modifying and Translating Input Events]]
+  - [[#event-input的其他特性][Event Input的其他特性]]
+
+* InputEvent
+
+
+
+  Emacs Command Loop读取一系列的"input event"来表示键盘/鼠标的动作,或发送给Emacs的系统事件.
+
+
+
+  表示键盘动作的event,用char或symbol的格式表示. 其他类型的event统一用list来表示.
+
+
+
+  * (eventp object)
+
+
+
+  若object为input event或event type,则返回非nil
+
+
+
+  需要注意的是,任何symbol既可以用来作为event,也可以作为event type,因此eventp不能区分一个symbol是被用于作为event,还是event type.
+
+
+
+** Keyboard Event
+
+
+
+   键盘输入可以分为两类:普通的按键和功能键.
+
+*** 普通按键事件
+
+    普通按键产生的event,在lisp中用character来表示.
+
+
+
+    The event type of a character event is the character itself (an integer)
+
+
+
+    一个input character event由"basic code"(取值范围从0到524287)加上"modifier bits"组成
+
+
+
+    modifier bits包括:
+
+
+
+    | 说明    | 值    | 说明                                                                                                            |
+
+    |---------+-------+-----------------------------------------------------------------------------------------------------------------|
+
+    | meta    | 2**27 |                                                                                                                 |
+
+    | control | 2**26 | C-a这样的已经定义在ASCII中的控制字符,由于已经有了特定的basic code了,因此Emacs不需要使用special bit来指示它      |
+
+    | shift   | 2**25 | 对于字符,数字和标点来说,basic code中已经定义相关的shift key按下后的对应键值,对于这些按键,Emacs不使用special bit |
+
+    | hyper   | 2**24 |                                                                                                                 |
+
+    | super   | 2**23 |                                                                                                                 |
+
+    | alt     | 2**22 |                                                                                                                 |
+
+
+
+    最好不要直接在程序中使用specific bit(因为这些bit的位置可能会改变)
+
+
+
+    应该使用`event-modifiers'函数来测试specific bit是否被设置
+
+
+
+    | 简写形式 | 说明    |
+
+    |----------+---------|
+
+    | A-       | alt     |
+
+    | C-       | control |
+
+    | H        | hyper   |
+
+    | M-       | meta    |
+
+    | S-       | shift   |
+
+    | s-       | super   |
+
+*** 功能键事件
+
+
+
+    功能键event在elisp中用symbol来表示. 一般来说,symbol的名称就是功能键的label(全小些形式). 例如<F1>产生的input event表示为符号'f1
+
+
+
+    The event type of a function key event is the event symbol itself
+
+
+
+    还有一些功能键event的表示与功能键的label不一致的情况:
+
+
+
+    * `backspace',`tab',`newline',`return',`delete'
+
+
+
+    * `left',`up',`right',`down'
+
+
+
+    光标箭头按键
+
+
+
+    * `kp-add',`kp-decimal',`kp-divide',...
+
+
+
+    右边小键盘的加减乘除
+
+
+
+    * `kp-0',`kp-1',...
+
+
+
+    右边小键盘的数字键
+
+
+
+    * `kp-f1',`kp-f2'...
+
+
+
+    右边小键盘的fn
+
+
+
+    * `kp-hoome',`kp-left',`kp-up',`kp-right',`kp-down'
+
+
+
+    右边小键盘的对应功能键
+
+
+
+    * `kp-prior',`kp-next',`kp-end',`kp-begin',`kp-insert',`kp-delete'
+
+
+
+    右边小键盘的对应功能键
+
+*** 以字符串表示keyboard event
+
+    现在一般不建议使用string来表示keyboard event,最好使用vector代替.
+
+
+
+    可以使用函数`listify-key-sequence'来讲string格式的keyboard event转换为list,方便解析出其中的内容.
+
+
+
+    需要注意:当使用字符串来表示keyboard event时,只有Meta modifier才能以'\M-'的格式表示在string中,其他modifier都无法表示.
+
+
+
+    下面是一些转换规则:
+
+
+
+    * 若keyboard character的值范围为0到127,则可以直接写进string
+
+    * 若上面的keyboard character同时按下了meta键(即2**27 到 2**27+127),则需要转换为(2**7到2**7+127)
+
+    * 若是大于256的非ASCII字符,可以包含进multibyte string中
+
+    * 其他字符(128-255范围的字符)无法用string表示.
+
+
+
+** Mouse Events
+
+
+
+   Emacs支持4种鼠标事件:click event,drag event,button-down event和motion event.
+
+
+
+   所有的鼠标事件都用list来表示,且(car list)为event type(提供了按下的是哪个鼠标按键,同时有哪个modifier key被按下了,这些信息). (cdr list)则提供了位置与时间的信息
+
+
+
+   需要注意的是,鼠标事件是由鼠标所在buffer的keymap来处理的,而不是光标所在的buffer的keymap来处理.
+
+*** 点击事件
+
+
+
+    点击事件的结果为'(EVENT-TYPE PSITIION CLICK_COUNT)
+
+
+
+    其中:
+
+
+
+    * EVENT-TYPE
+
+
+
+    该symbol标识鼠标的哪个按键被点击,可选值为'mouse-1,'mouse-2,'mouse-3
+
+
+
+    当然,也可以通过添加前缀`A-',`C-',`H-',`M-',`S-'和`s-'来标识点击时同时按下了哪个modifier key
+
+
+
+    该symbol同时也作来标识event的event type
+
+
+
+    * POSTION
+
+
+
+    POSTION具体的格式,根据点击的位置而不同.
+
+
+
+    当点击在text area,mode-line,header-line或area的边界时,POSTION的格式为:
+
+    #+BEGIN_EXAMPLE
+
+    (WINDOW POS-OR-AREA (X . Y) TIMESTAMP
+
+      OBJECT TEXT-POS (COL . ROW)
+
+      IMAGE (DX . DY) (WIDTH . HEIGHT))
+
+    #+END_EXAMPLE
+
+
+
+    其中:
+
+    * WINDOW
+
+
+
+    表示点击的那个window
+
+
+
+    * POS-OR-AREA
+
+
+
+    若点击的位置在text area内,则表示点击处的buffer postion
+
+
+
+    否则,它的值为表示window area的symbol:'mode-line,'header-line,'vertical-line,'left-margin,'right-margin,'left-fringe,'right-fringe
+
+
+
+    * X,Y
+
+
+
+    点击的位置相对text area左上角的坐标
+
+
+
+    * TIMESTAMP
+
+
+
+    事件发生的时间
+
+
+
+    * OBJECT
+
+
+
+    若点击的位置没有string类型的text property,则为nil.
+
+
+
+    否则为'(点击位置的带属性string . string的位置)
+
+
+
+    * TEXT-POS
+
+
+
+    对于点击在marginal area或fringe上时,该值为对应行第一个字符的buffer postion.
+
+
+
+    其他情况下,则就是当前buffer position
+
+
+
+    * COL,ROW
+
+
+
+    点击位置相对text area左上角的行列数
+
+
+
+    * IMAGE
+
+
+
+    若点击的位置是一个IMAGE,则该值为`find-image'返回的image object
+
+
+
+    否则为nil
+
+
+
+    * DX,DY
+
+
+
+    若OBJECT为nil,为点击的位置相对点击到的字符左上角的坐标
+
+
+
+    否则,为点击的位置相对OBJECT左上角的坐标
+
+
+
+    * WIDTH,HEIGTH
+
+
+
+    OBJECT的宽度与高度,若OBJECT为nil,则为点击处文本的宽度与高度
+
+
+
+    若点击的地方为scroll bar,则POSTION的格式为
+
+    #+BEGIN_EXAMPLE
+
+    (WINDOW AREA (PORTION . WHOLE) TIMESTAMP PART
+
+    #+END_EXAMPLE
+
+
+
+    其中:
+
+    * WINDOW
+
+
+
+    点击到的scroll bar所属的window
+
+
+
+    * AREA
+
+
+
+    为'vertical-scroll-bar
+
+
+
+    * PORTION
+
+
+
+    从scrollbar的最顶端到点击位置的长度,以像素为单位
+
+
+
+    On some toolkits, including GTK+, Emacs cannot extract this data, so the value is always `0'.
+
+
+
+    * WHOLE
+
+
+
+    scrollbar的整个长度,以像素为单位
+
+
+
+    On some toolkits, including GTK+, Emacs cannot extract this data, so the value is always `0'.
+
+
+
+    * TIMESTAMP
+
+
+
+    事件发生的时间
+
+
+
+    * PART
+
+
+
+    点击在了scrollbar的哪个位置,可以为'handle,'above-handle,'below-handle,'up,'down
+
+
+
+    * CLICK-COUNT
+
+
+
+    快速点击的次数
+
+*** 拖拽事件
+
+
+
+    拖拽事件的格式为:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (EVENT-TYPE
+
+       (WINDOW1 START-POSITION)
+
+       (WINDOW2 END-POSITION))
+
+    #+END_SRC
+
+
+
+    EVENT-TYPE以`drag-'为前缀,例如`drag-mouse-1'表示按下mouse button 1来拖动
+
+
+
+    根据是否按下了Modifier Key,还可以在`drag-'前添加`C-',`M-'...等前缀.
+
+
+
+    WINDOW和POSTION的值,则跟点击事件定义一样
+
+
+
+    若`read-key-sequence'接收到一个拖拽事件,但发现并没有相应的key binding绑定到这个事件上,而相应的点击事件有binding. 则会自动将拖拽事件转换为点击事件.
+
+
+
+*** Button-Down事件
+
+
+
+    Button-Down事件的格式与Click事件格式一样,都是
+
+    #+BEGIN_SRC emacs-lisp
+
+      (EVENT-TYPE PSITIION CLICK_COUNT)
+
+    #+END_SRC
+
+
+
+    不同点在于EVENT-TYPE是以`down-'作为前缀的,根据是否按下Modifier key,在`down-'前还有`C-'和`M-'前缀
+
+
+
+    `read-key-sequence'忽略任何没有command binding的buton-down event.
+
+
+
+*** Repeat Event
+
+
+
+    若快速点击同一个mouse botton而不移动mouse位置的话,则Emacs产生"repeat event"
+
+
+
+    最常见的"repeat event"就是"double-click" event(双击事件)
+
+
+
+    双击事件的EVENT-TYPE以`double-'为前缀,根据modifier key是否按下,可能在`double-'前添加`M-',`S-'等前缀
+
+
+
+    当用户执行双击时,其实产生了两个事件,第一个是普通的单击事件,第二个为双击事件. 因此在处理双击事件前单击事件的相关命令已经执行了.
+
+
+
+    同理,若点击一次鼠标之后立即按下鼠标并拖动鼠标,则产生了`double-drag' event.
+
+
+
+    而,在`double-click' event和`double-drag' event产生前,Emacs还会产生`double-down' event.
+
+
+
+    *总结起来,一次双击动作会产生4个事件* :down event->click event->double-down event->double-click event.
+
+
+
+    *一次double-drag动作也会产生4个事件* :down event->click event->double-down event->double-drag event.
+
+
+
+    同理,还有`triple-down',`triple-click'和`triple-drag'
+
+
+
+    *Emacs最多只产生triple-click event*.
+
+
+
+    若想知道精确的点击几次button,使用函数`event-click-count'
+
+
+
+    * (event-click-count event)
+
+
+
+    获取event中鼠标点击的次数
+
+
+
+    * 配置项double-click-fuzz
+
+
+
+    定义了两次双击之间,位置不能超过的像素数
+
+
+
+    * 配置项double-click-time
+
+
+
+    定义了两次双击之间,不超过的时间,以毫秒为单位
+
+
+
+    nil表示直接不探测multi-click
+
+
+
+    t表示无限时间.
+
+
+
+*** Motion Events
+
+    在运行`trace-mouse'的body时,不按mouse botton的情况下移动mouse,会产生"mouse motion" event,它的格式为:
+
+    #+BEGIN_SRC emacs-lisp
+
+      '(mouse-movement POSITION)
+
+    #+END_SRC
+
+
+
+    这里的POSITION跟点击事件中的POSITION一样
+
+
+
+    在trace-mouse之外的情况下,emacs不产生mouse motion event
+
+
+
+*** Focus Events
+
+
+
+    当切换frame时,会产生Focus Event. 它的格式为:
+
+    #+BEGIN_SRC emacs-lisp
+
+      '(switch-frame NEW-FRAME)
+
+    #+END_SRC
+
+
+
+    这里NEW-FRAME为新切换到的frame
+
+
+
+    由于在一系列按键序列中间产生一个focus event会扰乱原按键序列的执行,因此Emacs不会在key sequence中间产生focus event.
+
+
+
+    若用户在key sequence中间更改了focus,则Emacs会重新排列event,将focus event放在multi-event key sequence的最前面或最后面.
+
+
+
+*** 其他System Event
+
+
+
+    若用户在key sequence中间发生了下面的那些system event,则Emacs会重新排列event,将这些system event放在multi-event key sequence的最前面或最后面.
+
+
+
+    * '(delete-frame (FRAME))
+
+
+
+    表示用户对FRAME发送了关闭命令
+
+
+
+    * '(iconify-frame (FRAME))
+
+
+
+    iconify某个FRAME,默认的定义为`ignore'
+
+
+
+    * '(make-frame-visible (FRAME))
+
+
+
+    表示用户deiconified FRAME,默认为`ignore'
+
+
+
+    * '(wheel-up POSITION) / '(wheel-down POSITION)
+
+
+
+    滚动鼠标wheel时产生的event.
+
+
+
+    POSITION的结构跟Click Event的POSITION一样,标识了event发生时的鼠标位置
+
+
+
+    这种event只在某些操作系统上会产生,有些操作系统上产生的是`mouse-4'和`mouse-5' event.
+
+
+
+    因此,为了可移植性,建议使用定义在`mwheel.el'中的变量`mouse-wheel-up-event'和`mouse-wheel-down-event'来代替
+
+
+
+    * '(drag-n-drop POSITION FILES)
+
+
+
+    当从Emacs外选择了一些文件,并拖到Emacs frame中时产生`drag-n-drop' event
+
+
+
+    这里POSITION的格式跟click event中的POSITION一样.
+
+
+
+    FILES为文件名称的列表.
+
+
+
+    * '(help-echo FRAME HELP WINDOW OBJECT POS)
+
+
+
+    但光标移动到buffer中带有`help-echo' text property的文本时,产生该event
+
+
+
+    * 'sigusr1 / 'sigusr2
+
+
+
+    当Emacs收到信号`SIGUSR1'和`SIGUSR2'时触发该event. 一般用于调试时使用
+
+
+
+    要捕获user signal,绑定相应的event到`special-event-map'中的命令. 这时会不带参数地执行该命令,而signal event可以通过变量`last-input-event'来获得. 例如
+
+    #+BEGIN_SRC emacs-lisp
+
+      (defun sigusr-handler ()
+
+        (interactive)
+
+        (message "Caught signal %S" last-input-event))
+
+
+
+      (define-key special-event-map [sigusr1] 'sigusr-handler)
+
+    #+END_SRC
+
+
+
+    * '(language-change FRAME CODEPAGE LANGUAGE-ID)
+
+
+
+    在MS-Windows下才更改input language会产生该event.
+
+
+
+    这里FRAME表示改变input language时的当前frame.
+
+
+
+    CODEPAGE为更改为的新codepage number
+
+
+
+    LANGUAGE-ID为新input language的数字id
+
+
+
+    例如:
+
+    #+BEGIN_SRC emacs-lisp
+
+      ;; Get the abbreviated language name, such as "ENU" for English
+
+      (w32-get-locale-info language-id)
+
+      ;; Get the full English name of the language,
+
+      ;; such as "English (United States)"
+
+      (w32-get-locale-info language-id 4097)
+
+      ;; Get the full localized name of the language
+
+      (w32-get-locale-info language-id t)
+
+    #+END_SRC
+
+
+
+** 特殊Events
+
+   特殊Event在非常底层的地方被处理--as soon as they are read.
+
+
+
+   `read-event'函数内部就会消化掉这些event,而不会返回这种event. 事实上,`read-event'会一直等待并返回地一个非特殊event
+
+
+
+   特殊event不会被显示出来,不会被纳入key sequence中,不会存入`last-command-event'和`(this-command-keys)'.
+
+   特殊event They do not discard a numeric argument, they cannot be unread with `unread-command-events', they may not appear in a keyboard macro, and they are not recorded in a keyboard macro while you are defining one.
+
+
+
+   然而在读取到特殊event时,会记录在`last-input-event'中,and this is the way for the event's definition to find the actual event.
+
+
+
+   常见的特殊event type有`iconify-frame',`make-frame-visible',`delete-frame',`drag-n-drop',`language-change'以及用户信号`sigusr1',`sigusr2'...
+
+
+
+   定义如何处理特殊event的keymap为变量`special-event-map'
+
+
+
+** 区分Events
+
+   每个event都有一个"event type",用于区分event.
+
+
+
+   对于keyboard event,event type就是event value
+
+
+
+   对于list格式的event,event type为(car list)
+
+
+
+   相同的event type运行相同的命令. 键序列与event type绑定
+
+
+
+   * (event-modifiers event)
+
+
+
+   返回一个list,包含了该event中所有的modifiers,modifier的类型为symbol,
+
+   它的值可能是'shift,'control,'meta,'alt,'hyper和'super
+
+   对于mouse event来说,还可能包括'click,'drag,'down,'double,'triple
+
+
+
+   参数event可以是一个event对象,也可以是个event type.
+
+
+
+   If EVENT is a symbol that has never been used in an event that has been read as input in the current Emacs session, then `event-modifiers' can return `nil', even when EVENT actually has modifiers.
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (event-modifiers ?a)                    ; => nil
+
+     (event-modifiers ?A)                    ; => (shift)
+
+     (event-modifiers ?\C-a)                 ; => (control)
+
+     (event-modifiers ?\C-%)                 ; => (control)
+
+     (event-modifiers ?\C-\S-a)              ; => (control shift)
+
+     (event-modifiers 'f5)                   ; => nil
+
+     (event-modifiers 's-f5)                 ; => (super)
+
+     (event-modifiers 'M-S-f5)               ; => (meta shift)
+
+     (event-modifiers 'mouse-1)              ; => (click)
+
+     (event-modifiers 'down-mouse-1)         ; => (down)
+
+   #+END_SRC
+
+
+
+   * (event-basic-type event)
+
+
+
+   返回去掉modifier标志之后的event描述. 例如
+
+   #+BEGIN_SRC emacs-lisp
+
+     (event-basic-type ?a)                   ; => 97
+
+     (event-basic-type ?A)                   ; => 97
+
+     (event-basic-type ?\C-a)                ; => 97
+
+     (event-basic-type ?\C-\S-a)             ; => 97
+
+     (event-basic-type 'f5)                  ; => f5
+
+     (event-basic-type 's-f5)                ; => f5
+
+     (event-basic-type 'M-S-f5)              ; => f5
+
+     (event-basic-type 'down-mouse-1)        ; => mouse-1
+
+   #+END_SRC
+
+
+
+   * (mouse-movement-p object)
+
+
+
+   object是否为mouse movent event
+
+
+
+   * (event-convert-list list)
+
+
+
+   This function converts a list of modifier names and a basic event type to an event type which specifies all of them.
+
+   The basic event type must be the last element of the list.
+
+   例如:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (event-convert-list '(control ?a))      ; => 1,C-a
+
+     (event-convert-list '(control meta ?a)) ; => -134217727
+
+     (event-convert-list '(control super f1)) ; => C-s-f1
+
+   #+END_SRC
+
+
+
+** 获取Mouse Events中的信息
+
+
+
+   要想获得mouse event中的position list,可以使用以下两个函数
+
+
+
+   * (event-start event)
+
+
+
+   若为drag event,则返回start-postion
+
+
+
+   若为click或button-down event,则返回唯一的那个postion
+
+
+
+   * (event-end event)
+
+
+
+   若为drag event,则返回end-postion
+
+
+
+   若为click或button-down event,则返回唯一的那个postion
+
+
+
+   * (posnp object)
+
+
+
+   判断object是否为mouse position
+
+
+
+   下面的函数,一mouse postion list为参数,返回相应部分的值
+
+
+
+   * (posn-window postion)
+
+
+
+   返回postion list中的window
+
+
+
+   * (posn-area position)
+
+
+
+   返回position中的window area标志
+
+
+
+   若event发生在text-area则返回nil,否则返回表示area的symbol
+
+
+
+   * (posn-point position)
+
+
+
+   返回position中的buffer位置信息.
+
+
+
+   当event发生在text-area,marginal area或fringe上时,返回一个表示buffer位置的整数
+
+
+
+   其他情况下,返回值意义不明确
+
+
+
+   * (posn-x-y position)
+
+
+
+   以'(X . Y)的形式返回相对(posn-window postion)的坐标,单位为像素.
+
+
+
+   下面的例子,演示了如何将相对window的坐标转换为相对frame的坐标
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun frame-relative-coordinates (position)
+
+       "Return frame-relative coordinates from POSITION.
+
+               POSITION is assumed to lie in a window text area."
+
+       (let* ((x-y (posn-x-y position))
+
+              (window (posn-window position))
+
+              (edges (window-inside-pixel-edges window)))
+
+         (cons (+ (car x-y) (car edges))
+
+               (+ (cdr x-y) (cadr edges)))))
+
+   #+END_SRC
+
+
+
+   * (posn-col-row postion)
+
+
+
+   以'(COL . ROW)的格式返回buffer postion在text area中的列与行
+
+
+
+   它是根据(postion-x-y postion)的信息与frame的默认字符的宽度和默认行的高度,计算出来的.
+
+
+
+   需要注意的是,ROW是从text area的最顶端开始计算的,也就是说,如果(position-window positon)拥有header line,则它不会计算如ROW中
+
+
+
+   * (posn-actual-col-row postion)
+
+
+
+   以'(COL . ROW)的形式返回真正的相对(posn-window postion)的列数与行数
+
+
+
+   * (posn-string positiion)
+
+
+
+   返回position中的string object,可能为nil或'(STRING . STRING-POS)
+
+
+
+   * (posn-image position)
+
+
+
+   获得position中的image object,可能为nil或'(image...)
+
+
+
+   * (posn-object position)
+
+
+
+   返回position中的string object或image object,可能为nil或'(STRING . STRING-POS)或'(image...)
+
+
+
+   * (posn-object-x-y position)
+
+
+
+   获取相对POSITION list中的'(DX . DY). 即位置相对(posn-object position)的坐标. 单位为像素
+
+
+
+   若position为buffer position,则返回相对该处字符左上角的坐标.
+
+
+
+   * (posn-object-width-height position)
+
+
+
+   以'(WIDTH. HEIGHT)格式,返回(posn-object position)的宽度和高度,单位为像素
+
+
+
+   若position为buffer position,则返回位置处字符的宽度和高度
+
+
+
+   * (posn-timestamp position)
+
+
+
+   返回position中的timestamp信息,表示事件发生的时间戳,以毫秒为单位
+
+
+
+   以下函数根据buffer position或screen position,计算出position list
+
+
+
+   * (posn-at-point &optional pos window)
+
+
+
+   该函数返回position list用于表示参数pos在参数window中的位置. 若pos在window中不可见,则返回nil
+
+
+
+   参数pos默认为参数window中光标的位置
+
+
+
+   参数window默认为选中的window
+
+
+
+   * (posn-at-x-y x y &optional frame-or-window whole)
+
+
+
+   该函数返回position list用于表示(x . y)在参数frame-or-window中的相对坐标,
+
+
+
+   参数x,y是相对frame-or-window的以像素为单位的位置.
+
+
+
+   参数frame-or-window,默认为当前window
+
+
+
+   若参数为nil,则坐标是相当与window text area来计算的. 否则计算包括整个window area(text-rea+scroll bar+margin+fringe)
+
+
+
+** 获取scroll bar event中的信息
+
+
+
+   * (scroll-bar-event-ratio event)
+
+
+
+   以格式'(PORTION .WHOLE)返回event在scroll-bar中的位置.
+
+
+
+   * (scroll-bar-scale ratio total)
+
+
+
+   该函数事实上将参数ratio与total相乘,并将结果约为整数.
+
+
+
+   这里参数ration不是数字,而是格式为'(NUM . DENOM)的cons ceil. 一般该值由函数scroll-bar-event-ration返回.
+
+
+
+   该函数用于将scroll bar position转换为buffer postion是很方便:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (+ (point-min)
+
+        (scroll-bar-scale
+
+         (posn-x-y (event-start event))
+
+         (- (point-max) (point-min))))
+
+
+
+   #+END_SRC
+
+
+
+** 捕获Input Event
+
+   * (read-key-sequence prompt &optional continue-echo dont-downcase-last switch-frame-ok command-loop)
+
+
+
+   该函数读取key sequence并以string或vector的形式返回.
+
+
+
+   该函数会一直读取key sequence直到获取到一个完整的key sequence为止(即在当前keymap下能定位到某个command)
+
+
+
+   需要注意的是: *以mouse event开头的key sequence,是在mouse所在的window中keymap中查找对应command的*
+
+
+
+   参数prompt为提示信息,nil表示没有提示
+
+
+
+   参数continue-echo表示当key sequence不完整时,是否显示已经输入的key sequence
+
+
+
+   默认情况下,任何upper case event在找不到对应command时,会转换为lower case event再去查找一遍(这是会设置变量`this-command-keys-shift-translated'为t),参数dont-downcase-last禁止这种转换
+
+
+
+   参数swith-frame-ok表示在输入key sequence的过程中,是否能切换frame
+
+
+
+   参数command-loop若为非nil,则表示可以一次输入多个key sequence(一个key sequence与command想对应). nil表示只读取表示一个key sequence
+
+
+
+   `read-key-sequence'会压抑住quitting,也就是说,在输入`C-g'时,就好像其他普通的字符一样,不会去设置quit-flag
+
+
+
+   *当使用`read-key-sequence'读取mouse event时,若mouse event发生在window的非text area中,则会添加prefix-key来表示该area*:'header-line,'horizontal-scroll-bar,'menu-bar,'mode-line,'vertical-line,'vertical-scroll-bar
+
+   #+BEGIN_SRC emacs-lisp
+
+     (read-key-sequence "Click on the mode line: ")
+
+     => [mode-line
+
+         (mouse-1
+
+          (#<window 6 on NEWS> mode-line
+
+                    (40 . 63) 5959987))]
+
+   #+END_SRC
+
+
+
+   * (read-key-sequence-vector prompt &optional continue-echo dont-downcase-last switch-frame-ok command-loop)
+
+
+
+   与`read-key-sequence'类似,只是肯定以vector类型返回
+
+
+
+   * num-input-keys
+
+
+
+   当前Emacs session目前为止处理过的key sequence的数量.
+
+
+
+   * (read-event &optional prompt inherit-input-method seconds)
+
+
+
+   该函数只读取一个event,而不像`read-key-sequence'一样可能读取多个event.
+
+
+
+   The returned event may come directly from the user, or from a keyboard macro.
+
+   It is not decoded by the keyboard's input coding system
+
+
+
+   参数prompt为提升信息
+
+
+
+   若参数inherit-input-method为非nil,则支持用当前输入法输入non-ASCII字符. 否则会禁用输入法
+
+
+
+   参数seconds表示等待输入的超时秒数,若超时还未有event发生,则返回nil.
+
+   若参数seconds为nil,则Emacs在等待用户输入时被认为处于idle状态,若设置了值,则等待期间不会认为处于idle状态.
+
+
+
+   If `read-event' gets an event that is defined as a help character, then in some cases `read-event' processes the event directly without returning.
+
+
+
+   Certain other events, called "special events", are also processed directly within `read-event'
+
+
+
+   * (read-char &optional prompt inherit-input-method seconds)
+
+
+
+   读取并返回输入的character. 若用户产生的event不是character(例如点击事件或功能键事件),则`read-char'会抛出一个错误
+
+
+
+   * (read-char-exclusive &optional prompt inherit-input-method seconds)
+
+
+
+   类似`read-char',只是当读到的event不是character时,会忽略这个event,接着读取下一个event,而不是抛出错误
+
+
+
+   * num-nonmacro-input-events
+
+
+
+   该变量存储了到目前为止从terminal读取到的input events总数(那些由keyboard macro)产生的不算.
+
+
+
+   * (read-key &optional prompt)
+
+
+
+   该函数读取single key. 它处于`read-key-sequence'和`read-event'之间.
+
+
+
+   跟`read-key-sequence'不同之处在于,它读取single key而不是完整的key sequence
+
+
+
+   跟`read-event'不同之处在于,它会根据`input-decode-map',`local-function-key-map'和`key-translation-map'解码并转换用户的输入.
+
+
+
+   * (read-char-choice prompt chars &optional inhibit-quit)
+
+
+
+   该函数使用`read-key'读取并返回一个character. 它会忽略任何不是参数chars中的member的character.
+
+
+
+   chars为一个由characters组成的list. 表示可接受的character范围.
+
+
+
+   * (read-quoted-char &optional prompt)
+
+
+
+   类似`read-char',只是当读取的地一个character是一个8进制数时(0-7),它会读取接下来输入的所有8进制数,并返回由这些8进制numeric character code所表示的character.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (read-quoted-char "What character")
+
+
+
+     ---------- Echo Area ----------
+
+     What character 1 7 7-
+
+     ---------- Echo Area ----------
+
+
+
+     => 127
+
+   #+END_SRC
+
+
+
+** Modifying and Translating Input Events
+
+   在使用`read-event'时,Emacs会根据`extra-keyboard-modifiers'的值对读取到到的event做改变(modify),然后根据`keyboard-translate-table'的值做转换(translate)
+
+
+
+   * extra-keyboard-modifiers
+
+
+
+   该变量允许Lisp程序模拟按下键盘上的modifier key.
+
+
+
+   该变量的至必须为一个设置了modifier bit位的character(例如'?\C-\M-a'). 真正其作用的是其中的modifier bit(?\C-\M-).
+
+
+
+   若变量的值为`?\C-@',不会设置Ctrl被按下,相反, *这个值表示取消所有的modification*
+
+
+
+   另外,需要注意的是, *该变量只会修改从keyboard读取到的event,而对mouse event或其他类型的event无效*
+
+
+
+   * keyboard-translate-table
+
+
+
+   该变量为terminal-local variable. 它允许你将一个keyboard event重新映射成另一个keyboard event
+
+
+
+   一般情况下,它的值为一个char-table或nil.
+
+
+
+   Note that this translation is the first thing that happens to a character after it is read from the terminal.
+
+   Record-keeping features such as `recent-keys' and dribble files record the characters after translation.
+
+
+
+   * (keyboard-translate from to)
+
+
+
+   该函数通过修改`keyboard-translate-table'的值来达到将character code FROM转换为character code TO的目的.
+
+
+
+** Event Input的其他特性
+
+   * unread-command-events
+
+
+
+   该变量存储的值为一个由event组成的list,表示待读取的event.
+
+
+
+   该list中的event,以显示的顺序(即最前面的最先被使用)被读取,并且在使用后被删除
+
+
+
+   一般情况下,从该list中读取的event不会添加到当前命令的key sequence中(即不会被`this-command-keys'),因为该event在第一次读取时已经添加过一次了.
+
+   但若list中的element格式为'(t . EVENT)则表示强制将该event放入当前command的key sequence中
+
+
+
+   * (listify-key-sequence key)
+
+
+
+   该函数将key(string或vector)转换为由单独event组成的list,可以很容易的将这个list放入`unread-command-events'中
+
+
+
+   * (input-pending-p &optional check-timers)
+
+
+
+   该函数检查是否有command input可以被读取了.
+
+
+
+   若参数check-timers为非nil,则若没有input可以被读取时,运行Emacs运行已经ready的timers
+
+
+
+   * last-input-event
+
+
+
+   该变量存储最后的terminal input event. whether as part of a command or explicitly by a Lisp program.
+
+
+
+   在下面的例子中,这段Lisp程序读取字符'1'(ASCII码为49). 假设我们用C-x C-e来执行这段代码,则会发现`last-input-event'的值为'1'(49),而`last-command-event'只为?\C-e(5)
+
+   #+BEGIN_SRC emacs-lisp
+
+     (progn (print (read-char))
+
+            (print last-command-event)
+
+            last-input-event)
+
+     -| 49
+
+     -| 5
+
+     => 49
+
+   #+END_SRC
+
+
+
+   * 宏(while-no-input body...)
+
+
+
+   当运行body的过程中没有输入时,正常执行body并返回body的值.
+
+
+
+   但若执行body的过程中有输入到来,则会中断body的执行(类似quit),并返回t
+
+
+
+   若执行body的过程中,被真正的quit所打断,则返回nil
+
+
+
+   若BODY中某部分绑定`inhibit-quit'为非nil,则即使有输入到来,也不会中断该部分代码的执行,直到该部分代码被执行完毕.
+
+
+
+   * (discard-input)
+
+
+
+   该函数丢弃terminal input buffer的内容并取消正在处理的keyboard macro,并返回nil
+
+
+
+   例如:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (progn (sleep-for 2)                    ;在等待期间,用户可能输入了一些东西
+
+            (discard-input))                 ;会丢弃用户在等待期间所输入的东西
+
+     => nil
+
+
+
+   #+END_SRC

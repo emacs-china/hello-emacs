@@ -1,0 +1,27 @@
+#+TITLE: 变量名命名习惯
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#变量名命名习惯][变量名命名习惯]]
+
+* 变量名命名习惯
+
+  * -hook 一个在特定情况下调用的函数列表，比如关闭缓冲«时，进入某个模式时。
+
+  * -function值为一个函数
+
+  * -functions 值为一个函数列表
+
+  * -flag 值为nil或non-nil
+
+  * -predicate 值是一个作判断的函数，返回nil或non-nil
+
+  * -program 或-command 一个程序或shell名令名
+
+  * -form 一个表达式
+
+  * -forms 一个表达式列表。
+
+  * -map 一个按键映射（keymap）
+
+  * 命名以空格开头的缓冲区是临时的,用户不需要关系的缓冲区

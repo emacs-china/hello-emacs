@@ -1,0 +1,7 @@
+#+TITLE: Desktop Save Mode
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#desktop-save-mode][Desktop Save Mode]]
+
+* Desktop Save Mode

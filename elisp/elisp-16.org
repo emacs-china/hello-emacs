@@ -1,0 +1,548 @@
+#+TITLE: Reading and Printing Lisp Objects
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#reading-and-printing-lisp-objects][Reading and Printing Lisp Objects]]
+  - [[#input-stream][Input Stream]]
+    - [[#input-functions][Input Functions]]
+  - [[#output-stream][Output Stream]]
+    - [[#output-functions][Output Functions]]
+    - [[#output-variables][Output Variables]]
+
+* Reading and Printing Lisp Objects
+
+  Reading是将文本转换为lisp object的过程
+
+
+
+  Printing是将lisp object转换为文本的过程
+
+
+
+** Input Stream
+
+
+
+   输入流可以是以下几种类型
+
+
+
+   * Buffer
+
+
+
+   从buffer中光标所处位置开始读取
+
+
+
+   * Maker
+
+
+
+   从buffer中指定Maker处开始读取
+
+
+
+   * string
+
+
+
+   从string的第一个字母开始读取
+
+
+
+   * function
+
+
+
+   由function产生要读取的字符. 这种函数必须支持两种调用模式:
+
+
+
+   1. 当无参数调用时,返回下一个要读取的字符
+
+
+
+   2. 当带一个参数(通常是一个字符)调用时,保存该参数,并在下一次无参数调用时返回它,及实现unreading功能.
+
+
+
+   * t
+
+
+
+   表示从minibuffer中读取,若Emacs运行在batch mode状态下,则使用stdin
+
+
+
+   * nil
+
+
+
+   表示使用`standard-input'的值作为输入流
+
+
+
+   * symbol
+
+
+
+   表示使用symbol的函数定义作为输入,类似function
+
+
+
+*** Input Functions
+
+
+
+    * (read &optional stream)
+
+
+
+    从stream中读取一个S表达式,并转换为Lisp Object返回
+
+
+
+    * (read-from-string string &optional start end)
+
+
+
+    从string中读取一个S表达式,并返回'(lisp-object . postion)
+
+
+
+    其中lisp-object为S读到的表达式,postion是string中剩余字符的位置(第一个未读字符的位置)
+
+    #+BEGIN_SRC emacs-lisp
+
+      (read-from-string "(setq x 55) (setq y 5)") ; => ((setq x 55) . 11)
+
+      (read-from-string "\"A short string\"")     ; => ("A short string" . 16)
+
+
+
+      ;; Read starting at the first character.
+
+      (read-from-string "(list 112)" 0)       ; => ((list 112) . 10)
+
+      ;; Read starting at the second character.
+
+      (read-from-string "(list 112)" 1)       ; => (list . 5)
+
+      ;; Read starting at the seventh character, and stopping at the ninth.
+
+      (read-from-string "(list 112)" 6 8)     ; => (11 . 8)
+
+    #+END_SRC
+
+
+
+    * 变量standard-input
+
+
+
+    当stream参数为nil时,使用该变量的值作为steam参数的实参
+
+
+
+    * 变量read-circle
+
+
+
+    若为非nil,则允许读取循环结果的S表达式,默认为t
+
+
+
+** Output Stream
+
+
+
+   输出流参数可以是以下类型:
+
+
+
+   * buffer
+
+
+
+   输出字符插入到Buffer中的光标处,光标会随着字符的插入而向前移动.
+
+
+
+   * Maker
+
+
+
+   输出字符插入Buffer中Maker处
+
+
+
+   * Function
+
+
+
+   Elisp使用输出字符作为参数调用function,该function应该存储这些输出字符
+
+
+
+   * t
+
+
+
+   输出结果到echo area
+
+
+
+   * nil
+
+
+
+   使用`standard-output'的变量值
+
+
+
+   * symbol
+
+
+
+   使用symbol的function定义
+
+
+
+*** Output Functions
+
+
+
+    * (print object &optional stream)
+
+
+
+    输出object的文本表示到stream中.
+
+
+
+    输出时,在object的前后都会增加一个回车. 并且会输出引用字符
+
+    #+BEGIN_SRC emacs-lisp
+
+      (progn (print 'The\ cat\ in)
+
+             (print "the hat")
+
+             (print " came back"))
+
+      ;; -|
+
+      ;; -| The\ cat\ in
+
+      ;; -|
+
+      ;; -| "the hat"
+
+      ;; -|
+
+      ;; -| " came back"
+
+      ;; => " came back"
+
+    #+END_SRC
+
+
+
+    该函数返回object的文本表示字符串
+
+
+
+    * (prin1 object &optional stream)
+
+
+
+    类似print,但是不会在object的文本表示前后添加回车
+
+    #+BEGIN_SRC emacs-lisp
+
+      (progn (prin1 'The\ cat\ in)
+
+             (prin1 "the hat")
+
+             (prin1 " came back"))
+
+      ;; -| The\ cat\ in"the hat"" came back"
+
+      ;; => " came back"
+
+    #+END_SRC
+
+
+
+    * (princ object &optional stream)
+
+
+
+    该函数输出object的文本表示到stream中,并返回参数object.
+
+
+
+    该函数一般用来输出对人可读的信息(而不是对read函数可以读),因此该函数并不会插入引用字符,也不会在字符串两边加上双引号,更不会自动插入空格分隔两次调用间的内容
+
+    #+BEGIN_SRC emacs-lisp
+
+      (progn
+
+        (princ 'The\ cat)
+
+        (princ " in the \"hat\""))
+
+      ;; -| The cat in the "hat"
+
+      ;; => " in the \"hat\""
+
+    #+END_SRC
+
+
+
+    * (terpri &optional stream)
+
+
+
+    输出newline到stream中
+
+
+
+    * (write-char char &optional stream)
+
+
+
+    输出char到stream中,返回参数char
+
+
+
+    * (prin1-to-string object &optional noescape)
+
+
+
+    该函数返回一个字符串,该字符串的内容就是(prin1 object)的输出
+
+    #+BEGIN_SRC emacs-lisp
+
+      (prin1-to-string 'foo) ;; => "foo"
+
+      (prin1-to-string (mark-marker)) ;; => "#<marker at 2773 in strings.texi>"
+
+    #+END_SRC
+
+
+
+    若参数noescape为非nil,则输出时不使用引用字符
+
+    #+BEGIN_SRC emacs-lisp
+
+      (prin1-to-string "foo")                 ; => "\"foo\""
+
+      (prin1-to-string "foo" t)               ; => "foo"
+
+    #+END_SRC
+
+
+
+    也可以使用format函数实现该功能
+
+
+
+    * 宏(with-output-to-string bodys...)
+
+
+
+    该宏在将`standard-output'设置为一个字符串的环境下执行bodys,然后返回该字符串
+
+    #+BEGIN_SRC emacs-lisp
+
+      (with-output-to-string
+
+        (princ "The buffer is ")
+
+        (princ (buffer-name)))                ;=>"The buffer is foo"
+
+    #+END_SRC
+
+
+
+    * (pp object &optional stream)
+
+
+
+    类似prin1,但是输出的格式更方便阅读.
+
+
+
+*** Output Variables
+
+
+
+    * standard-output
+
+
+
+    当参数stream为nil时,使用该变量的值
+
+
+
+    * print-quoted
+
+
+
+    若该值为非nil,表示使用简写形式输出quoted forms.例如
+
+    (quote foo)输出为'foo, (function foo)输出为#'foo
+
+
+
+    * print-escape-newlines
+
+
+
+    若该值为非nil,则表示字符串中的newline字符,会被输出为\n,formfeed符会被输出为\f
+
+
+
+    该参数影响prin1和print函数的输出方式,但是不能影响prnc的输出
+
+    #+BEGIN_SRC emacs-lisp
+
+      (prin1 "a\nb")
+
+      -| "a
+
+      -| b"
+
+      => "a
+
+         b"
+
+
+
+      (let ((print-escape-newlines t))
+
+        (prin1 "a\nb"))
+
+      -| "a\nb"
+
+      => "a
+
+         b"
+
+    #+END_SRC
+
+
+
+    * print-escape-nonascii
+
+
+
+    若该变量值为非nil,则字符串中的unibyte格式非ascii字符输出为\XXX的格式.
+
+
+
+    该参数影响prin1和print函数
+
+
+
+    * print-escape-multibyte
+
+
+
+    若该变量值为非nil,则字符串中的mutibyte格式非ascii字符输出为\XXX的格式.
+
+
+
+    该参数影响prin1和print函数
+
+
+
+    * print-length
+
+
+
+    该变量指明了输出list,vector或bool-vector时,能输出最多多少个元素. 若超过这么多个元素,则使用引号缩写
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq print-length 2)                   ; => 2
+
+      (print '(1 2 3 4 5))                    ; => (1 2 ...)
+
+      -| (1 2 ...)
+
+    #+END_SRC
+
+
+
+    nil表示无限制
+
+
+
+    * print-level
+
+
+
+    该变量值指明了输出时()和[]能够嵌套的最大深度,超过这个深度会用省略号代替,nil表示无限制
+
+
+
+    * 配置项eval-expression-print-length/eval-expression-print-level
+
+
+
+    eval-expression中使用的print-length/print-level版本
+
+
+
+    * print-circle
+
+
+
+    若该值为非nil,则在输出时开启探测object是否有循环结构
+
+
+
+    * print-gensym
+
+
+
+    若该值为非nil,则输出时开启探测symbol是否是uninterned.
+
+
+
+    这时,uninterned symbol输出时会带有前缀#:
+
+
+
+    * print-continuous-numbering
+
+
+
+    If non-`nil', that means number continuously across print calls.
+
+    This affects the numbers printed for `#N=' labels and `#M#' references.
+
+    Don't set this variable with `setq'; you should only bind it temporarily to `t' with `let'.
+
+    When you do that, you should also bind `print-number-table' to `nil'
+
+
+
+    * print-number-table
+
+
+
+    This variable holds a vector used internally by printing to implement the `print-circle' feature.
+
+    You should not use it except to bind it to `nil' when you bind `print-continuous-numbering'.
+
+
+
+    * float-output-format
+
+
+
+    该变量指明了输出float类型数字时的格式. 默认为nil,表示在不丢失精度的情况下,使用最短的格式输出.

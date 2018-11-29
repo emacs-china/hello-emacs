@@ -1,0 +1,73 @@
+#+TITLE: 获取参数的几种方法
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#获取参数的几种方法][获取参数的几种方法]]
+  - [[#变量current-prefix-arg获取universal-argument][变量`current-prefix-arg`获取universal-argument]]
+  - [[#interactive][interactive]]
+
+* 获取参数的几种方法
+
+** 变量`current-prefix-arg`获取universal-argument
+
+
+
+   emacs命令可以使用C-u传递universal-argument.
+
+   | Key Input                | Value of current-prefix-arg |
+
+   |--------------------------+-----------------------------|
+
+   | No universal arg called. | nil                         |
+
+   | 【Ctrl+u -】             | Symbol -                    |
+
+   | 【Ctrl+u - 2】           | Number -2                   |
+
+   | 【Ctrl+u 1】             | Number 1                    |
+
+   | 【Ctrl+u 4】             | Number 4                    |
+
+   | 【Ctrl+u】               | List '(4)                   |
+
+   | 【Ctrl+u Ctrl+u】        | List '(16)                  |
+
+** interactive
+
+   * 若interactive的参数以*开头，则意义是，如果当前buffer是只读的，则不执行该函数
+
+   * interactive可以后接字符串,表示获得参数的方式
+
+   * p 接收C-u的数字参数
+
+
+
+   也可以不用P参数,直接在代码中判断current-prefix-arg的值
+
+   * r region的开始/结束位置
+
+   * n 提示用户输入数字参数,n后面可用接着提示符
+
+   * s 提示用户输入字符串参数
+
+   * 若函数接收多个input,需要用\n来分隔
+
+   * interactive可以后接一个form,form的求值结果应该是一个list,这个list的值作为参数的实参
+
+
+
+   在form中一般会用到如下几个函数用于获取用户输入
+
+   * read-string
+
+   * read-file-name
+
+   * read-directory-name
+
+   * read-regexp
+
+   * y-or-n-p
+
+   * read-from-minibuffer
+
+   * 使用变量`current-prefix-arg`来判断是否有universal-argument

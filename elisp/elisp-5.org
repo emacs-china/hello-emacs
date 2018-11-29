@@ -1,0 +1,78 @@
+#+TITLE: elisp中的等于
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#elisp中的等于][elisp中的等于]]
+  - [[#eq][eq]]
+  - [[#equal][equal]]
+  - [[#][=]]
+  - [[#-1][/=]]
+  - [[#eql][eql]]
+  - [[#char-equal][char-equal]]
+  - [[#string][string=]]
+  - [[#string-equal][string-equal]]
+  - [[#equal-includeing-properties][equal-includeing-properties]]
+
+* elisp中的等于
+
+** eq
+
+   eq用于判断两个Object是否为同一个Object
+
+** equal
+
+   equal用于判断两个Object是否有相同的内部结构(这通常意味着两个Object的类型是一样的,即0 不equal 0.0).
+
+
+
+   equal在比较两个string时,不会比较他们的属性,需要比较属性的话,使用equal-including-properties来代替
+
+
+
+   即使两个buffer的内容一样,equal这两个buffer时也不相等
+
+
+
+   由于equal会对两个Object的各个组成部分递归调用equal,因此在处理循环结构时,可能会陷入死循环.
+
+** =
+
+   =一般用于数字之间的比较,且0=0.0
+
+** /=
+
+   数字间的不等于
+
+** eql
+
+   eql类似eq,但在处理数字是,会同时比较数字的类型和值.因此(eql 1.0 1)=>nil;(eql 1.0 1.0)=>t
+
+** char-equal
+
+   比较两个character是否相等,默认忽略大小写差异,若变量`case-fold-search`nil(默认为t),则比较时区分大小写
+
+   #+BEGIN_SRC emacs-lisp
+
+     (char-equal ?x ?x)                      ; => t
+
+     (let ((case-fold-search nil))
+
+       (char-equal ?x ?X))                   ; => nil
+
+   #+END_SRC
+
+** string=
+
+   string=接收string或symbol的参数. 使用string=的时候一定会区分大小写,而跟变量`case-fold-search`无关. 而且在比较时,string的text properties不参与比较.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (string= "abc" 'abc)                    ;=>t
+
+   #+END_SRC
+
+** string-equal
+
+   string=的别名
+
+** equal-includeing-properties

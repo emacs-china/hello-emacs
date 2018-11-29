@@ -1,0 +1,810 @@
+#+TITLE: Customization
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#customization][Customization]]
+  - [[#common-item-keywords][Common Item Keywords]]
+  - [[#customization-groups][customization groups]]
+  - [[#customizable-variable][customizable variable]]
+    - [[#customization-type][Customization Type]]
+      - [[#simple-types][Simple Types]]
+      - [[#composite-types][Composite Types]]
+      - [[#type-keywords][Type Keywords]]
+      - [[#defining-new-types][Defining New Types]]
+  - [[#customizable-face][customizable face]]
+
+* Customization
+
+  emacs中可以使用`defcustom`定义customizable variables, 使用defface定义customizable face,使用defgroup定义cutomization group.
+
+
+
+** Common Item Keywords
+
+   defcustom,defgroup,defface这些定义配置项的函数/宏,都接收keyword参数.
+
+
+
+   所有这些keyword参数,除了`:tag`之外,都可以联合使用. 下面是一些通用的参数说明.
+
+
+
+   * :tag LABEL
+
+
+
+   LABEL为一个字符串类型. 该参数表示使用LABEL取代被定义item的名称作为该item的标签.
+
+
+
+   * :group GROUP
+
+
+
+   定义item所属的组别. 一个item可以同时属于多个组别,因此你可以多次使用该参数
+
+
+
+   * :link LINK-DATA
+
+
+
+   在该item的说明文档后面增加一个外部链接. 其中LINK-DATA可以以下格式:
+
+
+
+   你还可以在LINK_DATA的第一个元素后面加上`:tag NAME`用来表示链接显示为NAME. 例如`(info-link :tag "foo" "(emacs)Top")'会创建一个链接连接到Emacs手册,但是显示为foo
+
+
+
+   * (custom-manual INFO-NODE)
+
+
+
+   链接到Info node. INFO-NODE为Info文档中某node的名称,像"(emacs)Top"这样的.
+
+
+
+   该链接显示为[manual]
+
+
+
+   * (info-link INFO-NODE)
+
+
+
+   类似custom-manual,只是链接的显示为Info node的名称
+
+
+
+   * (url-link URL)
+
+
+
+   链接到web页面, 点击它会使用变量`browse-url-browser-function`定义的Web浏览器打开
+
+
+
+   * (emacs-library-link LIBRARY)
+
+
+
+   连接到Emacs Lisp library文件.
+
+
+
+   * (file-link FILE)
+
+
+
+   连接到某个文件,Emacs会用find-file函数打开它
+
+
+
+   * (function-link FUNCTION)
+
+
+
+   链接到某个函数的说明文档,当点击它,会使用describe-function来获取函数说明
+
+
+
+   * (variable-link VARIABLE)
+
+
+
+   连接到某个变量的说明文档
+
+
+
+   * (custom-group-link GROUP)
+
+
+
+   链接到其他的group
+
+
+
+   * :load FILE
+
+
+
+   在显示item前先加载FILE
+
+
+
+   * :require FEATURE
+
+
+
+   当保存item的值时,执行(require 'FEATURE)
+
+
+
+   * :version VERSION
+
+
+
+   表示该item第一次出现在版本为VERSION的Emacs中,或该item的默认值或意义在版本为VERSION的Emacs中更改了.
+
+
+
+   VERSION为字符串类型
+
+
+
+   * :package-version '(PACKAGE . VERSION)
+
+
+
+   表示该item第一次出现在版本为VERSION的PACKAGE中,或该item的默认值或意义在版本为VERSION的PACKAGE中更改了.
+
+
+
+   PACKAGE应该是一个符号,为package的正式名称. 而VERSION应该为字符串类型.
+
+
+
+   若PACKAGE为Emacs自带的,则PACKAGE和VERSION需要在变量`customize-package-emacs-version-alist`中
+
+** customization groups
+
+   * (defgroup group members doc [keyword value]...)
+
+
+
+   定义新的名为group的客户化组. 该客户化组中包含members为内容.
+
+
+
+   参数group为一个不被quote的symbol.
+
+
+
+   参数members为由cusomiztion items组成的list,表示这些items属于某个group. 然而实际上一般该参数都为nil,而是定义item时使用:group关键字来标识该item所属的group
+
+
+
+   members的元素格式为(NAME WIDGET). 这里NAME为表示item的symbol. 而WIDGET为item的类型(custom-variable,custom-face,custom-group)
+
+
+
+   当对group设置了:version参数,则所有属于该group的其他item,默认继承该参数值
+
+
+
+   defgroup可以使用:prefix关键字参数
+
+
+
+   :prefix PREFIX
+
+
+
+   表示若该group中的item以PREFIX为前缀,而变量`custom-unlispify-remove-prefixes`为非nil, 则该item的tag在显示时会忽略掉该PREFIX.
+
+
+
+   一个group可以设置忽略任意数量的prefix
+
+** customizable variable
+
+   defcusomter的语法与defvar有点类似,但是它还可以接收很多keyword参数.
+
+
+
+   * (defcustom var standard-value doc [keyword value]...)
+
+
+
+   参数var为不被quote的symbol. 它表示定义的可配置变量.
+
+
+
+   参数standard-value为一个表达式,它的计算值作为var的默认值
+
+
+
+   参数doc为对该变量的说明.
+
+
+
+   若在defcustom中没有通过:group关键字设置所属的group,则在相同文件中最后defgroup的组会自动作为该item的所属组.
+
+
+
+   defcustom支持的keyword参数有:
+
+
+
+   * :type TYPE
+
+
+
+   标注该客户化变量的类型,它指定了哪些值是合理的,如何显示这些值.
+
+
+
+   也可以在defcustomer后使用函数(custom-add-frequent-value customization-item value)来增加选值范围
+
+
+
+   * :options VALUE-LIST
+
+
+
+   指定可选值的范围,该可选值的范围并不具有约束性.
+
+
+
+   该keyword只有在type为hook,plist和alist时才有效
+
+
+
+   * :set SETFUNCTION
+
+
+
+   当使用Customize更改该配置项时,实际上调用的是SETFUNCTION函数,该函数接收两个参数:配置项和新值. 默认SETFUNCTION函数为set-default
+
+
+
+   * :get GETFUNCTION
+
+
+
+   当获取该配置项的值时,实际上是调用了GETFUNCTION函数. 该函数接收一个参数:配置项, 并返回某个值. 默认GETFUNCTION为`default-value'
+
+
+
+   * :initialize FUNCTION
+
+
+
+   当defcustom语句被执行时,实际上是调用了FUNCTION函数. 该函数接收两个参数:配置项和默认值.
+
+
+
+   elisp预定义了一些可选的FUNCTION:
+
+
+
+   * `custom-initialize-set'
+
+
+
+   * `custom-initialize-default'
+
+
+
+   * `custom-initialize-reset'
+
+
+
+   * `custom-initialize-changed'
+
+
+
+   * `custom-initialize-safe-set'
+
+
+
+   * `custom-initialize-safe-default'
+
+
+
+   * :risky VALUE
+
+
+
+   设置该配置项变量的`risky-local-variable'属性为VALUE
+
+
+
+   * :safe FUNCTION
+
+
+
+   设置该配置项变量的`safe-local-variable'属性为FUNCTION
+
+
+
+   * :set-after VARIABLES
+
+
+
+   * (custom-reevaluate-setting customizable-arg)
+
+
+
+   可以用该函数在defcustom外,重新对customizablen-arg进行赋值
+
+
+
+   * (custom-variable-p arg)
+
+
+
+   判断arg是否为可配置变量, 这意味着这个变量是带有`standard-value'属性的symbol或者带有`custom-autoload'属性的symbol,或者由其他可配置变量组成的alist
+
+
+
+   * (custom-set-variables &rest args)
+
+
+
+   根据arg中的说明,更改配置项
+
+
+
+   每个arg的格式为'(配置项 配置项的值表达式 [is-NOW [REQUEST-features-list [doc-string]]])
+
+
+
+
+
+*** Customization Type
+
+    所有的customization type都实现为widget. customization widget可以通过`C-M-i'或`M-<TAB>'来补全
+
+**** Simple Types
+
+     * 'sexp
+
+
+
+     任意lisp object
+
+
+
+     * 'integer
+
+
+
+     * 'number
+
+
+
+     * 'float
+
+
+
+     * 'string
+
+
+
+     * 'regexp
+
+
+
+     * 'character
+
+
+
+     * 'file
+
+
+
+     配置项必须是一个文件名称
+
+
+
+     * '(file :must-match t)
+
+
+
+     配置项必须是一个已存在的文件名称
+
+
+
+     * 'directory
+
+
+
+     配置项必须是目录
+
+
+
+     * 'hook
+
+
+
+     该配置项必须是一个函数列表
+
+
+
+     * 'symbol
+
+
+
+     * 'function
+
+
+
+     该配置项必须是一个lambda表达式或函数名
+
+
+
+     * 'variable
+
+
+
+     该配置必须是一个变量名称
+
+
+
+     * 'face
+
+
+
+     * 'boolean
+
+
+
+     * 'key-sequence
+
+
+
+     * 'coding-system
+
+
+
+     * 'color
+
+**** Composite Types
+
+     * '(cons CAR-TYPE CDR-TYPE)
+
+
+
+     该配置项必须是cons cell. 并且它的car必须为CAR-TYPE,cdr必须为CDR-TYPE
+
+
+
+     * '(list ELEMENAT1-TYPE ELEMENT2-TYPE ... ELEMENTn-TYPE)
+
+
+
+     该配置项为由n个元素组成的list,每个元素都需要跟相应的ELEMENT-TYPE相匹配
+
+
+
+     * '(group ELEMENAT1-TYPE ELEMENT2-TYPE ... ELEMENTn-TYPE)
+
+
+
+     类似'(list ELEMENAT1-TYPE ELEMENT2-TYPE ... ELEMENTn-TYPE),区别在于list使用element的tag来作为element value的标签,而group不作标签
+
+
+
+     * '(vector ELEMENAT1-TYPE ELEMENT2-TYPE ... ELEMENTn-TYPE)
+
+
+
+     类似'(list ELEMENAT1-TYPE ELEMENT2-TYPE ... ELEMENTn-TYPE)
+
+
+
+     区别在于配置项的类型必须是vector
+
+
+
+     * '(alist :key-type KEY-TYPE :value-type VALUE-TYPE)
+
+
+
+     配置项为alist类型,且每个cons ceil元素的car必须是KEY-TYPE的,cons ceil的cdr必须是VALUE-TYPE
+
+
+
+     :key-type参数与:value-type可以省略,默认为'sexp
+
+
+
+     * '(plist :key-type KEY-TYPE :value-type VALUE-TYPE)
+
+
+
+     类似'(alist :key-type KEY-TYPE :value-type VALUE-TYPE),只是配置项为plist类型,且KEY-TYPE默认为symbol类型而不是sexp
+
+
+
+     * '(choice CUSTOMIZE-TYPE1 CUSTOMIZE-TYPE2 ... CUSTOMIZE-TYPEn)
+
+
+
+     配置项可以是CUSTOMIZE-TYPES中的任意一种.
+
+
+
+     可以在CUSTOMIZE-TYPE中通过:tag关键字来指明配置项为某种TYPE时的label.例如
+
+     #+BEGIN_SRC elisp
+
+       (choice (integer :tag "Number of spaces")
+
+               (string :tag "Literal text"))
+
+     #+END_SRC
+
+
+
+     * '(radio CUSTOMIZE-TYPE1 CUSTOMIZE-TYPE2 ... CUSTOMIZE-TYPEn)
+
+
+
+     类似'(choice CUSTOMIZE-TYPE1 CUSTOMIZE-TYPE2 ... CUSTOMIZE-TYPEn),只是显示时使用radio button的方式显示而不是用菜单显示
+
+
+
+     * '(const VALUE)
+
+
+
+     该配置项的值必须为VALUE. 常与choice搭配
+
+
+
+     * '(other VALUE)
+
+
+
+     表示配置项可以接收任意的lisp值,但是该配置项实际上总是被赋值为VALUE.
+
+
+
+     other主要用在choice中作为最后一个元素使用. 例如:
+
+     #+BEGIN_SRC emacs-lisp
+
+       (choice (const :tag "Yes" t)
+
+               (const :tag "No" nil)
+
+               (other :tag "Ask" foo)
+
+     #+END_SRC
+
+
+
+     * '(function-item FUNCTION)
+
+
+
+     类似const,但是它的值必须是function.
+
+
+
+     * '(variable-item VARIABLE)
+
+
+
+     类似const,但是它的值必须是表示某个变量的symbol
+
+
+
+     * '(set TYPE1 TYPE2 ... TYPEn)
+
+
+
+     该配置项必须是一个list,且每个list中元素类型必须匹配TYPES中的其中一种
+
+
+
+     * '(repeat ELEMENT-TYPE)
+
+
+
+     该配置项必须是一个list,并且每个元素都是ELEMENT-TYPE的
+
+
+
+     * '(restricted-sexp :match-alternatives CRITERIA)
+
+
+
+     该配置项的值可以是任一的lisp对象,但是必须匹配CRITERIA中的任一条件.
+
+
+
+     CRITERIA是一个list,其中每个元素可以是:一个predicate function或者A quoted constant
+
+     #+BEGIN_SRC emacs-lisp
+
+       ;; allows integers, `t' and `nil' as legitimate values.
+
+       (restricted-sexp :match-alternatives
+
+                        (integerp 't 'nil))
+
+     #+END_SRC
+
+**** Type Keywords
+
+     在定义配置项的:type时,可以在customizaton type name symbol后指定以下的keyword-argument对:
+
+
+
+     * :value DEFAULT
+
+
+
+     提供默认值. 当某种类型不能包含nil时,特别有用.
+
+
+
+     * :format FORMAT-STRING
+
+
+
+     显示配置项值时的格式.
+
+
+
+     | 占位符     | 说明                                                                     |
+
+     |------------+--------------------------------------------------------------------------|
+
+     | %[BUTTON%] | 以按钮的样式显示文本BUTTON,其:action属性说明了当该按钮被点击时作什么操作 |
+
+     | %{SAMPLE}  | 以`:sample-face'的样式显示文本SAMPLE                                     |
+
+     | %v         | 显示为该配置项的value                                                  |
+
+     | %d         | 显示为该配置项的documentation string                                   |
+
+     | %h         | 类似%d,但当配置项的doc-string超过一行时,会提供一个按钮隐藏/显示剩下的行  |
+
+     | %t         | 显示为该配置项的tag                                                    |
+
+     | %%         | 显示为%                                                                     |
+
+
+
+     * :action ACTION
+
+
+
+     当点击button时执行的操作. 这里ACTION为一个函数,它会接收两个参数:点击的按钮所在widget和点击事件
+
+
+
+     * :button-face FACE
+
+
+
+     提供:button-face的显示样式,它会用于显示FORMAT-STRING中的%[...%]中的内容
+
+
+
+     * :button-prefix PREFIX / :button-suffix SUFFIX
+
+
+
+     指明在显示button的前后文本. 他们的值可以是:
+
+
+
+     nil: 不显示多于的文本
+
+
+
+     string: 显示文本
+
+
+
+     symbol: 显示symbol的值
+
+
+
+     * :tag TAG
+
+
+
+     指定TAG(字符串类型)作为配置项为该类型时的tag
+
+
+
+     * :doc DOC
+
+
+
+     指定DOC作为配置项为该类型时的doc-string
+
+
+
+     * :help-echo MOTION-DOC
+
+
+
+     * :match FUNCTION
+
+
+
+     使用FUNCTION判断配置项的值是否匹配该类型,FUNCTION为一个函数,它接收两个参数:表示CUSTOMIZATION TYPE的widget和配置项的值
+
+
+
+     * :validate FUNCTION
+
+
+
+     使用FUNCTION校验配置项的值是否有效. FUNCTION函数接收一个参数:表示CUSTOMIZATION TYPE的widget. 若该函数判断widget是当前值是有效的,则返回 *nil* ,否则返回包含无效数据的widget,并设置该widget的`:error'属性为出错描述.
+
+**** Defining New Types
+
+
+
+     定义新Type就是为一个Composite Types命一个名字. 由于一个type就是一个widget,因此使用define-widget来实现
+
+     #+BEGIN_SRC emacs-lisp
+
+       (define-widget 'binary-tree-of-string 'lazy
+
+         "A binary tree made of cons-cells and strings."
+
+         :offset 4
+
+         :tag "Node"
+
+         :type '(choice (string :tag "Leaf" :value "")
+
+                        (cons :tag "Interior"
+
+                              :value ("" . "")
+
+                              binary-tree-of-string
+
+                              binary-tree-of-string)))
+
+     #+END_SRC
+
+
+
+     这里define-widget的第一个参数为表示新widget type的symbol.
+
+
+
+     第二个参数为一个已经存在的widget,表示新widget type的类别,一般用'lazy
+
+
+
+     第三个参数为doc-string
+
+
+
+     :type参数描述了所代表的composite type说明
+
+** customizable face
+
+
+
+   * (custom-set-faces &rest args)
+
+
+
+   根据arg,更改face配置项.
+
+
+
+   一个arg的格式为'(FACE SPEC [is-Now [doc-string]])

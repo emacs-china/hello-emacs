@@ -1,0 +1,123 @@
+#+TITLE: Number相关函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#number相关函数][Number相关函数]]
+
+* Number相关函数
+
+  * 判断是否为自然数(0+正整数)
+
+
+
+  (natnump object)
+
+
+
+  * 判断是否为0
+
+
+
+  (zerop number)
+
+
+
+  * 取余数
+
+
+
+  (% dividend divisor)
+
+
+
+  %的参数必须是整数,对于任何两个整数dividend和divisor都有(+(% DIVIDEND DIVISOR) (* (/ DIVIDEND DIVISOR) DIVISOR)) == DIVIDEND
+
+
+
+  (mod dividend divisor)
+
+
+
+  mode的参数可以是Float型,它的返回值的正负号与DIVISOR一致,并且mod的商值使用floor进行截断到整数,然后再计算返回的余值.
+
+
+
+  (+ (mod DIVIDEND DIVISOR) (* (floor DIVIDEND DIVISOR) DIVISOR)) == DIVIDEND
+
+
+
+  * 三角函数
+
+  * (sin arg)
+
+
+
+  * (cos arg)
+
+
+
+  * (tan arg)
+
+
+
+  * (asin arg)
+
+
+
+  * (acos arg)
+
+
+
+  * (atan y &optional x)
+
+
+
+  * 指数计算
+
+  * (exp arg)
+
+    e的arg次方
+
+
+
+  * (expt x y)
+
+    x的y次方
+
+
+
+  * (log arg &optional base)
+
+    base默认为e,取arg的指数
+
+
+
+  * (aqrt arg)
+
+    取arg的平方根,若arg<0,则返回NaN
+
+
+
+  * 常量float-e
+
+
+
+  * 常量float-pi
+
+
+
+  * 获取随机值
+
+    (random &optional limit)
+
+
+
+  * 若limit为正整数，则返回0到limit的随意整数
+
+
+
+  * 若limit为t，则表示使用当前时间和Emacs的进程号重新选择一个种子
+
+
+
+  * 若limit为一个字符串，它表示使用string的内容作为种子
