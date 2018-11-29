@@ -1,0 +1,64 @@
+#+TITLE: 光标位置
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#光标位置][光标位置]]
+  - [[#函数][函数]]
+
+* 光标位置
+
+** 函数
+
+   * 获取光标当前位置
+
+
+
+   (point)
+
+
+
+   * 获取region的开始和结束位置
+
+
+
+   (region-beginning) / (region-end)
+
+
+
+   * 当前行的开始/结束位置
+
+
+
+   (line-beginning-position) / (line-end-position)
+
+
+
+   * 获取当前buffer的开始/结束位置
+
+
+
+   (point-min) / (point-max)
+
+
+
+   * 得到行号
+
+
+
+   line-number-at-pos
+
+
+
+   * 测试是否在buffer头/尾
+
+
+
+   bobp(beginning of buffer predicate)和eobp(end of buffer predicate)
+
+
+
+   * 测试是否在行首/尾
+
+
+
+   bolp(beginning of line predicate)和eolp(end of line predicate)

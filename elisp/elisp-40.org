@@ -1,0 +1,53 @@
+#+TITLE: Region/Mark相关函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#regionmark相关函数][Region/Mark相关函数]]
+
+* Region/Mark相关函数
+
+  * 设置mark
+
+
+
+  (set-mark-command)
+
+
+
+  * 删除region
+
+
+
+  (kill-region)
+
+
+
+  * 注释region
+
+
+
+  (comment-region)
+
+
+
+  * 重新格式化region
+
+
+
+  (fill-region)
+
+
+
+  * 缩进region
+
+
+
+  (indent-region)
+
+
+
+  * 判断Region是否是active的
+
+
+
+  (region-active-p) 该函数还要求Transient-mark-mode

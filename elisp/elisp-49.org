@@ -1,0 +1,21 @@
+#+TITLE: Register函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#register函数][Register函数]]
+
+* Register函数
+
+  * 将内容复制到Register中
+
+
+
+  (copy-to-register ?1 startPos endPos)
+
+
+
+  * 从Register中取出内容
+
+
+
+  (insert-register ?1 t)

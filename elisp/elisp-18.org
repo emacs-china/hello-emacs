@@ -1,0 +1,938 @@
+#+TITLE: Elisp中的函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#elisp中的函数][Elisp中的函数]]
+  - [[#elisp中函数的分类][Elisp中函数的分类]]
+  - [[#获取函数信息][获取函数信息]]
+  - [[#匿名函数][匿名函数]]
+    - [[#获取匿名函数][获取匿名函数]]
+    - [[#参数列表][参数列表]]
+  - [[#命名函数][命名函数]]
+    - [[#declare-form][declare form]]
+  - [[#调用函数][调用函数]]
+  - [[#废弃函数][废弃函数]]
+  - [[#内联函数][内联函数]]
+  - [[#函数声明][函数声明]]
+  - [[#函数描述字符串docstring][函数描述字符串(docstring)]]
+  - [[#交互模式声明][交互模式声明]]
+  - [[#declare-form-1][declare-form]]
+  - [[#判断function是否安全][判断function是否安全]]
+
+* Elisp中的函数
+
+  Elisp中的函数,是跟C++不同的. C++中的函数必须有一个函数名,然而Elisp中的函数没有函数名,只是你可以把它与一个symbol相连接,这样这个symbol的名字就暂时作为该函数的函数名了.
+
+
+
+  此外,Elisp中的函数可以通过与多个symbol相关连的方式而为同一个函数提供多个名称,而C++中的函数只有一个函数名称.
+
+** Elisp中函数的分类
+
+   函数的特性在与能够接收参数,然后返回计算结果,并可能产生一定的副作用. 在Elisp中符合这些特性的类函数对象有以下几种类型:
+
+
+
+   * lambda expression
+
+   匿名函数
+
+
+
+   * primitive
+
+   使用C语言编写的内置类函数对象,special form都认为是primitive的一种.
+
+
+
+   * special form
+
+   类似C语言中的固定语法的语句
+
+
+
+   * macro
+
+   宏,跟function类似,但它并不对参数进行预运算且返回的结果必须是一段S表达式.
+
+
+
+   * command
+
+   可以通过`command-execute`这个primitive调用的对象,通常是一个带了interactive声明的函数(也可能是keyboard macro).
+
+
+
+   * closure
+
+   闭包,带有静态作用域下变量的函数.
+
+
+
+   * byte-code function
+
+   编译为字节码的函数
+
+
+
+   * autoload object
+
+   它指向一个真实的函数的位置. 当真正调用到autoload object时,Emacs载入包含真正函数定义的那个文件,并且调用那个真正的函数.
+
+** 获取函数信息
+
+   * (functionp object)
+
+
+
+   判断object是否为函数. 若为函数则返回t,但macro和special form会返回nil
+
+
+
+   object也可以为symbol类型,会自动判断它所指向的function.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (functionp 'goto-line)                  ;=>t
+
+   #+END_SRC
+
+
+
+   * (subrp object)
+
+
+
+   判断object是否为primtive.
+
+
+
+   *注意:* 与functionp不同.object为symbol的话,会返回nil.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (subrp 'message)            ; `message' is a symbol,
+
+     => nil                 ;   not a subr object.
+
+     (subrp (symbol-function 'message))
+
+     => t
+
+   #+END_SRC
+
+
+
+   * (byte-code-function-p object)
+
+
+
+   判断object是否为byte-code function. object为symbol类型则返回nil
+
+   #+BEGIN_SRC emacs-lisp
+
+     (byte-code-function-p 'next-line) ; => nil
+
+     (byte-code-function-p (symbol-function 'next-line)) ; => t
+
+   #+END_SRC
+
+
+
+   * (subr-arity subr)
+
+
+
+   这里subr需要为一个primitive对象(不能为symbol),该函数返回subr的最少参数个数和最大参数个数.
+
+
+
+   返回格式为'(MIN . MAX).
+
+
+
+   若参数有&rest,则MAX为many.
+
+
+
+   若subr为special form,则该函数返回'unevalled
+
+
+
+   * (interactive-form function)
+
+
+
+   获取function的interactive信息
+
+** 匿名函数
+
+*** 获取匿名函数
+
+    获取匿名函数,主要有三种方法:
+
+
+
+    * 使用lambda宏
+
+      #+BEGIN_EXAMPLE
+
+        (lambda (参数列表...)
+
+            [函数描述字符串]
+
+            [交互模式声明]
+
+            函数体...)
+
+      #+END_EXAMPLE
+
+
+
+    * 使用function函数
+
+
+
+    (function function-object)
+
+
+
+    类似quote函数,它直接返回 *未计算* 的参数function-object.
+
+    #+BEGIN_SRC emacs-lisp
+
+      (function 3)                            ;=>3,function的参数可以不为lambda表达式
+
+      (function (lambda add-1(x) (1+ x)))     ;=>(lambda add-1(x) (1+ x)),但一般function的参数都是lambda表达式
+
+    #+END_SRC
+
+
+
+    所不同的是,该函数告诉Emacs evaluator和byte-compiler,function-object为函数.
+
+
+
+    具体来说,若function-object为lambda表达式,则有两个附加效果:
+
+    1. When the code is byte-compiled, FUNCTION-OBJECT is compiled into a byte-code function object
+
+
+
+    2. When lexical binding is enabled, FUNCTION-OBJECT is converted into a closure
+
+
+
+    * 使用`#'`标识
+
+
+
+    #'f是(function f)的缩写形式
+
+
+
+    #+BEGIN_SRC emacs-lisp
+
+      ;; 一下三种写法是等价的
+
+      (lambda (x) (* x x))
+
+      (function (lambda (x) (* x x)))
+
+      #'(lambda (x) (* x x))
+
+    #+END_SRC
+
+*** 参数列表
+
+    参数列表的格式为:(必须参数列表...[&optional 可选参数列表] [&rest 剩余参数])
+
+
+
+    使用&optional表示之后的参数是可选的.
+
+
+
+    使用&rest表示之后的参数为不定参数. 它是实际参数的一个列表.
+
+
+
+    若在实际调用函数时,没有为可选参数和剩余参数提供实际参数值,则这些参数值为nil.
+
+
+
+** 命名函数
+
+   使用fset/defalias将匿名函数与一个symbol想结合,就为这个匿名函数分配了一个名称.
+
+
+
+   * (fset symbol lambda函数)
+
+   #+BEGIN_SRC emacs-lisp
+
+     (fset 'plus-one (lambda (x) (+ x 1)))
+
+     (plus-one 10)                           ;11
+
+   #+END_SRC
+
+
+
+   * (defalias alias-name lambda-function-or-symbol &optional doc-string)
+
+
+
+   为函数设定名字或别名,一般很少用到
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defalias 'add-one '1+)
+
+     (add-one 11)                            ;12
+
+     (defalias 'add-two (lambda (x) (+ x 2)))
+
+     (add-two 11)                            ;13
+
+   #+END_SRC
+
+
+
+   实际上,更常见的定义命名函数的方法是使用defun宏
+
+   * (defun 函数名 (参数列表) [函数说明字符串] [declare-form] [交互模式声明] 函数体...)
+
+
+
+   定义一个带名字的函数.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun add-one (x)
+
+       "return value after plus one"
+
+       (+ x 1))
+
+
+
+     (add-one 10)                            ;11
+
+   #+END_SRC
+
+
+
+   *注意:* 它可以比lambda函数多一个declare-form部分,这个declare-form通常用于提供Elisp编译器一些函数的信息,以便进行优化.
+
+
+
+   * (fboundp symbol)
+
+
+
+   判断symbol是否可以作为函数使用
+
+
+
+   * (fmakunbound symbol)
+
+
+
+   删除函数,使symbol不再作为函数使用.
+
+*** declare form
+
+    declare form常用来为函数或宏添加一些关于属性的元标签. 它的语法是:
+
+
+
+    * (declare specs...)
+
+
+
+    其中spec的格式为(PROPERTY ARGS...),spec可以是以下几种说明
+
+
+
+    * (advertised-call-convention new-arg-list when)
+
+
+
+    new-arg-list为正确的调用函数的方法,其他的调用方法都被认为是废弃的.
+
+
+
+    when为一个表示什么时候废弃的字符串.
+
+
+
+    * (debug EDEBUG-FORM-SPEC)
+
+
+
+    只能在定义宏时使用. 当用Edebug来调试该宏时,使用EDEBUG-FORM-SPEC
+
+
+
+    * (doc-string N)
+
+
+
+    This is used when defining a function or macro which itself will be used to define entities like functions, macros, or variables
+
+
+
+    它表示,第N个参数作为doc-string来看待
+
+
+
+    * (ident indent-spec)
+
+
+
+    Indent calls to this function or macro according to INDENT-SPEC.
+
+
+
+    虽然可以用在函数上,但一般还是用在宏定义中
+
+
+
+    * (obsolete current-name when)
+
+
+
+    类似(make-obsolete),表示该函数被废弃了
+
+
+
+    * (compiler-macro EXPANDER)
+
+
+
+    只能用在函数定义时,告诉编译器在编译时,使用EXPANDER代替该函数.
+
+
+
+    这样的话,所有的(function args...)都实际上调用的是(EXPANDER args...)
+
+
+
+    * (gv-expander EXPANDER)
+
+
+
+    Declare EXPANDER to be the function to handle calls to the macro (or function) as a generalized variable, similarly to `gv-define-expander'.
+
+
+
+    EXPANDER can be a symbol or it can be of the form `(lambda (ARG) BODY)' in which case that function will additionally have access to the macro (or function)'s arguments.
+
+
+
+    * (gv-setter SETTER)
+
+
+
+    Declare SETTER to be the function to handle calls to the macro (or function) as a generalized variable.
+
+    SETTER can be a symbol in which case it will be passed to `gv-define-simple-setter', or it can be of the form `(lambda (ARG) BODY)' in which case that function will additionally have access to the macro (or function)'s arguments and it will passed to `gv-define-setter'.
+
+** 调用函数
+
+   最常用的调用函数的方式是将函数作为一个list的第一个参数. 这样当计算这个list时,会把地一个元素作为函数,其他作为参数来调用.
+
+
+
+   但是有的时候,需要在运行期间决定要执行的函数,这时候就需要使用以下函数的帮助:
+
+
+
+   * (funcall function &rest arguments...)
+
+
+
+   使用参数arguments调用函数function.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq f 'list)                          ; => list
+
+     (funcall f 'x 'y 'z)                    ; => (x y z)
+
+     (funcall f 'x 'y '(z))                  ; => (x y (z))
+
+   #+END_SRC
+
+   参数function必须是一个lisp function或primitive function,而不能是macro或special form
+
+
+
+   * (apply function &rest arguments...)
+
+
+
+   类似funcall函数,但apply的arguments中,最后一个参数 *必须* 是list. 而这个list中的元素会被打散为独立的参数来作为function的实参.
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq f 'list)                          ; => list
+
+     (apply f 'x 'y 'z)                      ; error--> 最后一个参数z不是list类型
+
+     (apply '+ 1 2 '(3 4))                   ; => 10
+
+     (apply '+ '(1 2 3 4))                   ; => 10
+
+
+
+     (apply 'append '((a b c) nil (x y z) nil)) ; => (a b c x y z)
+
+   #+END_SRC
+
+
+
+   * (apply-partially func &rest args)
+
+
+
+   apply-partially使用参数args绑定func中的前(length args)个参数,并由此产生一个新的函数.
+
+
+
+   返回的新函数接受剩余的参数,并在内部调用原func函数.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defalias 'add-1 (apply-partially '+ 1)
+
+       "Increment argument by one.")
+
+     (add-1 10)                              ; => 11
+
+   #+END_SRC
+
+
+
+   * (identity arg)
+
+
+
+   该函数返回参数arg,没有任何其他处理
+
+
+
+   * (ignore &rest args)
+
+
+
+   该函数忽略args,直接返回nil
+
+
+
+   若要对某个集合(包括list)中的每个元素都调用某个函数(注意,不能是宏和special form),需要使用到map系列的函数.
+
+
+
+   *需要注意的是*,char-table比较特殊,只能用map-char-table函数调用.
+
+
+
+   * (mapcar function sequence)
+
+
+
+   mapcar将sequence中的每个元素都调用一次function方法,并将结果组成一个list返回.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (mapcar 'car '((a b) (c d) (e f)))      ; => (a c e)
+
+     (mapcar '1+ [1 2 3])                    ; => (2 3 4)
+
+     (mapcar 'string "abc")                  ; => ("a" "b" "c")
+
+   #+END_SRC
+
+
+
+   * (mapc function sequence)
+
+
+
+   类似mapcar,但不收集个函数的运算结构. mapc的返回值为参数sequence
+
+
+
+   * (mapconcat function sequence separator)
+
+
+
+   对sequence中的每个元素都调用function方法,其function方法计算的结果必须为string类型. 然后将这个string类型的结果用separator结合起来.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (mapconcat 'symbol-name
+
+                '(The cat in the hat)
+
+                " ")                         ; => "The cat in the hat"
+
+
+
+     (mapconcat (function (lambda (x) (format "%c" (1+ x))))
+
+                "HAL-8000"
+
+                "")                          ; => "IBM.9111"
+
+   #+END_SRC
+
+
+
+   * (cl-maplist function list...)
+
+
+
+   类似mapcar,但调用function的参数为(cdr list)
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (maplist #'(lambda (x) x)
+
+              '(a b c))
+
+     ;; ((a b c) (b c) (c))
+
+
+
+   #+END_SRC
+
+** 废弃函数
+
+   类似变量一样,函数也可以被标注为废弃的.
+
+
+
+   * (make-obsolete obsolete-name current-name &optional when)
+
+
+
+   该函数标注obsolete-name为废弃的. 其中
+
+
+
+   obsolete-name可以为表示函数或宏的symbol,也可以为函数或宏的别名.
+
+
+
+   current-name可以是一个symbol,表示使用current-name代替obsolete-name. 也可以是一个字符串表示废弃的警告说明. 也可是nil.
+
+
+
+   when应该是一个日期或版本号的字符串,用于表示什么时候开始废弃该函数.
+
+
+
+   * (define-obsolete-function-alias obsolete-name current-name &optional when doc)
+
+
+
+   该宏定义obsolete-name为函数current-name的别名,同时标注obsolet-name为废弃的函数.
+
+
+
+   该宏等价于:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defalias OBSOLETE-NAME CURRENT-NAME DOC)
+
+     (make-obsolete OBSOLETE-NAME CURRENT-NAME WHEN)
+
+   #+END_SRC
+
+
+
+   * (set-advertised-calling-convention function new-arg-list when)
+
+
+
+   该函数与上面两个函数不同点在于,它不是标注某个函数为废弃的,它只标注某个函数的某种用法为废弃的.
+
+
+
+   任何不使用new-arg-list表示的实参调用function函数都会被警告为废弃的.
+
+
+
+   when表示什么时候开始废弃function的原用法,一般为表示版本号的字符串.
+
+   #+BEGIN_SRC emacs-lisp
+
+     ;; 在老版本中sit-for函数可以接受三个参数
+
+     (sit-for seconds milliseconds nodisp)
+
+
+
+     ;; 然而用这种调用方法在Emacs22.1版本之后就被废弃掉了,因此可以这样设置
+
+     (set-advertised-calling-convention
+
+      'sit-for '(seconds &optional nodisp) "22.1") ;表示新的sit-for函数签名为(defun sit-for (seconds &optional nodisp))
+
+   #+END_SRC
+
+** 内联函数
+
+   要定义内联函数,只需要将定义函数的defun,换成defsubst即可
+
+   #+BEGIN_EXAMPLE
+
+   (defsubst name (arg-list)
+
+      [doc-string]
+
+      [declare-form]
+
+      [interactive]
+
+      bodys)
+
+   #+END_EXAMPLE
+
+
+
+   注意:虽然内联函数会加快函数的执行速度,但它会增加文件和内存的消耗量,而且对debugging,tracing和asdising支持不够好,因此除非速度真的很重,否则不要用内联函数.
+
+** 函数声明
+
+   * (declare-function function file &optional arglist fileonly)
+
+
+
+   该宏告诉编译器,function函数在文件file中定义,且参数签名为arglist.
+
+
+
+   编译器会检查文件file中是否包含了function函数,且参数签名是否为arglist,若想让编译器不检查函数的参数签名,需要将arglist设置为t
+
+
+
+   若参数fileony为非nil,表示只检查file存在,而不检查文件中是否定义了function.
+
+** 函数描述字符串(docstring)
+
+   * 一般来说,函数描述字符串的第一行为对该函数作用的总结.
+
+     * docstring的第一行最好独立的,因为apropos命令只显示第一行的文档
+
+     * docstring中参数最好用大些字母
+
+     * docstring以*开头的defvar变量被认为是用户选项（user option）
+
+     * 用户选项可以通过命令set-variable交互设置
+
+     * 可以使用edit-options命令编辑*scratch*
+
+     * `符号名'生成一个链接
+
+     * \\{major-mode-map}可以显示扩展成按键的说明
+
+     * docstring最后那个的\[ command ]会被command的绑定键所代替
+
+     * 如果不想要这种代替，需要用\=转义，当然，在Emacs的docstring中，真正的写法应该是
+
+       #+begin_src elisp
+
+         "\\=\\{major-mode-map}"
+
+         "\\=\\[command]"
+
+       #+end_src
+
+   * 将`\n(fn ARGLIST)`放在最后一行,会自动扩展为该函数的实际参数列表.
+
+
+
+** 交互模式声明
+
+   若一个函数带了交互模式声明,则它也就是一个命令了,即可以通过M-x(execute-command)来调用了.
+
+
+
+   交互模式声明的格式为(interactive code-string),其中:
+
+   * 若interactive的参数以*开头，则意义是，如果当前buffer是只读的，则不执行该函数
+
+
+
+   * interactive可以后接字符串,表示获得参数的方式
+
+   * p 接收C-u的数字参数
+
+
+
+   也可以不用P参数,直接在代码中判断current-prefix-arg的值
+
+   * r region的开始/结束位置
+
+   * n 提示用户输入数字参数,n后面可用接着提示符
+
+   * s 提示用户输入字符串参数
+
+   * 若函数接收多个input,需要用\n来分隔
+
+
+
+   * interactive可以后接一个form,form的求值结果应该是一个list,这个list的值作为参数的实参
+
+
+
+   在form中一般会用到如下几个函数用于获取用户输入
+
+   * read-string
+
+   * read-file-name
+
+   * read-directory-name
+
+   * read-regexp
+
+   * y-or-n-p
+
+   * read-from-minibuffer
+
+   * 使用变量`current-prefix-arg`来判断是否有universal-argument
+
+** declare-form
+
+   使用`declare'宏能够为函数或宏增加元属性. 它的语法为:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (declare specs...)
+
+   #+END_SRC
+
+
+
+   其中spec的格式为`(property args...)'. 目前支持以下几种spec
+
+   + (advertised-calling-convention SIGNATURE WHEN)
+
+
+
+   该spec的功能类似调用`set-advertised-calling-convention'函数
+
+
+
+   其中,SIGNATURE为参数列表,指定了调用函数或宏的正确用法. WHEN为一个字符串指明了什么时候开始废除原函数用法.
+
+
+
+   + (debug edebug-form-spec)
+
+     该spec只对宏有效. 当使用edebug调试宏时,使用edebug-form-spec. 参见[[info:elisp#Instrumenting%20Macro%20Calls][Instrumenting Macro Calls]]
+
+
+
+   + (doc-string n)
+
+     指明第n个参数为documentation string
+
+
+
+   + (indent indent-spec)
+
+     对当前函数或宏缩进时,根据indent-spec来缩进. 该功能通常用在宏中,但也对函数生效. 参见[[info:elisp#Indenting%20Macros][Indenting Macros]]
+
+
+
+   indent-spec可以是:
+
+   - nil
+
+     使用标准缩进模式
+
+
+
+   - defun
+
+     将该宏看成是一个`def'结构: 这种结构中会将第二行看成是body的起始行
+
+
+
+   - an integer,number
+
+     The firstnumberarguments of the function aredistinguishedarguments; the rest are considered the body of the expression.
+
+     A line in the expression is indented according to whether the first argument on it is distinguished or not.
+
+     If the argument is part of the body, the line is indented lisp-body-indent more columns than the open-parenthesis starting the containing expression.
+
+     If the argument is distinguished and is either the first or second argument, it is indented twice that many extra columns.
+
+     If the argument is distinguished and not the first or second argument, the line uses the standard pattern.
+
+
+
+   - 表示函数名称的symbol
+
+     该函数接收两个参数`pos'和`state',并且应该返回一个表示应该缩进到多少列的数字,或一个car表示缩进列的list. 其中
+
+
+
+   - pos :: 光标当前行缩进的起始位置(The position at which the line being indented begins.)
+
+
+
+   - state :: 函数`parse-partial-sexp'解析从光标当前位置到当前行行首之间内容的返回结果
+
+
+
+   The difference between returning a number and returning a list is that a number says that all following lines at the same nesting level should be indented just like this one; a list says that following lines might call for different indentations. This makes a difference when the indentation is being computed byC-M-q; if the value is a number, C-M-qneed not recalculate indentation for the following lines until the end of the list
+
+
+
+
+
+   + (obsolete current-name when)
+
+     该spec功能类似调用`make-obolete'函数
+
+
+
+   current-name为一个symbol,或string,或nil
+
+
+
+   when为一个字符串用来指定什么时候开始废弃该函数/宏
+
+** 判断function是否安全
+
+   使用unsafep来判断一个form是否是安全的
+
+
+
+   * (unsafep form &optional unsafep-vars)
+
+
+
+   若判断form为安全的可以执行,则返回nil. 否则返回一个list描述为什么form是不安全的.
+
+
+
+   The argument UNSAFEP-VARS is a list of symbols known to have temporary bindings at this point;
+
+
+
+   The current buffer is an implicit argument, which provides a list of buffer-local bindings.

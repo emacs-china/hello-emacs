@@ -1,0 +1,1600 @@
+#+TITLE: Major Mode and Minor Mode
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#major-mode-and-minor-mode][Major Mode and Minor Mode]]
+  - [[#hooks][Hooks]]
+    - [[#调用hook中的函数][调用Hook中的函数]]
+    - [[#设置hook变量][设置Hook变量]]
+  - [[#major-modes][Major Modes]]
+    - [[#major-mode-conventions][Major Mode Conventions]]
+    - [[#how-emacs-chooses-a-major-mode][How Emacs Chooses a Major Mode]]
+    - [[#mode-help][Mode Help]]
+    - [[#derived-modes][Derived Modes]]
+    - [[#basic-major-modes][Basic Major Modes]]
+    - [[#mode-hooks][Mode Hooks]]
+    - [[#generic-modes][Generic Modes]]
+  - [[#minor-modes][Minor Modes]]
+    - [[#minor-mode-conventions][Minor Mode Conventions]]
+    - [[#keymaps-and-minor-modes][Keymaps and Minor Modes]]
+    - [[#defining-minor-modes][Defining Minor Modes]]
+  - [[#mode-line-format][Mode Line Format]]
+    - [[#mode-line基础说明][Mode Line基础说明]]
+    - [[#mode-line-formatheader-line-format和frame-title-format的格式][mode-line-format,header-line-format和frame-title-format的格式]]
+    - [[#mode-line-format中常用到的变量][Mode-line-format中常用到的变量]]
+    - [[#-constructs说明][%-constructs说明]]
+    - [[#mode-line中的text-properties][Mode Line中的text properties]]
+    - [[#模拟mode-line的显示结果][模拟mode line的显示结果]]
+    - [[#window-header-line][Window Header Line]]
+  - [[#imenu][Imenu]]
+    - [[#通过设置imenu-generic-expression定义imenu][通过设置`imenu-generic-expression'定义Imenu]]
+    - [[#通过设置imenu-prev-index-position-function和imenu-extract-index-name-function来定义imenu][通过设置`imenu-prev-index-position-function'和`imenu-extract-index-name-function'来定义Imenu]]
+    - [[#通过设置imenu-create-index-function来定义imenu][通过设置`imenu-create-index-function'来定义Imenu]]
+
+* Major Mode and Minor Mode
+
+** Hooks
+
+   Emacs中大多数的hook为"normal hooks",这表示该hook中的函数会被不带参数调用,且他们的返回值会被忽略. 以`-hook'结尾的hook都是"normal hook".
+
+
+
+   非`-hook'结尾的hook可能为"abnormal hook",这表示该hook中的函数会被带参数调用,或者他们的返回值会被使用. 一般这种`abormal hook'的名称是以`-functions'结尾的.
+
+
+
+   以`-function'结尾的hook表示它的值为单个的函数,而不是函数列表,此时 *不能用`add-hook'来添加hook函数,而需要使用`add-function'代替*
+
+
+
+   hook触发式,排在前面的hook函数优先被调用
+
+
+
+*** 调用Hook中的函数
+
+    + (run-hooks &rest hookvars)
+
+      该函数依次调用hookvars中的hook函数. 每个hookvar都是一个 *符号*. 且每个hook都需为一个"normal hook"
+
+
+
+    若hookvar为buffer-local变量,则调用的hook函数以hookvar的buffer-local的值为准,但 *若此时hook值中有元素t,则表示全局的hook值中定义的函数也会被调用*
+
+
+
+    + (run-hook-with-args hook &rest args)
+
+      该函数以参数args调用hook中的函数,此时hook为"abnormal hook"
+
+
+
+    + (run-hook-with-args-until-failure hook &rest args)
+
+      以参数args依次调用abnormal hook中的函数,直到某个函数返回nil为止
+
+
+
+    该函数返回最后那次调用函数的返回值. 即若由于hook中某个函数返回nil而退出时也返回nil,否则返回非nil值
+
+
+
+    + (run-hook-with-args-until-success hook &rest args)
+
+      以参数args依次调用abnormal hook中的函数,直到某个函数返回非nil为止
+
+
+
+    该函数返回最后那次调用函数的返回值. 即若由于hook中某个函数返回非nil而退出时则返回该值,否则返回nil值
+
+
+
+*** 设置Hook变量
+
+    + (add-hook hook function &optional append local)
+
+      为hook添加function为hook函数
+
+
+
+    若function已经存在(使用equal进行比较),则不再重复添加
+
+
+
+    若function的`permanent-local-hook'属性非nil,则 *`kill-all-local-variables'或更改major mode都不会将该函数从hook的当前值中被删除*
+
+
+
+    默认情况下,function会被放在hook的最前方优先调用,但`append'参数可以让function添加到hook的最后方,最后被调用
+
+
+
+    参数`local'表示将function加入buffer-local hook中,该标志会使hook变为buffer-local变量,并在buffer-local变量值中添加元素`t'(表示同时也执行该hook的global value)
+
+
+
+    + (remove-hook hook function &optional local)
+
+      该函数从hook中移除function
+
+
+
+    若参数`local'为非nil,则表示将该hook变为buffer-local hook,然后移除function
+
+
+
+** Major Modes
+
+   每个Major Mode都需要有一个"mode hook". Major Mode在完成初始化过程的最后一个步骤都应该是调用"mode hook"
+
+
+
+   每个Major Mode都需要一个以`-mode'结尾的命令用来进入该Major Mode
+
+
+
+   + 命令(fundamental-mode)
+
+     fundamental-mode不包含任意的与该mode相关的函数定义和变量设置. 它 *甚至没有mode hook*
+
+
+
+   + 配置项major-mode
+
+     该变量为buffer-local变量,其值为一个symbol,标识了当前处于哪个major mode. 其标准的默认值为`fundamental-mode'
+
+
+
+   若默认值为nil,则当Emacs使用命令(例如`switch-to-buffer')创建新buffer(??是创建吗??)时, *新buffer的major mode与之前buffer保持不变*
+
+   但是作为一个特例,若前一个buffer的major-mode的`mode-class'属性为`special',则 *新buffer的Major Mode为Fundamental mode* (具体参见Major Mode Conventions)
+
+
+
+*** Major Mode Conventions
+
+    定义Major Mode时,有很多惯例需要遵守,因此推荐使用`define-derived-mode'从一个现成的Major Mode中继承新Major Mode. 该宏会自动维护这些惯例.
+
+
+
+    下面是一些常见的惯例
+
+    + 进入Major Mode的命令以`-mode'结尾
+
+
+
+    且当不带参数调用时,该命令通过设置 *keymap,syntax table和buffer-local变量* 将当前buffer切换到新的Major Mode.
+
+
+
+    该命令不能修改buffer的内容
+
+
+
+    + 为进入Major Mode的命令添写doc-string,简要描述一下该mode有哪些特殊命令
+
+
+
+    doc-string中可以使用`\[COMMAND]',`\[KEYMAP]'和`\<KEYMAP>'来自动显示用户自定义的键绑定.
+
+
+
+    + 进入Major Mode的命令的第一个动作应该是调用`kill-all-local-variables'
+
+
+
+    `kill-all-local-variables'会先触发`change-major-mode-hook',然后清理之前的Major Mode设置的buffer-local变量
+
+
+
+    + Major Mode Command需要设置buffer-local变量`major-mode'的值为major mode command的symbol.
+
+
+
+    命令`describe-mode'会根据该变量输出帮助文档
+
+
+
+    + Major Mode Command需要设置buffer-local变量`major-name'的值为该major mode的"pretty" name.
+
+
+
+    `major-name'通常为一个字符串,且它的值用来会显示在mode line上
+
+
+
+    + 由于Emacs只有一个命名空间,因此所有与Major Mode相关的变量,常量和函数,应该以该major mode名称为前缀
+
+
+
+    + 当Major Mode是用来编辑特定结构的文本或编程语言时,具备根据结构自动缩进文本是很有用的一项功能,因此这类major mode一般都会有缩进函数,并将其设置为变量`indent-line-function'的值. 同时也可能设置其他一些关于缩进的变量的值
+
+
+
+    + Major Mode通常有其自己的keymap,该keymap的名字一般为`mode名称-mode-map'
+
+
+
+    Major Mode Command应该调用`use-local-map'函数来安装自己的keymap
+
+
+
+    + Major Mode Keymap中的键绑定,一般以`C-c'+控制字符或数字或`{}<>:;'为前缀.
+
+
+
+    `C-c'+标点符号是留给minor mode使用的.
+
+
+
+    `C-c'+普通字母留给用户使用的
+
+
+
+    major mode也可以重新绑定`M-n',`M-p'但应该表示某种向前向后移动的命令
+
+
+
+    + 编辑文本的major mode不应该重定义<RET>为任何非换行的命令.
+
+
+
+    非编辑文本的major mode无此显示
+
+
+
+    + Major mode不应该修改哪些会严重影响用户性能的配置项(例如是否开启Auto-Fill mode)
+
+
+
+    + 若major mode有自己的syntax table,则该syntax table变量的名称规范为`mode名称-mode-syntax-table'
+
+
+
+    + 若major mode希望支持某种编程语言的注释语法,则需要设置与注释语法相关的变量.
+
+
+
+    具体参见`comment-column',`comment-start-skip',`comment-start',`comment-end'
+
+
+
+    + 若major mode有自己的缩写表,则需要存放到名为`MODENAME-mode-abbrev-table'的变量中.
+
+
+
+    If the major mode command defines any abbrevs itself, it should pass ‘t’for the SYSTEM-FLAG argument to ‘define-abbrev’. 详情参见[[info:elisp#Defining%20Abbrevs][Defining Abbrevs]]
+
+
+
+    + major mode通过设置buffer-local变量`font-lock-defaults'来设置高亮
+
+
+
+    + major mode中用到的每个face都应该尽可能的从已有的Emacs face中继承
+
+
+
+    + major mode应该告诉Imenu如何找出buffer中的各个定义和章节的位置.
+
+
+
+    方法是通过设置`imeu-generic-expression',`imenu-prev-index-position-function',`imenu-extract-index-name-function',`imenu-create-index-function'. 具体参见[[info:elisp#Imenu][Imenu]]
+
+
+
+    + major mode可以定义buffer local变量`eldoc-documentation-function'以便eldoc能支持该mode
+
+
+
+    + major mode可以通过设置`completion-at-point-functions'来指定如何实现补全. 具体参见[[info:elisp#Completion%20in%20Buffers][Completion in Buffers]]
+
+
+
+    + 在major mode command中使用`make-local-variable'来创建buffer-local变量.
+
+
+
+    *不要使用`make-variable-buffer-local'来创建buffer local变量* ,因为该函数会是的即使不是该mode的buffer中的变量也变成buffer-local变量.
+
+
+
+    + 每个major mode都应该有一个名为`MODENAME-mode-hook'的normal hook.
+
+
+
+    major mode command的最后步骤应该是 *使用`run-mode-hooks'依次调用`change-major-mode-after-body-hook',`MODENAME-mode-hook'和`after-change-major-mode-hook'这三个hook*
+
+
+
+    + 若major mode为子mode,则在major mode command开始时还需要调用父mode的major mode command
+
+
+
+    通过宏`define-derived-mode'定义的mode会自动完成这种设计,但若没有使用`define-derived-mode'宏,则需要手工调用`delay-mode-hooks'中的父mode command
+
+
+
+    + 若从major mode切换成其他major mode,则会触发`change-major-mode-hook',可以进行一些特殊处理
+
+
+
+    + 若该major mode仅用来管理由major mode自己产生的文本(而不是用户输入的内容),则该major command symbol的`mode-class'属性应该为`special',像下面所示:
+
+      #+BEGIN_SRC emacs-lisp
+
+        (put 'funny-mode 'mode-class 'special)
+
+      #+END_SRC
+
+
+
+    默认情况下,若`major-mode'的默认值为`nil',则新创建的buffer会继承当前buffer的major mode. 但对于属性`mode-class'为`special'的major mode来说, *新创建的buffer使用Fundamental Mode代替*,像Dired,Rmail,Buffer List这些Major Mode都开启了该特性
+
+
+
+    同时,在这些special major mode中调用`view-buffer'函数并不能启用`view-mode' minor mode,因为这类的mode通常都提供了他们自己的类似view-mode的键绑定
+
+
+
+    这类major mode,推荐使用`define-derived-mode'直接从`special-mode'中继承
+
+
+
+    + 通过配置`auto-mode-alist'变量,可以让Emacs打开特定规则的文件名时自动选中Major Mode.
+
+
+
+    If you define the mode command to autoload, you should add this element in the same file that calls ‘autoload’.
+
+
+
+    If you use an autoload cookie for the mode command, you can also use an autoload cookie for the form that adds the element (参见[[info:elisp#autoload%20cookie][autoload cookie]])
+
+
+
+    + 定义mode的代码可能会被重复执行
+
+
+
+    因此在定义与mode相关的变量时,推荐使用`defvar'和`defcustom'
+
+
+
+
+
+*** How Emacs Chooses a Major Mode
+
+    当Emacs打开文件时,会自动根据文件名称和文件内容选择合适的major mode
+
+
+
+    + 命令(normal-mode &optional find-file)
+
+
+
+    让Emacs为当前buffer选择合适的major-mode
+
+
+
+    该函数先调用`set-auto-mode'函数,然后运行`hack-local-variables'来使file local变量生效. 参见[[info:emacs#Local%20Variables%20in%20Files][Local Variables in Files]] 和[[info:elisp#File Local Variables][File Local Variables]]
+
+
+
+    若参数`find-file'为非nil,则normal-mode假设是被`find-file'函数调用的,这种情况下,它会根据`enable-local-variables'的值来决定是否应用file local变量的值.
+
+
+
+    若参数`find-file'为nil,则无条件应用file local变量值
+
+
+
+    该函数内部调用`set-auto-mode'来选择major mode,若选择失败,则根据`major-mode'的默认值来决定应用major mode
+
+
+
+    + 函数(set-auto-mode &optional keep-mode-if-same)
+
+
+
+    该函数为当前buffer选择合适的major-mode,其选择的依据依次为
+
+
+
+    1. 根据`_*_'行或文件结尾处的`mode:' file local变量值.
+
+
+
+    注意: *若`enable-local-variables'为nil,或文件名称匹配`inhibit-local-variables-regexps'中的元素,则Emacs不使用file local变量*
+
+
+
+    2. 根据`interpreter-mode-alist'变量值和`#!'行推测
+
+
+
+    3. 根据`magic-mode-alist'变量值和buffer开头的内容推测
+
+
+
+    4. 根据`auto-mode-alist'变量值和文件名称推测
+
+
+
+    若参数keep-mode-if-same为非nil,则若该buffer已经处于合适的mode状态时,并不再此调用major mode coomand. *这样是为了防止用户自定义的buffer loal 变量值被重设*
+
+
+
+    + (set-buffer-major-mode buffer)
+
+      设置指定buffer的major mode为`major-mode'的默认值.
+
+
+
+    若默认值为nil,则表示使用当前buffer的major mode.
+
+
+
+    作为特例,`*scratch' buffer的值会被设置为`initial-major-mode'
+
+
+
+    低层的原始创建buffer的函数不会调用该函数,但中层的创建buffer的函数(例如`switch-to-buffer'和`find-file-noselect')在创建buffer时会使用该函数
+
+
+
+    + 配置项initial-major-mode
+
+
+
+    该值决定了初始的`*scratch*' buffer的major mode. 该变量的值应该为major mode command的symbol
+
+
+
+    + 变量interpreter-mode-alist
+
+
+
+    该变量告诉Emacs如何根据`#!'行的内容判断major mode
+
+
+
+    它一个alist,其元素格式为`(REGEXP . MODE)' 表示`#!'行内容匹配REGEXP的其Major Mode为MODE
+
+
+
+    + 变量majic-mode-alist
+
+
+
+    该变量告诉Emacs如何根据buffer内容判断major mode
+
+
+
+    该值为一个alist,其元素格式为`(REGEXP . FUNCTION)', 若buffer开头部分的内容匹配REGEXP,且FUNCTION为非nil,则Emacs会通过调用该FUNCTION切换Major Mode
+
+
+
+    若FUNCTION为nil,则通过变量`auto-mode-alist'判断Major Mode
+
+
+
+    + 变量`majic-fallback-mode-alist'
+
+      该变量类似`magic-mode-alist',但 *只有在`auto-mode-alist'中没有相应配置时才生效*
+
+
+
+    + 变量`auto-mode-alist'
+
+      该变量告诉Emacs如何根据文件名称判断major mode
+
+
+
+    该值为一个alist,其元素格式 *一般* 为`(REGEXP . MODE-FUNCTOIN)'表示文件名称匹配REGEXP的话,调用MODE-FUNCTION来选择Major Mode(若访问的文件是[[info:elisp#File%20Name%20Expansion][扩展过的文件名]] ,则文件名会先经过`file-name-sans-versions'过滤掉版本号或备份标志)
+
+
+
+    元素还可能为格式`(REGEXP FUNCTION t)',表示调用FUNCTION后,Emacs继续搜索`auto_mode-alist'并选择合适的Major Mode. 该功能在处理压缩的文件时特别有用.
+
+
+
+*** Mode Help
+
+    + 命令(describe-mode &optional buffer)
+
+
+
+    该命令显示指定buffer(默认为当前buffer)的major mode和minior mode的相关文档.
+
+
+
+    该函数使用`documentation'函数从major mode command和minior mode command中获取doc-string
+
+*** Derived Modes
+
+    创建一个新的major mode的推荐方法是使用`define-derived-mode'从一个现有的major mode中继承出来.
+
+
+
+    即使没有接近的major mode,那也应该从`text-mode',`special-mode'或`prog-mode'这三大基本major mode中选一个来继承.
+
+
+
+    实在不行,那就从`fundamental-mode'中继承
+
+
+
+    + 宏(define-derived-mode VARIANT PARENT NAME DOCSTRING KEYWORD-ARGS... BODY...)
+
+
+
+    该宏定义VARIANT为新Major Mode Command,该Major Mode,继承自PARENT,且以NAME为Mode Name
+
+
+
+    参数VARIANT和PARENT为不被引用的symbol
+
+
+
+    新的Major Mode覆盖了PARENT Mode的以下几个方面:
+
+
+
+    - 新Major Mode拥有自己的keymap,名为`VARIANT-map'.
+
+      除非`VARIANT-map'在调用`define-derived-mode'前已经被设置并且定义了父keymap,否则PARENT mode的keymap为`VARIANT-map'的父keymap
+
+
+
+    - 新Major Mode拥有自己的syntax table,名为`VARIANT-syntax-table',但该名字可以通过`:syntax-table' keyword关键字修改
+
+      除非`VARIANT-syntax-table在调用`define-derived-mode'前已经被设置并且定义了父syntax-table,否则PARENT mode的syntax-table为`VARIANT-syntax-table的父syntax-table
+
+
+
+    - 新Major Mode拥有自己的abbrev table,存在名为`VARIANT-abbrev-table'的变量中,但该变量名可以通过`:abbrev-table' keyword关键字修改
+
+
+
+    - 新Major Mode有自己的mode hook,名为`VARIANT-hook'.
+
+      该hook会在运行完其祖先的mode hook后,通过`run-mode-hooks'调用
+
+
+
+    可以在参数BODY指定了如何覆盖PARENT mode的其他设置. *注意不要加`interactive'语句,`define-derived-mode'会自动添加该语句*
+
+
+
+    若PARENT有一个非nil的`mode-class'属性,则`define-derived-mode'会设置VARIANT的`mode-class'属性为相同的值.
+
+
+
+    参数PARENT也可以为nil,表示新Major Mode没有父mode
+
+
+
+    参数DOCSTRING为对新Major Mode的说明,`define-derived-mode'会在此基础上增添一些关于mode hook,mode keymap的信息,该参数可以省略
+
+
+
+    `define-drived-mode'支持以下几种KEYWORD-ARG
+
+
+
+    - `:syntax-table'
+
+
+
+    为新Major Mode指定syntax table变量.
+
+
+
+    若参数为nil,则表示使用PARENT mode的syntax table变量,若参数PARENT为nil,则使用标准syntax-table
+
+
+
+    - `:abbrev-table'
+
+
+
+    为新Major Mode指定abbrev-table变量.
+
+
+
+    若参数为nil,表示使用PARENT mode的abbrev-table变量,若参数PARENT为nil,则使用`fundamental-mode-abbrev-table'
+
+
+
+    - `:group'
+
+
+
+    指定了该mode所属的customization group.
+
+
+
+    + 函数(derived-mode-p &rest modes)
+
+
+
+    当前Major Mode是否继承自modes中的任意一个mode, modes为symbol列表
+
+
+
+*** Basic Major Modes
+
+
+
+    除了Fundamental mode外,还有三个普遍被继承的mode:Text mode,Prog mode和Special mode
+
+
+
+    + 命令(text-mode)
+
+
+
+    Text-mode用于编辑自然语言.
+
+
+
+    It defines the ‘"’ and ‘\’ characters as having punctuation syntax (参见 [[info:elisp#Syntax%20Class%20Table][Syntax Class Table]])
+
+
+
+    该mode下绑定`M-<TAB>'为`ispell-complete-word'
+
+
+
+    + Prog-mode
+
+
+
+    Prog-mode用于编辑编程语言. 大u偶数的编程语言major mode都继承自该mode
+
+
+
+    Prog-mode设置`parse-sexp-ignore-comments'为`t',设置`bidi-paragraph-direction'为`left-to-right'
+
+
+
+    + Special-mode
+
+
+
+    Special-mode常用于那些内容由Emacs自动产生(而不是人工输入或从文件读取)的buffer中.
+
+
+
+    从Special mode继承的mode会设置`mode-class'属性为`special'
+
+
+
+    Special mode设置mode为只读的.且会重新绑定很多通用绑定,例如`q'绑定为`quit-window',`g'绑定为`revert-buffer'
+
+
+
+*** Mode Hooks
+
+    每个Major Mode Command最后三条指令应该是调用`change-major-mode-after-body-hook',自己的`MODE-hook',和`after-change-major-mode-hook'. *通常是通过调用函数`run-mode-hooks'来自动完成上面的三个步骤.*
+
+
+
+    当major mode为某个父mode的子mode,则在body中调用父mode command时,应该放入`delay-mode-hooks'结构内,这样才能保证父mode的hook不会立即被触发,而统一等到子mode调用`run-mode-hooks'时再触发.
+
+
+
+    若不使用`define-derived-mode'宏,而选择手工定义Major Mode,则可能会需要用到下列函数
+
+
+
+    + 函数(run-mode-hooks &rest hookvars)
+
+
+
+    Major Mode应该使用该函数来运行自己的mode hook.
+
+
+
+    该函数类似`run-hooks',但它还会调用`change-major-mode-after-body-hook'和`after-change-major-mode-hook'.
+
+
+
+    *若在`delay-mode-hooks'宏的body中调用该函数,它不会立即执行这些hook,而是推迟到下一次调用`run-mode-hooks'时再执行*
+
+
+
+    + 宏(delay-mode-hooks &rest body)
+
+      该宏执行BODY中的语句,但BODY中的所有`run-mode-hooks'调用都会延迟运行他们的hook,直到下次不在`delay-mode-hooks'结构中的调用`run-mode-hooks'才运行.
+
+
+
+    + 变量`change-major-mode-after-body-hook'
+
+      触发的时机在major mode hook之前
+
+
+
+    + 变量`after-change-major-mode-hook'
+
+      触发时机正常应该为major mode command的最后一步!
+
+
+
+*** Generic Modes
+
+    "Generic Modes"是指的那些只支持基本的注释语法和Font Lock Mode的简单Major Mode.
+
+
+
+    使用宏`define-generic-mode'来定义generic mode,更多例子参见`generic-x.el'中的内容
+
+
+
+    + (define-generic-mode mode comment-list keyword-list font-lock-list auto-mode-list function-list &optional docstring)
+
+
+
+    若参数docstring为nil,则`define-generic-mode'会自动生成一个
+
+
+
+** Minor Modes
+
+   "minor mode"提供了一系列的与major mode无关的特性.
+
+
+
+   + 变量minor-mode-list
+
+     该变量存储了所有的minor mode commands
+
+
+
+*** Minor Mode Conventions
+
+    定义minor mode也有一些惯例要遵循,这些惯例有:
+
+    + 每个minor mode都应该有一个以`-mode'结尾的指示变量,用于判断该minor mode是否启用.
+
+
+
+    若minor mode是buffer-local的,则该指示变量也应该是buffer-local的
+
+
+
+    该指示变量常与变量`minor-mode-alist'结合来在mode line上显示minor mode name.
+
+
+
+    该指示变量还与变量`minor-mode-map-alist'结合来判断是否激活minor mode keymap.
+
+
+
+    + 定义一个与上面的指示变量同名的命令,该命令用于开启/关闭minor mde
+
+
+
+    该命令需要能够接收一个可选参数.
+
+    1. 当以interactive方式调用该命令时,若不带参数调用该命令,则切换minor-mode的状态,若参数为正数,则开启minor-mode,若为负数则关闭minor-mode
+
+
+
+    2. 当在lisp中调用该命令时,若参数为nil或正数,则开启minor mode,参数若为'toggle,则切换minor-mode,参数为负数则关闭minor-mode
+
+
+
+    下面是一个实现模板
+
+    #+BEGIN_SRC emacs-lisp
+
+      (interactive (list (or current-prefix-arg 'toggle)))
+
+      (let ((enable (if (eq arg 'toggle)
+
+                        (not foo-mode) ; this mode’s mode variable
+
+                      (> (prefix-numeric-value arg) 0))))
+
+        (if enable
+
+            DO-ENABLE
+
+          DO-DISABLE))
+
+    #+END_SRC
+
+
+
+    + 若想在mode line显示该minor mode,则需要往变量中`minor-mode-alist'中添加相应的元素.
+
+
+
+    `minor-mode-alist'中的元素格式应该为`(MODE-VARIABLE STRING)'. 其中
+
+
+
+    - `MODE-VARIABLE'为指示minor-mode是否开启的哪个变量名称
+
+
+
+    - `STRING'为在mode line上的显示文本.
+
+
+
+    - *要注意 minor-mode-alist中不要出现重复的MODE-VARIABLE*
+
+
+
+    + 还有一些类似Major Mode的惯例
+
+
+
+    - those regarding the names of global symbols
+
+
+
+    - the use of a hook at the end of the initialization function
+
+
+
+    - the use of keymaps
+
+
+
+    - other
+
+
+
+    + 另外,尽可能允许用户通过`customization'来开闭minor mode.
+
+
+
+    因此应该尽量使用`defcustom'来定义minor mode的标识变量. 并且要记得 *給该标识变量加上autoload cookie并指定`:require'定义minor mode的库*:
+
+    #+BEGIN_SRC emacs-lisp
+
+         ;;;###autoload
+
+      (defcustom msb-mode nil
+
+        "Toggle msb-mode.
+
+           Setting this variable directly does not take effect;
+
+           use either \\[customize] or the function `msb-mode'."
+
+        :set 'custom-set-minor-mode
+
+        :initialize 'custom-initialize-default
+
+        :version "20.4"
+
+        :type    'boolean
+
+        :group   'msb
+
+        :require 'msb)
+
+    #+END_SRC
+
+
+
+*** Keymaps and Minor Modes
+
+    每个minor mode都可以有自己的keymap. 要为minor mode设置自己的keymap,需要往变量`minor-mode-map-alist'中添加元素. 具体参见[[info:elisp#Definition%20of%20minor-mode-map-alist][Definition of minor-mode-map-alist]]
+
+
+
+*** Defining Minor Modes
+
+    + (define-minor-mode MODE DOC [INIT-VALUE [LIGHTER [KEYMAP]]] KEYWORD-ARGS... &rest BODY)
+
+
+
+    该宏定义一个新的名为MODE的minor mode,并生成一个名为MODE的minor mode command. 参数DOC为该minor mode的说明文档
+
+
+
+    该宏还定义了一个名为MODE的指示变量,通过设置该变量为t或nil可以开启/关闭该minor mode. 该变量的默认值为INIT-VALUE.
+
+
+
+    参数LIGHTER为一个字符串或nil,当开启了该minor mode后就会在mode-line中显示该字符串, 若为nil则表示不显示在mode-line上
+
+
+
+    参数KEYMAP为nil,值为keymap的变量名,keymap,或元素为`(KEY-SEQUENCE . DEFINITION)'的alist. 它指定了该minor mode所使用的keymap,并生成名为`MODE-map'的变量用于存放keymap
+
+    这里的KEY-SEQUENCE和DEFINITION参数格式要匹配`define-key'函数的参数格式.
+
+
+
+    目前参数KEYWORD-ARGS支持如何keyword参数:
+
+    + `:group GROUP'
+
+
+
+    指定BODY中的`defcustom'语句定义配置项时所属的默认组为GROUP, 若不指定该参数,则所属的默认组为参数MODE
+
+
+
+    *使用该参数前,请确保已经预先用`defgroup'定义了分组*
+
+
+
+    + `:global GLOBAL-P'
+
+
+
+    指明该minor-mode作用于为global还是buffer-local, 默认为nil即为buffer-local的.
+
+
+
+    将一个minor-mode变为global的,意味着它的指示变量`MODE'被定义为用户配置项, 通过配置项界面改变该变量的值会同时关闭/开启该minor mode.
+
+
+
+    这种情况下,需要 *保证在配置该配置项时有运行相应的minor mode代码*,最简单的方法是使用`:require'关键字
+
+
+
+    + `:init-value INIT-VALUE'
+
+
+
+    设置指示变量`MODE'的初始值
+
+
+
+    + `:lighter LIGHTER'
+
+
+
+    设置显示在mode-line上的内容
+
+
+
+    + `:keymap KEYMAP'
+
+
+
+    设置minor mode的KEYMAP
+
+
+
+    + `:variable PLACE'
+
+
+
+    使用PLACE作为minor mode的指示变量(默认为参数MODE).
+
+
+
+    这里PLACE可以是一个变量名称,或者可以被`setf'赋值的泛型变量(参见[[info:elisp#Generalized%20Variables][Generalized Variables]]).
+
+
+
+    PLACE还可以是格式为`(GET . SET)'的cons cell. 其中GET为获取minor mode状态的表达式, SET为接收一个参数并设置minor mode的函数
+
+
+
+    + `:after-hook AFTER-HOOK-FORM'
+
+
+
+    AFTER-HOOK-FORM为一个S表达式(不需要被引用), 它会在minor mode hook触发后运行.
+
+
+
+    + 其他任意的keyword参数
+
+
+
+    *这些keyword参数直接被传递給`defcustom'用来作为生成minor mode指示变量时的参数*. 比较常见的有`:require'参数.
+
+
+
+    下面是一个使用`define-minor-mode'的例子
+
+    #+BEGIN_SRC emacs-lisp
+
+      (define-minor-mode hungry-mode
+
+        "Toggle Hungry mode.
+
+      Interactively with no argument, this command toggles the mode.
+
+      A positive prefix argument enables the mode, any other prefix
+
+      argument disables it.  From Lisp, argument omitted or nil enables
+
+      the mode, `toggle' toggles the state.
+
+
+
+      When Hungry mode is enabled, the control delete key
+
+      gobbles all preceding whitespace except the last.
+
+      See the command \\[hungry-electric-delete]."
+
+        ;; The initial value.
+
+        nil
+
+        ;; The indicator for the mode line.
+
+        " Hungry"
+
+        ;; The minor mode bindings.
+
+        '(([C-backspace] . hungry-electric-delete))
+
+        :group 'hunger)
+
+    #+END_SRC
+
+
+
+    + 宏(define-globalized-minor-mode GLOBAL-MODE MODE TURN-ON KEYWORD-ARGS)
+
+      创建一个与MODE对应的名为GLOBAL-MODE的minor mode.
+
+
+
+    `GLOBAL-MODE'的意义在于同时启用/关闭所有buffer中的名为`MODE'的minor mode
+
+
+
+    它会使用函数`TURN-ON'来开启buffer中的minor mode,使用`(MODE -1)'来关闭buffer中的minor mode
+
+
+
+    该宏会定义一个名为`GLOBAL-MODE'的配置项,用户可以通过customize通过更改该配置项的值来开启/关闭该minor mode. *当更改该配置项时,请保证已经执行了该`define-globalized-minor-mode'代码,最简单的方法是使用`:require'关键字参数*
+
+
+
+    使用`:group GROUP' keyword 参数指定了`GLOBAL-MODE'所属的组别.
+
+
+
+    *一般情况下,定义了一个global minor mode的同时,需要定义一个buffer local minor buffer,这样才能允许某些buffer不开启该minor mode*
+
+** Mode Line Format
+
+   每个Emacs window的底部一般都会有一个mode line,用来显示buffer的信息.
+
+
+
+   每个Emacs Window的顶部也可以有一个header line,其作用与mode line类似.
+
+*** Mode Line基础说明
+
+    mode line显示什么内容由buffer local变量`mode-line-format'决定.
+
+
+
+    header line显示什么内容则由buffer local变量`header-line-format'决定
+
+
+
+    当前选中的window的mode line使用名为`mode-line'的face显示, 其他为选中的mode line使用名为`mode-line-inactive'的face显示
+
+
+
+    出于效率考虑,Emacs不会不停地更新mode line和header line. 只有当你进行如下操作时才回去更新mode-line和header-line
+
+    1. 更改window configuration
+
+    2. 切换buffer
+
+    3. narrow或widen buffer
+
+    4. scroll buffer
+
+    5. 修改了buffer内容
+
+    6. 调用了函数`force-mode-line-update'
+
+
+
+    + (force-mode-line-update &optional all)
+
+      该函数强制更新当前buffer的mode-line和header-line
+
+
+
+    但若参数all为非nil,则表示强制更新所有buffer的mode-line和header-line
+
+*** mode-line-format,header-line-format和frame-title-format的格式
+
+
+
+    mode-line-format,header-line-format和frame-title-format的格式可能是以下几种类型:
+
+
+
+    + 字符串
+
+      类似`format'函数中的格式说明符.
+
+
+
+    除了字符串中的"%-Constructs"会被替换为其他数据外,其他的内容原样显示
+
+
+
+    若部分子串包含`face'属性,则该部分字串显示时使用`face'属性指定的face来显示, 其他没有`face'属性的字串,使用`mode-line'或`mode-line-inactive'来显示.
+
+
+
+    *字串中的`help-echo'和`keymap'属性具有特殊的意义*,具体参见[[info:elisp#Properties%20in%20Mode][Properties in Mode]]
+
+
+
+    + SYMBOL类型的变量
+
+
+
+    显示为symbol的值.
+
+
+
+    但 *即使symbol的值为带"%-constructs"的字符串,其中的"%-constructs"也不会被转义!!*
+
+
+
+    此外,若symbol的值为t或nil,或者该symbol被标记为"risky"(该symbol的`risky-local-variable'属性非nil),则这些symbol的值会被忽略
+
+
+
+    + (字符串 其他数据...) / (列表 其他数据...)
+
+
+
+    若数据为一个list,且该list的第一个元素为字符串类型或list类型,则表示递归处理所有的列表元素,并将结果合并显示.
+
+
+
+    + (:eval FORM)
+
+
+
+    若数据为一个list,且第一个元素为`:eval',则表示运行`FORM',并将结果作为显示内容
+
+
+
+    *注意 FORM中不要load任何文件,因为这样可能导致无穷循环*
+
+
+
+    + (:propertize ELT PROPS...)
+
+
+
+    若数据为一个list,且第一个元素为`:propertize',则表示递归处理ELT,并为结果加上PROPS提供的字符串属性.
+
+
+
+    参数PROPS应该由0到多个"TEXT-PROPERTY" "VALUE"组成
+
+
+
+    + (SYMBOL THEN ELSE)
+
+
+
+    若数据为一个list,且第一个元素为非条件语句的关键字,则表示若SYMBOL的值为非nil则显示递归处理THEN的处理结果,否则显示ELSE的处理记过.
+
+
+
+    ELSE可以省略,则表示若symbol值为nil,什么也不显示
+
+
+
+    + (WIDTH REST...)
+
+
+
+    若数据为一个list,且第一个元素为整数,则表示限定REST的结果显示宽度为WIDTH.
+
+
+
+    若WIDTH为正数,表示向左对齐,WIDTH为负数,表示向右对齐.
+
+*** Mode-line-format中常用到的变量
+
+    下面所列举的变量,都是mode-line-format的组成部分
+
+    + mode-line-mule-info
+
+
+
+    该变量在mode-line-format中可以显示语言环境,buffer的字节编码,当前的输入法
+
+
+
+    + mode-line-modified
+
+
+
+    该变量会显示当前buffer是否被修改. 默认情况下:
+
+
+
+    1. 若buffer被修改显示'**'
+
+
+
+    2. 若buffer未被修改显示为'--'
+
+
+
+    3. 若buffer只读显示为'%%'
+
+
+
+    4. 若buffer只读单被修改,显示为'%*'
+
+
+
+    + mode-line-frame-identification
+
+
+
+    该变量可以用来标识当前frame
+
+
+
+    在图形界面下,该变量默认为" ". 在字符界面下,该变量默认为"-%F "
+
+
+
+    + mode-line-buffer-identification
+
+
+
+    该变量可以用来标识当前buffer.
+
+
+
+    它的默认值为"%12b",附带一些text properties
+
+
+
+    + mode-line-position
+
+
+
+    该变量标识光标所在当前buffer的位置.
+
+
+
+    它默认为"%p",显示当前所在位置是整个buffer的百分之多少处.
+
+
+
+    但也可以给它添加注入buffer大小,行号,列号等信息
+
+
+
+    + vc-mode
+
+
+
+    该变量指示buffer所关联的文件纳入的版本控制信息.
+
+
+
+    若文件未纳入版本控制系统中,则该变量值为nil
+
+
+
+    + mode-line-modes
+
+
+
+    该变量显示buffer所开启的major mode,minor mode,递归编辑层次,buffer所关联进程的状态,是否出于narrow状态
+
+
+
+    该变量值中又包含了三个变量:
+
+    - mode-name
+
+
+
+    Major Mode的名称
+
+
+
+    - mode-line-process
+
+
+
+    与当前buffer相关的process的状态.
+
+
+
+    该变量紧挨着major-name显示. 默为nil
+
+
+
+    - minor-mode-alist
+
+
+
+    该变量是一个buffer local变量,它指示了如何显示minor-mode.
+
+
+
+    该变量的元素组成格式为`(MINOR-MODE-VARIABLE MODE-LINE-STRING)'
+
+
+
+    当MINOR-MODE-VARIABLE的值为非nil时,则显示MODE-LINE-STRING,否则什么也不显示
+
+
+
+
+
+    + mode-line-remote
+
+
+
+    该变量用来显示当前buffer的`default-directory'是否是远程目录
+
+
+
+    + mode-line-client
+
+
+
+    该变量用来标识哪些frame为`emacsclient'的frame
+
+
+
+    + global-mode-string
+
+
+
+    若开启了该minor mode的话,该变量的内容会显示在`which-func-mode' minor mode后,否则会显示在`mode-line-modes'后
+
+
+
+
+
+*** %-constructs说明
+
+    类似format函数中的格式字符串,%-constructs的格式为`%[整数]标识',这里的整数指定了最小的长度,标识指定了替换为何值
+
+    | %% | %字符                                                                                                                                                                                                                                                |
+
+    | %b | 当前buffer名称                                                                                                                                                                                                                                       |
+
+    | %c | 当前光标所在的列数                                                                                                                                                                                                                                   |
+
+    | %e | 当Emacs接近内存耗尽时,显示警告信息,否则为空                                                                                                                                                                                                          |
+
+    | %f | 当前buffer访问的文件名称                                                                                                                                                                                                                             |
+
+    | %F | 当前frame的title或name                                                                                                                                                                                                                               |
+
+    | %i | 当前buffer可访问部分的size,单位为字节                                                                                                                                                                                                                |
+
+    | %I | 类似%i,但以更人性化的方式显示,例如会转换为多少k,M,G                                                                                                                                                                                                  |
+
+    | %l | 当前光标所在的行数                                                                                                                                                                                                                                   |
+
+    | %n | 若当前buffer出于narrow状态,则显示"Narrow",否则显示空                                                                                                                                                                                                 |
+
+    | %P | The percentage of the buffer text above the *top* of window, or ‘Top’, ‘Bottom’ or ‘All’.  Note that the default mode line construct truncates this to three characters.                                                                       |
+
+    | %p | The percentage of the buffer text that is above the *bottom* of the window (which includes the text visible in the window, as well as the text above the top), plus ‘Top’ if the top of the buffer is visible on screen; or ‘Bottom’ or ‘All’. |
+
+    | %s | 与当前buffer相关的process的状态                                                                                                                                                                                                                      |
+
+    | %z | 键盘,中断,buffer编码格式的信息                                                                                                                                                                                                                       |
+
+    | %Z | 类似%z,但还包括换行符的信息                                                                                                                                                                                                                          |
+
+    | %* | 若buffer只读,显示"%",若buffer被修改过,显示"*",否则显示"-"                                                                                                                                                                                            |
+
+    | %+ | 类似%*,但若一个read-only buffer被修改了,它显示"*",而%*会显示"%"                                                                                                                                                                                      |
+
+    | %& | 若buffer被修改则显示"*",否则显示"-"                                                                                                                                                                                                                  |
+
+    | %[ | 显示递归编辑的层次,多少层就有多少个"["                                                                                                                                                                                                               |
+
+    | %] | 显示递归编辑的层次,多少层就有多少个"]"                                                                                                                                                                                                               |
+
+    | %- | 使用"-"填充剩余的mode line                                                                                                                                                                                                                            |
+
+
+
+*** Mode Line中的text properties
+
+    某些text properties在mode line中有其特殊的意义:
+
+    + `face'属性影响text的显示
+
+    + `help-echo'属性提供了光标指向他text后弹出的帮助内容
+
+    + `keymap'属性是的text能处理鼠标点击事件
+
+
+
+*** 模拟mode line的显示结果
+
+    + (format-mode-line format &optional face window buffer)
+
+      该函数,将format当成是`mode-line-format'的值,模拟当指定的WINDOW显示指定BUFFER时会显示怎样的mode-line.
+
+
+
+    参数face指定了那些没有指定`face'属性的text应该如何显示
+
+*** Window Header Line
+
+    head-line与mode-line极其类似,它的显示是由变量`header-line-format'指定的. 且`header-line-format'的格式与`mode-line-format'的格式一样
+
+
+
+    当一个Window只能显示一行内容时,则它不会显示header line.
+
+
+
+    若一个window只能显示两行内容时,它无法同时显示mode-line和header-line. 这时若mode-line不为nil,则会显示mode-line而不是header-line
+
+
+
+    + (window-header-line-height &optional window)
+
+      该函数返回指定WINDOW的header line的高度,单位为像素
+
+
+
+** Imenu
+
+   Imenu会在imenu菜单(参见[[info:emacs#Imenu][Imenu]])中列出buffer中的语法定义名称或章节名称,然后通过点击菜单中的定义名称或章节名称就能直接跳转到相应位置上了.
+
+   + 命令(imenu-add-to-enubar NAME)
+
+
+
+   该命令会产生一个名为NAME的imenu菜单
+
+
+
+   当然,使用Imenu的前提是,能够产生一个定义/章节名称与buffer位置之间关系的索引.
+
+*** 通过设置`imenu-generic-expression'定义Imenu
+
+
+
+    通过设置`imenu-generic-expression'定义Imenu,是最常用的方式
+
+
+
+    + imenu-generic-expression
+
+
+
+    该变量为一个list,它指定了使用那种正则表达式来定位定义/章节的位置. 它的元素可以是以下两种格式
+
+
+
+    - (SUB-MENU-TITLE REGEXP INDEX)
+
+
+
+    这里SUB-MENU-TITLE表示通过REGXP找到的项目应该放到名为`SUB-MENU-TITLE'的子菜单中.
+
+    若其值为nil,则表示找到的项目直接放到Imenu菜单中.
+
+
+
+    参数REGEXP则表示buffer中任何匹配REGEXP的内容都被认为是定义/章节.
+
+
+
+    参数INDEX则说明了,REGEXP中哪个匹配的子组为定义/章节的名称
+
+
+
+    - (SUB-MENU-TITLE REGEXP INDEX FUNCTION ARGUMENTS...)
+
+
+
+    这种格式的`SUB-MENU-TITLE',`REGEXP'和`INDEX'与上面格式的意义相同.
+
+
+
+    不同之处在于,当点击Imenu中的相关项是,会调用`FUNCTION'函数,且传入参数为:菜单项的名称,定义的位置和参数ARGUMENTS
+
+
+
+    + imenu-case-fold-search
+
+
+
+    该变量决定了使用`imenu-generic-expression'中的正则表达式匹配buffer内容时,是否大小写敏感.
+
+
+
+    默认为t,表示大小写敏感.
+
+
+
+    + imenu-syntax-alist
+
+
+
+    该变量是一个元素为'(CHARACTER-OR-STRING . SYNTAX-DESCRIPTION)的alist.
+
+
+
+    当Imenu处理`imenu-generic-expression'时,会使用该变量来修改当前buffer的syntax table(通过调用`modfy-syntax-entry'来实现,具体参见[[info:elisp#Syntax%20Table%20Functions][Syntax Table Functions]]).
+
+*** 通过设置`imenu-prev-index-position-function'和`imenu-extract-index-name-function'来定义Imenu
+
+    + imenu-prev-index-position-function
+
+
+
+    该变量的函数,需要从光标开始处向前扫描,并将光标定位到发现定义/章节的位置,然后返回非nil值.
+
+
+
+    若向前再找不到任何定义/章节了,则该函数需要返回nil
+
+
+
+    + imenu-extract-index-name-function
+
+
+
+    该变量的函数,需要从光标所在位置出抽取出定义/章节的名字
+
+
+
+*** 通过设置`imenu-create-index-function'来定义Imenu
+
+
+
+    该变量的函数不接受参数,并且返回当前buffer的index alist.
+
+
+
+    该变量的默认值为`imenu-default-create-index-function',该函数通过调用`imenu-prev-index-position-function'和`imenu-extract-index-name-function'的值来产生index alist. 但若这两个参数有一个为nil,则根据`imenu-generic-expression'来产生index alist
+
+
+
+    这里index alist的元素有三种格式
+
+    + '(INDEX-NAME . INDEX-POSITION)
+
+
+
+    表示选择INDEX-NAME项,则跳转到INDEX-POSITION位置
+
+
+
+    + '(INDEX-NAME INDEX-POSITION FUNCTION ARGUMENTS...)
+
+
+
+    表示选择INDEX-NAME项,则执行`(funcall FUNCTION INDEX-NAME INDEX-POSITION ARGUMENTS...)'
+
+
+
+    + '(SUB-MENU-TITLE . SUB-INDEX-ALIST)
+
+
+
+    表示根据SUB-INDEX-ALIST创建子菜单SUB-MENU-TITLE

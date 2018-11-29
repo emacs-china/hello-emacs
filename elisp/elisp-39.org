@@ -1,0 +1,360 @@
+#+TITLE: Symbol相关函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#symbol相关函数][Symbol相关函数]]
+  - [[#symbol组成部分][symbol组成部分]]
+  - [[#获取symbol][获取symbol]]
+  - [[#其他函数][其他函数]]
+  - [[#symbol中的property][symbol中的property]]
+  - [[#标准symbol-property说明][标准symbol property说明]]
+
+* Symbol相关函数
+
+** symbol组成部分
+
+   * (symbol-name symbol)
+
+   获取symbol的名称
+
+   #+BEGIN_SRC emacs-lisp
+
+     (symbol-name 'foo)
+
+   #+END_SRC
+
+
+
+   #+RESULTS:
+
+   : foo
+
+
+
+   * (symbol-function symbol)
+
+   获取symbol的函数cell
+
+
+
+   * (indirect-function symbol-or-function &optional noerror)
+
+   类似symbol-function,但若symbol的function cell为另一个symbol,则它会返回(indirect-function 另一个symbol)的值
+
+
+
+   参数symbol-or-function表示它也可以是function类型的,若类型为function,则直接返回该function参数
+
+
+
+   *
+
+
+
+   * (fset symbol definition)
+
+   设置symbol的函数cell为definition
+
+** 获取symbol
+
+   * (make-symbol name)
+
+   创建uninterned symbol
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq sym (make-symbol "foo"))          ; => foo
+
+     (eq sym 'foo)                           ; => nil ,uninterned symbol和interned symbol是不一样的
+
+   #+END_SRC
+
+
+
+   * (intern name &optoinal obarray)
+
+   返回obarray中名为name的symbol,若obarray中不存在名为name的symbol,则新建一个symbol.
+
+
+
+   obarray默认为全局变量`obarray`
+
+
+
+   参数name必须是字符串类型
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq sym (intern "foo"))               ; => foo
+
+     (eq sym 'foo)                           ; => t
+
+     (setq sym1 (intern "foo" other-obarray)) ; => foo
+
+     (eq sym1 'foo)                           ; => nil
+
+   #+END_SRC
+
+
+
+   * (intern-soft name &optional obarray)
+
+   类似intern,但若obarray中不存在名为name的symbol,则返回nil
+
+
+
+   且参数name可以为symbol类型和字符串类型
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (intern-soft "frazzle")                 ; No such symbol exists. => nil
+
+     (make-symbol "frazzle")                 ; Create an uninterned one. => frazzle
+
+     (intern-soft "frazzle")                 ; That one cannot be found. => nil
+
+     (setq sym (intern "frazzle"))           ; Create an interned one. => frazzle
+
+     (intern-soft "frazzle")                 ; That one can be found! => frazzle
+
+     (eq sym 'frazzle)                       ; And it is the same one. => t
+
+   #+END_SRC
+
+
+
+** 其他函数
+
+   * (mapatoms func &optional obarray)
+
+   对obarray中包含的每个symbol,都调用func来处理,然后返回nil.
+
+
+
+   obarray默认为全局的obrray变量
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq count 0)
+
+
+
+     (defun count-syms (s)
+
+       (setq count (1+ count)))
+
+
+
+     (mapatoms 'count-syms)                  ; => nil
+
+     count                                   ; => 54972
+
+   #+END_SRC
+
+
+
+   * (unintern symbol-or-string obarray)
+
+   从obarray中删除指定的symbol
+
+
+
+   删除成功返回t,否则返回nil
+
+
+
+** symbol中的property
+
+   * 获取symbol的property
+
+
+
+   (get symbol property)
+
+
+
+   从symbol的property list中出去出与参数property eq的值,若没有找到,则返回nil
+
+
+
+   (symbol-plist symbol)
+
+
+
+   返回symbol相应的property list
+
+
+
+   (function-get symbol property)
+
+   该函数与get类似,但若参数symbol为另一个函数的别名时,该函数返回实际函数的property的值,而不是别名的property的值
+
+
+
+   * 设置symbol的property
+
+   (put symbol property value)
+
+
+
+   设置symbol中property list的相应property的值.
+
+
+
+   若原property不存在则添加新property和value,否则更新其value
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (put 'fly 'verb 'transitive)            ; =>'transitive
+
+     (put 'fly 'noun '(a buzzing little bug)) ; => (a buzzing little bug)
+
+     (get 'fly 'verb)                         ; => transitive
+
+     (symbol-plist 'fly)                      ; => (verb transitive noun (a buzzing little bug))
+
+   #+END_SRC
+
+
+
+   (setplist symbol plist)
+
+
+
+   覆盖symbol的原property list为参数plist
+
+
+
+   该函数的返回值为参数plist
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setplist 'foo '(a 1 b (2 3) c nil))    ; => (a 1 b (2 3) c nil)
+
+     (symbol-plist 'foo)                     ; => (a 1 b (2 3) c nil)
+
+   #+END_SRC
+
+
+
+** 标准symbol property说明
+
+   * :advertised-binding
+
+   symbol所表示的函数的建议绑定键
+
+
+
+   * char-table-extra-slots
+
+   若symbol所表示的值为char-table类型,则该值指明了能有多少个额外slot
+
+
+
+   * customized-face,face-defface-spc,saved-face,theme-face
+
+   定义了face的方方面面的性质,不要去直接修改这些属性,而应该使用deffac及相关函数
+
+
+
+   * customized-value,save-vlaue,standard-value,theme-value
+
+   这些属性用来记录customizable variable的方方面面的属性,不要去直接修改这些属性,而应该使用defcustom及相关函数
+
+
+
+   * disabled
+
+   若为非nil,则表示该函数不为command
+
+
+
+   * face-documentation
+
+   指定face的说明,该属性由defface自动设置
+
+
+
+   * history-length
+
+   指明了minibuffer中,对指定的history list variable的最大历史存储数量
+
+
+
+   * interactive-form
+
+   symbol表示函数的interactive form. 不要直接修改该属性,使用定义函数时的interactive特殊form
+
+
+
+   * menu-enable
+
+   该属性是一个表达式,根据该表达式的值来决定是否在menu中显示该菜单项
+
+
+
+   * mode-class
+
+   若该属性为`special`,则指定的major mode是`special`的
+
+
+
+   * permanent-local
+
+   若该属性值为非nil,则表示symbol表示的变量是buffer-local的变量, 当更换major mode时,这种变量的值不会被重置
+
+
+
+   * permanent-local-hook
+
+   若该属性值为非nil,则表示当鞥该major mode时,该symbol表示的hook变量不被重置
+
+
+
+   * pure
+
+   该属性值为非nil告诉编译器,该symbol所表示的方法为纯函数方法(即没有副作用). 因此在使用const参数来调用该方法时,在编译期就能执行该方法. 这会让一些本该在运行期报的错误,在编译器就被检查出来.
+
+
+
+   * risky-local-variable
+
+   若该属性值为非nil,表示该symbol表示的变量,不建议设置为file-local variable
+
+
+
+   * safe-function
+
+   标示该symbol标示的函数,是否可以安全的执行
+
+
+
+   * safe-local-eval-function
+
+   标示该symbol标示的函数,是否可以安全的在file-local evaluation form中执行
+
+
+
+   * safe-local-variable
+
+   该属性值应该是一个函数,该函数用来决定该symbol表示的变量是否为safe file-local的
+
+
+
+   * side-effect-free
+
+   非nil表示symbol表示的函数无副作用,该属性用来决定函数的安全性和字节编译优化, *不要尝试手工修改它*
+
+
+
+   * variable-documentation
+
+   该属性为指定变量的说明

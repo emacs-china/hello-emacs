@@ -1,0 +1,1865 @@
+#+TITLE: 操作系统相关
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#操作系统相关][操作系统相关]]
+  - [[#emacs启动说明][Emacs启动说明]]
+    - [[#emacs启动流程][Emacs启动流程]]
+    - [[#emacs相关初始化文件][Emacs相关初始化文件]]
+    - [[#终端相关的library][终端相关的library]]
+    - [[#emacs是如何处理命令行参数的][Emacs是如何处理命令行参数的]]
+  - [[#退出emacs][退出Emacs]]
+    - [[#退出emacs-1][退出Emacs]]
+    - [[#挂起emacs][挂起Emacs]]
+  - [[#操作系统环境相关][操作系统环境相关]]
+  - [[#用户信息][用户信息]]
+  - [[#播放声音][播放声音]]
+  - [[#batch-mode][Batch Mode]]
+  - [[#session管理][Session管理]]
+  - [[#desktop-notificatino][Desktop Notificatino]]
+  - [[#file-notification][File Notification]]
+  - [[#动态加载][动态加载]]
+  - [[#定时器][定时器]]
+- [[#it-blocks-out-all-process-output-since-emacs-accepts-process][It blocks out all process output (since Emacs accepts process]]
+
+* 操作系统相关
+
+** Emacs启动说明
+
+*** Emacs启动流程
+
+    1. 搜索`load-path'中的各个目录,看是否存在`subdirs.el'这个文件,有则执行该文件.
+
+
+
+    `subdirs.el'这个文件正常情况下是由Emacs在安装时自动生成的,它的作用是加载目录中的各个子目录到`load-path'中,并且递归执行子目录中的`subdirs.el'文件
+
+
+
+    2. 在`load-path'中的各目录中寻找`leim-list.el'并加载
+
+
+
+    `leim-list.el'这个文件被用来注册输入法. 并且Emacs在搜索`leim-list.el'时会跳过那些存放Emacs自带库的目录.
+
+
+
+    3. 设置变量`before-init-time'的值为当前时间. 设置变量`after-init-time'为nil,表示Emacs还未初始化完成.
+
+
+
+    4. 根据`LANG'环境变量设置language environment 和 the terminal coding system
+
+
+
+    5. 对命令行参数进行基本的处理,这一步处理掉的是emacs本身支持的那些参数.
+
+
+
+    6. 若不是运行在batch模式下,Emacs根据`initial-window-system'的值来为不同的窗口系统进行不同的初始化.
+
+
+
+    某个窗口系统分别加载哪个初始化函数,是根据变量`window-system-initialization-alist'来决定的.
+
+
+
+    存放初始化函数的文件路径应该为`term/窗口系统类型-win.el'中
+
+
+
+    7. 触发`before-init-hook'
+
+
+
+    8. 在可以的情况下,创建图形化的frame.
+
+
+
+    若设置了参数`--batch'或`--daemon'或`--script'则直接跳过这一步
+
+
+
+    9. 初始化最初的frame的显示界面,如果需要的话,还会设置菜单栏和工具栏.
+
+
+
+    若系统支持图形化的frame,则不管当前frame是否为图形化的frame,都会去设置工具栏,因为在后面的操作中有可能再次创建图形化frame
+
+
+
+    10. 使用函数`custom-reevaluate-setting'来重新初始化变量`custom-delayed-init-variables'中的各成员的值.
+
+
+
+    11. 若`site-start'库存在,则加载之.
+
+
+
+    但若设置了参数`-Q'或`--no-site-file'则跳过这一步
+
+
+
+    12. 加载用户的初始化文件,用户初始化文件可能是`~/.emacs',`~/.emacs.el',`~/.emacs.d/init.el'
+
+
+
+    但若设置了参数`-q',`-Q'或`--batch'则跳过这一步
+
+
+
+    13. 若`default'库存在,则加载之.
+
+
+
+    但若变量`inhibit-default-init'为非nil,或设置了参数`-q',`--batch'则跳过这一步
+
+
+
+    14. 尝试从变量`abbrev-file-name'变量指定的文件中加载缩写配置信息.
+
+
+
+    若设置了参数`--batch',则跳过这一步
+
+
+
+    15. 若`package-enable-at-startup'为非nil,则Emacs调用函数`package-initialize'来激活所有的已安装的第三方Emacs Lisp包. 具体参见[[info:elisp#Packaging%20Basics][Packaging Basics]]
+
+
+
+    16. 设置变量`after-init-time'的时间为当前时间,表示初始化过程已经完成
+
+
+
+    17. 触发`after-init-hook'
+
+
+
+    18. 若`*scratch*' buffer存在,且出于Fundamental mode下,则根据变量`initial-major-mode'的值却换Major Mode
+
+
+
+    19. 若在文本终端环境启动的Emacs,则还会加载与终端相关的lisp library,并触发`tty-setup-hook'
+
+
+
+    20. 若`inhibit-startup-echo-area-message'为nil,则在echo area显示初始信息
+
+
+
+    21. 处理尚未被处理的命令行参数,这一步处理的是用户自定义的参数
+
+
+
+    22. 若设置了参数`--batch'则此时退出
+
+
+
+    23. 若`initial-buffer-choice'为字符串,则访问该字符串所表示的文件/目录
+
+
+
+    若为函数,则不带参数调用该函数,并根据返回结果选择显示哪个buffer
+
+
+
+    若`*scratch*' buffer存在且无内容,则插入`initial-scratch-message'变量值到buffer中
+
+
+
+    24. 触发`emacs-startup-hook'
+
+
+
+    25. 调用`frame-notice-user-settings',该函数根据初始化文件修改选中的frame参数
+
+
+
+    26. 触发`window-setup-hook'
+
+
+
+    27. 显示`startup screen' buffer
+
+
+
+    但若`inhibit-startup-screen'或`inital-buffer-choice'为非nil,或设置了`--no-splash'/`-Q'命令行参数,则跳过这一步
+
+
+
+    28. 若设置了选项`--daemon',则调用`server-start'函数,并从控制终端相分离(参见[[info:emacs#Emacs%20Server][Emacs Server]])
+
+
+
+    29. 若Emacs由X Session Manager调起,则会调用`emacs-session-restore'函数,调用参数为之前X Session的ID
+
+*** Emacs相关初始化文件
+
+    用户初始化文件可能是`~/.emacs',`~/.emacs.el',`~/.emacs.d/init.el'
+
+
+
+    有些Emacs会有一个名为`default.el'的默认初始化文件,若在`load-path'中能找到该文件的话,则当启动Emacs,会加载该文件.
+
+
+
+    个人用户的初始化文件优先级比`default.el'的要高, *若在加载个人初始化文件时将`inhibit-default-init'设置非nil,则不再加载`default.el'了*
+
+
+
+    当然`-q'和`-Q'参数,使得Emacs既不加载个人初始化文件,也不加载默认初始化文件
+
+
+
+    还有一个配置site相关的初始化文件叫做`site-start.el',Emacs在加载用户初始化文件前会加载该文件,但你可以通过参数`--no-site-file'来跳过加载该文件
+
+
+
+    + 配置项site-run-file
+
+
+
+    该变量指定了与site相关配置的初始化文件的文件名,默认为`site-start'
+
+
+
+    The only way you can change it with real effect is to do so before
+
+
+
+    + 配置项`inhibit-default-init'
+
+
+
+    该变量指定是否不加载默认初始化文件`default.el',默认为nil表示加载
+
+
+
+    + before-init-hook
+
+
+
+    在加载所有的初始化文件(`site-start.el',个人初始化文件,`default.el')前触发
+
+
+
+    + after-init-hook
+
+
+
+    加载完所有的初始化文件后,在加载与终端相关library前(若在文本终端下启动的Emacs)或处理命令行参数前触发
+
+
+
+    + emacs-startup-hook
+
+
+
+    在处理完命令行参数后触发
+
+
+
+    若在batch模式下,Emacs不触发该hook
+
+
+
+    + window-setup-hook
+
+
+
+    类似`emacs-startup-hook',但是它触发的时间要晚一点,在设置完frame参数之后触发
+
+
+
+    + user-init-file
+
+
+
+    该参数的值为用户初始化文件的绝对路径名. 若实际加载的初始化文件为.elc文件,则该值为相应的源代码路径
+
+
+
+    + user-emacs-directory
+
+
+
+    该参数的值为`.emacs.d'目录的路径. 除了MS-DOS平台,其他平台上该值都是`~/.emacs.d'
+
+*** 终端相关的library
+
+    Emacs在不同类型的终端下启动时,都会加载不同的终端相关的library. 该library的名字由`term-file-prefix'变量的值(默认为"term/")与终端类型(通常由环境变量`TERM'表示)组合而成.
+
+
+
+    该terminal-specific librar的作用常用来使得Emacs能够识别special keys. 若操作系统的Termcap或Terminfo项无法完全识别所有的终端功能键,则可以需要修改变量`input-decode-map'的值
+
+
+
+    若终端类型名中包含`-'或`_',且使用改名字查找library时未找到,则会尝试去除终端名中最后那个`_'或`-'部分后,作为终端名称在此查询library.
+
+
+
+    可以在初始化文件中通过设置`term-file-prefix'为nil,以阻止Emacs加载terminal specific library
+
+
+
+    在Emacs完成初始化文本终端后,会触发`tty-setup-hook',You could use this hook to define initializations for terminals that do not have their own libraries.
+
+
+
+    + term-file-prefix
+
+
+
+    若变量为nil表示不加载终端初始化文件. 否则Emacs加载名为 =(load (concat term-file-prefix (getenv "TERM"))= 的文件作为初始化终端的脚本.
+
+
+
+    + tty-setup-hook
+
+
+
+    该hook在Emacs初始化万一个新文本终端后触发.(This applies when Emacs starts up in non-windowed mode, and when making a tty ‘emacsclient’ connection.)
+
+
+
+    + (suspend-tty &optional TTY)
+
+
+
+    参数TTY为Emacs使用的终端. 该函数挂起指定的终端,此时使用该终端的Frame依然存在,但是Emacs并不再从该终端读取任何输入,也不再更新使用该终端的frame.
+
+
+
+    参数TTY可以使一个终端对象,也可以是一个frame(表示该frame所在的终端),或nil(表示当前frame所在的终端)
+
+
+
+    若TTY已经出于挂起状态,该函数不做任何事情.
+
+
+
+    该函数还会触发`suspend-tty-functions',以终端对象作为参数来调用其中的每个函数.
+
+
+
+    + (resume-tty &optional tty)
+
+
+
+    参数TTY为之前挂起的终端设备,该函数恢复该终端,并触发`resume-tty-functions',同样以终端对象作为参数来调用其中的每个函数.
+
+
+
+    若TTY不处于挂起状态,则该函数不做任何事
+
+
+
+    If the same device is already used by another Emacs terminal, this function signals an error.
+
+
+
+    + (controlling-tty-p &optional tty)
+
+
+
+    判断TTY是否为控制终端.
+
+
+
+    参数TTY可能是终端对象,frame(表示该frame所在的终端),或nil(表示当前frame所在的终端)
+
+
+
+*** Emacs是如何处理命令行参数的
+
+
+
+    当使用emacs --script xxx.el args时,为了获取command-line参数,可以在xxx.el中使用变量`argv`获取参数列表
+
+    + (command-line)
+
+
+
+    该函数解析调用Emacs时的command line,处理该command line,加载用户初始化文件,然后显示启动信息
+
+
+
+    + command-line-processed
+
+
+
+    该变量标识了,comand line是否已经被处理过了, 若处理过了则该值为t
+
+
+
+    当通过`dump-emacs'函数来redump Emacs时,常常会先将该变量设为nil,这样可以让新dumped Emacs会去再一次处理它的command-line arguments
+
+
+
+    + command-switch-alist
+
+      该变量是素为`(option . handler-function)'的alist. 这里
+
+
+
+    - option为command-line argument中的`-option'参数(*带-*),为字符串格式
+
+
+
+    - handler-function为相应的处理函数名,它接收option为参数
+
+
+
+    若command line option后还带了其他参数,则在handler-function中可以通过变量`command-line-args-left'来获取剩余的命令行参数
+
+
+
+    + command-line-args
+
+      传递给Emacs的完整command-line argument列表
+
+
+
+    + command-line-args-left
+
+      尚未处理的command-line argument列表. *自定义函数有时需要修改该变量*
+
+
+
+    + command-line-functions
+
+      该变量是一系列函数的列表,这些函数用来处理无法识别的command-line参数.
+
+
+
+    每次处理一个没有特殊意义的command line argument时,该变量中的函数都会被依次调用, *直到有一个函数返回非nil的值*
+
+
+
+    *这些函数被调用时并不传递参数,但在这些函数内可以通过变量`argi'获取当前待处理的command-line argument. 可以通过变量`command-line-args-left'获取尚未被处理的command line arguments*.
+
+
+
+    *若某函数除了当前待处理的函数,同时也把后面的参数給处理过了,则需要把后面那些被处理过的参数从`command-line-args-left'中删除*
+
+
+
+    *若某函数已经处理了当前代处理的参数,则一定记得返回非nil值*. *若所有的函数都返回nil,该参数会被认为是Emacs要打开的文件名称*
+
+
+
+** 退出Emacs
+
+*** 退出Emacs
+
+    + 命令(kill-emacs &optional exit-data)
+
+
+
+    该命令触发`kill-emacs-hook',并退出Emacs进程
+
+
+
+    参数`EXIT-DATA'若为整数,则表示Emacs进程的退出码
+
+
+
+    参数`EXIT-DATA'若为字符串,则表示Emacs退出时输出的内容
+
+
+
+    + kill-emacs-hook
+
+
+
+    该hook在`kill-emacs'真正退出Emacs进程前被触发
+
+
+
+    *由于`kill-emacs'被调用的时候可能已经与用户失去了交互,因此该hook的参数不能包含与用户交互的语句.*
+
+
+
+    若需要在退出时与用户交互,使用下面的`kill-emacs-query-functions'
+
+
+
+    + kill-emacs-query-functions
+
+
+
+    当`save-buffers-kill-terminal'(C-x C-c)尝试退出Emacs时,它会触发该hook.
+
+
+
+    在该hook的函数中可以继续询问用户确认是否退出. 若该hook中任何一个函数返回nil,则`save-buffer-kill-emacs'并不会真正退出Emacs,并且也不执行hook之后的函数.
+
+
+
+    *直接调用`kill-emacs'并不会触发该hook*
+
+*** 挂起Emacs
+
+    在 *文本终端(图形终端下无效)* 中调用Emacs的情况下,可以对Emacs执行挂起操作(对于不支持挂起操作的shell来说,该功能只是临时再启动一个shell而已).
+
+
+
+    + 命令(suspend-emacs &optional string)
+
+
+
+    该函数阻塞并挂起Emacs并将控制权交回给它的父进程. 当重新激活Emacs后,该函数返回nil
+
+
+
+    该函数仅当Emacs是在控制终端下启动时才有用.to relinquish control of other tty devices, use‘suspend-tty’
+
+
+
+    在挂起Emacs之前,你必须删除该Emacs在其他终端上的frame,否则该函数会抛出异常. 参见[[info:elisp#Multiple%20Terminals][Multiple Terminals]]
+
+
+
+    若参数string为非nil,则字符串中的每个字符都会发送到上层shell,作为 *终端输入(注意:不是作为进程输出)  该输入会被shell读取并执行*
+
+
+
+    在挂起Emacs前,`suspend-emacs'会触发`suspend-hook'.在恢复Emacs后,`suspend-emacs'会触发`suspend-resume-hook'
+
+
+
+    + suspend-hook
+
+
+
+    Emacs挂起前触发
+
+
+
+    + suspend-resume-hook
+
+
+
+    Emacs恢复后触发
+
+
+
+    + 命令(suspend-frame)
+
+
+
+    挂起当前frame.
+
+
+
+    若出于图形界面下,则它调用函数`iconify-frame'最小化frame.
+
+
+
+    若出于文本界面下,则根据当前frame是否出于控制终端下,而调用`suspend-emacs'或`suspend-tty'
+
+** 操作系统环境相关
+
+   * system-configureation
+
+
+
+   the standard GNU configuration name for the hardware/software configuration of your system,字符串类型
+
+
+
+   * system-type
+
+
+
+   表示操作系统类型的symbol
+
+
+
+   * 'aix
+
+   * 'berkeley-unix
+
+   * 'cygwin
+
+   * 'darwin
+
+   * 'gnu
+
+   * 'gnu/linux
+
+   * 'gnu/kfreebsd
+
+   * hpux
+
+   * irix
+
+   * ms-dos
+
+   * usg-unix-v
+
+   * windows-nt
+
+
+
+   * 配置项mail-host-address
+
+
+
+   email地址,若该参数为非nil,则会用来替代`system-name'作为email地址.
+
+
+
+   * 命令(getenv var &optional frame)
+
+
+
+   获取环境变量VAR的值.若找不到对应的环境变量,返回nil
+
+
+
+   参数VAR为字符串
+
+
+
+   在Emacs中环境变量存放在变量`process-environment'中
+
+
+
+   * 命令(setenv variable &optional value substitute)
+
+
+
+   该命令设置环境变量VARIABLE的值为VALUE,返回VARIABLE的新值或nil(表示从环境中删除该变量)
+
+
+
+   参数VARIABLE为字符串类型,VALUE可以为nil或字符串
+
+
+
+   若VALUE为nil或忽略(interactively with prefix argument)时,`setenv'从环境变量中删除VARIABLE, *这时`setenv'返回被删除的VARIABLE*
+
+
+
+   若参数SUBSTITUTE为非nil,Emacs调用函数`substitute-env-vars'来扩展环境变量的值为VALUE(什么意思??)
+
+
+
+   * process-environment
+
+
+
+   保持了系统变量的值,`getenv'和`setenv'都是通过设置改变量的值进行的.
+
+
+
+   在实际应用中,经常会用let form临时改变该参数的值
+
+
+
+   若参数中包括了重复的元素,则只有地一个元素生效
+
+
+
+   * initial-environment
+
+
+
+   改变了存储的是Emacs从父进程中集成到的环境变量
+
+
+
+   * path-separator
+
+
+
+   在搜索路径变量(PATH)中分隔各路径的分隔符. unix类操作系统为":",win下为";"
+
+
+
+   * (parse-colon-path path)
+
+
+
+   接受搜索路径的字符串($PATH的值),并根据path-separator进行分割,返回各个目录组成的list
+
+   #+BEGIN_SRC emacs-lisp
+
+     (parse-colon-path ":/foo:/bar")
+
+     ;; => (nil "/foo/" "/bar/")
+
+   #+END_SRC
+
+
+
+   * invocation-name
+
+
+
+   调用的Emacs可执行文件的名称,不包括目录名称
+
+
+
+   * invocation-directory
+
+
+
+   调用的Emacs,可执行文件所在的目录,若无法决定,则返回nil
+
+
+
+   * installation-directory
+
+
+
+   若为非nil,则指定了当Emacs无法在标准安装路径下找`lib-src'和`etc'子目录时,Emacs应该到在哪个目录下查找`lib-src'和`etc'子目录.
+
+
+
+   * (load-average &optional use-float)
+
+
+
+   返回最近1分钟,5分钟和15分钟的系统负载
+
+
+
+   默认情况下该函数返回的值为百分比,但若参数use-float为非nil,则直接使用小数代替
+
+   #+BEGIN_SRC emacs-lisp
+
+     (load-average)
+
+     ;; => (169 48 36)
+
+     (load-average t)
+
+     ;; => (1.69 0.48 0.36)
+
+   #+END_SRC
+
+
+
+   * (emacs-pid)
+
+
+
+   emacs的pid
+
+
+
+   * tty-erase-char
+
+
+
+   该变量存储的是在Emacs启动前,系统d额终端驱动所选择的删除键
+
+
+
+** 用户信息
+
+
+
+   * (user-login-name &optional uid) / user-login-name
+
+
+
+   获取username
+
+
+
+   若环境变量`LOGNAME'或`USER'有值,则返回该值. 否则根据 *effective UID(而不是real UID)* 计算该值
+
+
+
+   * (user-real-login-name) / user-real-login-name
+
+
+
+   该函数根据Emacs的real UID计算用户名,而不管`LOGNAME',`USER'和effective UID
+
+
+
+   * (user-full-name &optional uid) / user-full-name
+
+
+
+   该函数获取用户的全名
+
+
+
+   若环境变量`NAME'有值,则返回它.
+
+
+
+   若Emacs进程的uid不属于任何已知用户,则返回"unkown"
+
+
+
+   参数uid可以为nil,或一个表示uid的数字或一个表示登录名的字符串. 若根据指定的uid无法找到名称,则返回nil
+
+
+
+   * (user-real-uid)
+
+
+
+   用户的real uid,若uid太大了超过整数的范围,则可能使用浮点数
+
+
+
+   * (user-uid)
+
+
+
+   用户的effective uid
+
+
+
+   * (group-gid)
+
+
+
+   Emacs进程的effective GID
+
+
+
+   * (group-real-gid)
+
+
+
+   Emacs进程的real GID
+
+
+
+   * (system-users)
+
+
+
+   列出该系统所有的用户名列表.
+
+
+
+   若Emacs不能获取到这些信息,则返回只包含`user-real-login-name'的列表
+
+   #+BEGIN_SRC emacs-lisp
+
+     (system-users)
+
+     ;;("cl-builder"
+
+     "dictd" "statd" "dnsmasq" "memcache" "sshd" "ftp" "mysql" "Debian-exim" "lujun9972" "saned" "hplip" "speech-dispatcher" "rtkit" "pulse" "kernoops" "usbmux" "avahi" "avahi-autoipd" "whoopsie" "lightdm" "colord" "messagebus" "syslog" "libuuid" "nobody" "gnats" "irc" "list" "backup" "www-data" "proxy" "uucp" "news" "mail" "lp" "man" "games" "sync" "sys" "bin" "daemon" "root")
+
+   #+END_SRC
+
+
+
+   * (system-groups)
+
+
+
+   系统中所有的用户组列表.
+
+
+
+   若Emacs不能获取到这些信息,则返回nil
+
+   #+BEGIN_SRC emacs-lisp
+
+     (system-groups)
+
+     ;;("cl-builder" "dictd" "memcache" "ftp" "mysql" "winbindd_priv" "Debian-exim" "sambashare" "lujun9972" "saned" "rtkit" "utempter" "pulse-access" "pulse" "avahi" "avahi-autoipd" "ssh" "mlocate" "whoopsie" "netdev" "nopasswdlogin" "lightdm" "ssl-cert" "lpadmin" "colord" "scanner" "bluetooth" "messagebus" "fuse" "syslog" "crontab" "libuuid" "nogroup" "users" "games" "staff" "plugdev" "sasl" "video" "utmp" "shadow" "gnats" "src" "irc" "list" "operator" "backup" "www-data" "dip" "audio" "sudo" "tape" "floppy" "cdrom" "voice" "fax" "dialout" "kmem" "proxy" "man" "uucp" "news" "mail" "lp" "disk" "tty" "adm" "sys" "bin" "daemon" "root")
+
+   #+END_SRC
+
+** 播放声音
+
+   * (play-sound sound)
+
+
+
+   播放指定SOUND.
+
+
+
+   参数SOUND的格式为'(sound PROPERTIES...),其中PROPERTIES可以是以下keyword参数
+
+
+
+   * :file FILE
+
+
+
+   声音文件的地址. sound-file必须是.wav或.au格式的. 可以是绝对路径或相对`data-directory'的相对路径
+
+
+
+   * :data DATA
+
+
+
+   表示使用DATA作为声音的内容,而不用从:file中读取.
+
+
+
+   参数DATA必须是包含声音比特流的字符串
+
+
+
+   * :volume VOLUME
+
+
+
+   指定了音量的大小. 取值范围从0到1
+
+
+
+   * :device DEVICE
+
+
+
+   指定通过哪台设备播放声音. DEVICE为字符串
+
+
+
+   * (play-sound-file file &optional volume device)
+
+
+
+   播放声音文件
+
+
+
+   * play-sound-functions
+
+
+
+   在播放声音前,会触发该hook. 每个函数都接受一个参数:描述sound的plist
+
+
+
+   * (set-message-beep SOUND)
+
+
+
+   设置beep蜂鸣时的声音.
+
+
+
+   参数SOUND可以是nil,'asterisk,'exclamation,'hand,'question,'ok或'silent
+
+** Batch Mode
+
+   在启动Emacs时若带了参数`batch'会使得Emacs进入batch mode,这种状态下的Emacs不能与用户交互,任何输出到echo area的信息都会输出到Emacs的stdout, 任何从minibufer读取的输入都被链接到Emacs的stdin中.
+
+
+
+   该模式常用于使用Emacs来运行某个elisp程序,程序运行完成后,Emacs就退出了.
+
+
+
+   * noninteractive
+
+
+
+   该参数指明了Emacs是否运行在Batch Mode下
+
+** Session管理
+
+
+
+   Emacs支持X Session Management Protocol,该协议用于suspend/restart应用程序.
+
+   在X window系统中,一个名为"session manager"的程序负责保持正在运行的程序的状态.
+
+   当X server关闭时,session manager会要求应用程序保存它们的状态,并推迟X server关闭直到收到应用程序的回应. 此时应用程序也可能会取消这次关闭.
+
+
+
+   当session manager重启挂起的session时,它会引导应用程序分别加载自己保存的状态.
+
+   session manager是通过给应用程序调用是添加一个特殊的参数来引导应用程序加载状态的.
+
+   对于Emacs来说,该参数为"--smid SESSION"
+
+
+
+   * emacs-save-session-functions
+
+
+
+   Emacs通过调用该hook来支持状态的保存.
+
+
+
+   当session manager通知Emacs说window系统要关闭时,Emacss会调用该hook中的函数.
+
+   每个函数调用是都不带参数,并且会将当前buffer设置为临时buffer.
+
+   最终,Emacs保持buffer到文件中,该文件被成为"session file"
+
+
+
+   当session manager重启挂起的Emacs时,Emacs会自动通过执行函数`emacs-session-restore'来加载session file
+
+
+
+   若`emacs-save-session-functions'中有函数返回非nil的值,则Emacs会通知Session manager取消这次关闭.
+
+** Desktop Notificatino
+
+
+
+   若Emacs编译时开启了D-Bus支持,则通过加载`notifications'库,Emacs可以给某些操作系统发送"通知"
+
+
+
+   * (notifications-notify &rest params)
+
+
+
+   通过D-Bus,使用Freedesktop notification protocol发送通知,该函数返回一个整数作为通知的id
+
+
+
+   参数params可以是如下keyword参数
+
+
+
+   * :bus BUS
+
+
+
+   D-Bus bus. 该参数只有在bus不是`:session'时使用
+
+
+
+   * :title TITLE
+
+
+
+   通知的标题
+
+
+
+   * :body TEXT
+
+
+
+   通知的内容. 某些notification server甚至支持HTML标签
+
+
+
+   * :app-name NAME
+
+
+
+   发送通知的应用程序名称. 默认为`notifications-application-name'
+
+
+
+   * :replaces-id ID
+
+
+
+   表示该通知要替代指定id的原先通知. ID必须是之前`notifications-notify'调用的返回值
+
+
+
+   * :app-icon ICON-FILE
+
+
+
+   通知的图标文件. 若ICON-FILE为nil则不显示图标. 默认为`notifications-application-icon'
+
+
+
+   * :actions (KEY TITLE KEY TITLE...)
+
+
+
+   一系列要应用的动作. KEY和TITLE都是字符串. 其中TITLE会在通知上以按钮的形式展现.
+
+
+
+   若要设置默认动作(通常该动作在点击notification时触发)的key为"default".
+
+
+
+   * :timeout TIMEOUT
+
+
+
+   显示多少毫秒后自动关闭. 默认值-1表示超时时间遵照notification server的设置. 0表示无限时间
+
+
+
+   * :urgency URGENCY
+
+
+
+   紧急的级别. 可以是'low,'normal或'critical
+
+
+
+   * :action-items
+
+
+
+   若设置了该关键字,则TITLE string of the action也被解释为icon name
+
+
+
+   * :category CATEGORY
+
+
+
+   通知的类型,字符串格式
+
+
+
+   * :desktop-entry FILENAME
+
+
+
+   This specifies the name of the desktop filename representing the calling program, like `"emacs"'.
+
+
+
+   * :image-data (WIDTH HEIGHT ROWSTRIDE HAS-ALPHA BITS CHANNELS DATA)
+
+
+
+   这是一个raw data 图像格式描述了宽,高,rowstride,是否有alpha通道,每个sample的比特数,通道和图像数据
+
+
+
+   * :image-path PATH
+
+
+
+   PATH为一个URI(目前只支持"file"类型)或"$XDG_DATA_DIRS/icon"目录下的某个icon theme的名称
+
+
+
+   * :sound-file FILENAME
+
+
+
+   弹出通知时,播放声音文件
+
+
+
+   * :sound-name NAME
+
+
+
+   "$XDG_DATA_DIRS/sound"目录下定义的sound theme
+
+
+
+   * :suppress-sound
+
+
+
+   若设置了,则不播放任何声音.
+
+
+
+   * :resident
+
+
+
+   若设置了该参数,则即使对该通知做了动作,该通知也不会自动关闭,除非明确的对该通知发出关闭操作
+
+
+
+   * :transient
+
+
+
+   若设置了该参数,则server会认为该通知是暂时的,而忽略server的持久化能力(?When set the server will treat the notification as transient and by-pass the server's persistence capability, if it should exist?)
+
+
+
+   * :x POSITION / :y POSITION
+
+
+
+   定义通知在屏幕上的显示位置
+
+
+
+   * :on-action FUNCTION
+
+
+
+   当按下了表示action的按钮时,会调用该函数. 该函数接受两个参数:notification id和action key
+
+
+
+   * :on-close FUNCTION
+
+
+
+   当通知因为超时或人为关闭时调用该函数. 该函数接受两个参数:notification id和关闭的REASON.
+
+
+
+   函数中的REASON参数可以是:
+
+
+
+   * 'expired
+
+
+
+   由于超时而关闭
+
+
+
+   * 'dismissed
+
+
+
+   被人为关闭
+
+
+
+   * 'close-notification
+
+
+
+   通过调用`notifications-close-notification'函数来关闭
+
+
+
+   * 'undefined
+
+
+
+   notification server未告知原因
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun my-on-action-function (id key)
+
+       (message "Message %d, key \"%s\" pressed" id key))
+
+     ;; => my-on-action-function
+
+
+
+     (defun my-on-close-function (id reason)
+
+       (message "Message %d, closed due to \"%s\"" id reason))
+
+     ;; => my-on-close-function
+
+
+
+     (notifications-notify
+
+      :title "Title"
+
+      :body "This is <b>important</b>."
+
+      :actions '("Confirm" "I agree" "Refuse" "I disagree")
+
+      :on-action 'my-on-action-function
+
+      :on-close 'my-on-close-function)
+
+     ;; => 22
+
+
+
+     这时会弹出一个message window. 按下 "I agree"
+
+     ;; => Message 22, key "Confirm" pressed
+
+     ;;    Message 22, closed due to "dismissed"
+
+   #+END_SRC
+
+
+
+   * (notifications-close-notification notification-id &optional bus)
+
+
+
+   关闭指定id的通知. 参数BUS可以是一个表示D-Bus连接的字符串.默认为:session
+
+
+
+   * (noifications-get-capabilities &optional bus)
+
+
+
+   返回notification server支持的特性的列表.
+
+
+
+   它的返回值是一个由sybmol组成的list:
+
+
+
+   * :actions
+
+
+
+   The server will provide the specified actions to the user
+
+
+
+   * :body
+
+
+
+   支持定义Body的内容
+
+
+
+   * :body-hyperlinks
+
+
+
+   body中支持超链接
+
+
+
+   * :body-images
+
+
+
+   body中支持嵌入图片
+
+
+
+   * :body-markup
+
+
+
+   支持在body中嵌入标记
+
+
+
+   * :icon-muti
+
+
+
+   server会把图片数组中的每帧整合成一个动画
+
+
+
+   * :icon-static
+
+
+
+   server只显示图片数组中的地一个帧图片,该参数与:icon-multi互斥
+
+
+
+   * persistence
+
+
+
+   支持通知的持久化
+
+
+
+   * :sound
+
+
+
+   支持播放声音
+
+
+
+   * (notifications-get-server-information)
+
+
+
+   以字符串列表的形式返回notification server的信息.
+
+
+
+   返回值的格式为'(NAME VENDOR VERSION SPEC-VERSION). 其中:
+
+
+
+   * NAME 为server的产品名称
+
+
+
+   * VENDOR 为vendor名称. 常见的有"KDE"和"GNOME"
+
+
+
+   * VERSION 为server的版本号
+
+
+
+   * SPEC-VERSION 为The specification version the server is compliant with
+
+
+
+** File Notification
+
+
+
+   若编译Emacs时链接了`gfilenotify',`inotify',`w32notify'或其他对应的库,通过加载`filenotify'库,Emacs可以监视文件系统中文件的改变.
+
+
+
+   * (file-notify-add-watch file flag callback)
+
+
+
+   为文件FILE添加监视器. 该函数返回添加的监视器的descriptor.
+
+
+
+   若FILE无法被监视,则该函数抛出错误`file-notify-error'
+
+
+
+   注意: *有些文件系统不能监视文件是否发生改变. 因此该函数返回非nil的值并不一定表示文件的改变一定会通知到Emacs*
+
+
+
+   参数FLAG为一个列表,指明了要监视FILE的哪些改变:
+
+
+
+   * 'change
+
+
+
+   文件内容改变
+
+
+
+   * 'attribute-change
+
+
+
+   文件属性改变
+
+
+
+   参数FILE可以是某个文件,也可以是目录. 若FILE为目录,则会监视该目录下的所有文件,但不递归监视子目录.
+
+
+
+   当监视的事件发生时,Emacs会调用CALLBACK函数,并传递EVENT作为参数. 其中EVENT的格式为:
+
+   '(DESCRIPTOR ACTION FILE [FILE1])
+
+
+
+   其中DESCRIPTOR即为监视器的描述符
+
+
+
+   ACTION为事件描述,它的可能值有:
+
+   * 'created
+
+   * 'deleted
+
+   * 'changed
+
+   * 'renamed
+
+   * 'attribute-changed
+
+
+
+   FILE和FILE1为事件发生的文件名称.
+
+
+
+   下面是一个例子
+
+   #+BEGIN_SRC emacs-lisp
+
+     (require 'filenotify)
+
+     ;; => filenotify
+
+
+
+     (defun my-notify-callback (event)
+
+       (message "Event %S" event))
+
+     ;; => my-notify-callback
+
+
+
+     (file-notify-add-watch
+
+      "/tmp" '(change attribute-change) 'my-notify-callback)
+
+     ;; => 35025468
+
+
+
+     (write-region "foo" nil "/tmp/foo")
+
+     ;; => Event (35025468 created "/tmp/.#foo")
+
+     ;;    Event (35025468 created "/tmp/foo")
+
+     ;;    Event (35025468 changed "/tmp/foo")
+
+     ;;    Event (35025468 deleted "/tmp/.#foo")
+
+
+
+     (write-region "bla" nil "/tmp/foo")
+
+     ;; => Event (35025468 created "/tmp/.#foo")
+
+     ;;    Event (35025468 changed "/tmp/foo") [2 times]
+
+     ;;    Event (35025468 deleted "/tmp/.#foo")
+
+
+
+     (set-file-modes "/tmp/foo" (default-file-modes))
+
+     ;; => Event (35025468 attribute-changed "/tmp/foo")
+
+   #+END_SRC
+
+
+
+   根据不同的底层库的实现不同,rename操作可能被认为是一个rename操作或一个delete+create操作
+
+
+
+   It can be expected, when a directory is watched, and both FILE and FILE1 belong to this directory.  Otherwise, the actions `deleted' and `created' could be returned in a random order.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (rename-file "/tmp/foo" "/tmp/bla")
+
+     ;; => Event (35025468 renamed "/tmp/foo" "/tmp/bla")
+
+
+
+     (file-notify-add-watch
+
+      "/var/tmp" '(change attribute-change) 'my-notify-callback)
+
+     ;; => 35025504
+
+
+
+     (rename-file "/tmp/bla" "/var/tmp/bla")
+
+     ;; => ;; gfilenotify
+
+     ;;    Event (35025468 renamed "/tmp/bla" "/var/tmp/bla")
+
+
+
+     ;; => ;; inotify
+
+     ;;    Event (35025504 created "/var/tmp/bla")
+
+     ;;    Event (35025468 deleted "/tmp/bla")
+
+   #+END_SRC
+
+
+
+   * (file-notify-rm-watch descriptor)
+
+
+
+   删除指定的监视器
+
+** 动态加载
+
+   Emacs supports such on-demand loading of support libraries for *some of its features.*
+
+
+
+   需要注意: *不是所有的特性都能使用这种方式动态加载*
+
+
+
+   * dynamic-library-alist
+
+
+
+   该参数是一个由动态库和对应的动态库文件组成的alist.
+
+
+
+   该alist中每个元素的格式为'(LIBRARY FILES...)
+
+
+
+   例如:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq dynamic-library-alist
+
+           '((xpm "libxpm.dll" "xpm4.dll" "libXpm-nox4.dll")
+
+             (png "libpng12d.dll" "libpng12.dll" "libpng.dll"
+
+                  "libpng13d.dll" "libpng13.dll")
+
+             (jpeg "jpeg62.dll" "libjpeg.dll" "jpeg-62.dll"
+
+                   "jpeg.dll")
+
+             (tiff "libtiff3.dll" "libtiff.dll")
+
+             (gif "giflib4.dll" "libungif4.dll" "libungif.dll")
+
+             (svg "librsvg-2-2.dll")
+
+             (gdk-pixbuf "libgdk_pixbuf-2.0-0.dll")
+
+             (glib "libglib-2.0-0.dll")
+
+             (gobject "libgobject-2.0-0.dll")))
+
+   #+END_SRC
+
+** 定时器
+
+
+
+   Emacs只有在空闲时才会调用定时器,即在等待输入,`site-for'函数和`read-event'函数时才会触发定时器.
+
+
+
+   Emacs会在触发定时器前将`inhibit-quit'设置为t,这是因为从定时器函数中推出很容易产生不一致状态.
+
+
+
+   通过定时器函数修改buffer会导致undo命令分不清哪些改动是人工改动的,哪些改动是触发器函数修改的. 因此一般不再定时器函数中修改buffer,若要修改,注意在修改buffer前和修改buffer后调用一次`undo-boundary'函数
+
+
+
+   定时器函数也应该避免调用会导致Emacs等待的函数,因为这样的话又会导致其他定时器函数的处罚,可能产生无法预期的后果. 若真要等待一段时间后再执行,请再分配一个新的定时器来处罚
+
+
+
+   If a timer function calls functions that can change the match data, it should save and restore the match data
+
+
+
+   * 命令(run-at-time time repeat function &rest args)
+
+
+
+   设置等时间为TIME时,用参数ARGS调用FUNCTON函数.
+
+
+
+   若参数repeat为某个数字,则会每隔repeat秒后执行一次. 若repeat为nil表示只执行一次
+
+
+
+   参数TIME可以是一个相对时间或一个绝对时间:
+
+   #+BEGIN_QUOTE
+
+Absolute times may be specified using a string with a limited
+
+variety of formats, and are taken to be times _today_, even if
+
+already in the past.  The recognized forms are `XXXX', `X:XX', or
+
+`XX:XX' (military time), and `XXam', `XXAM', `XXpm', `XXPM',
+
+`XX:XXam', `XX:XXAM', `XX:XXpm', or `XX:XXPM'.  A period can be
+
+used instead of a colon to separate the hour and minute parts.
+
+
+
+To specify a relative time as a string, use numbers followed by
+
+units.  For example:
+
+
+
+`1 min'
+
+denotes 1 minute from now.
+
+
+
+`1 min 5 sec'
+
+denotes 65 seconds from now.
+
+
+
+`1 min 2 sec 3 hour 4 day 5 week 6 fortnight 7 month 8 year'
+
+denotes exactly 103 months, 123 days, and 10862 seconds from
+
+now.
+
+
+
+For relative time values, Emacs considers a month to be exactly
+
+thirty days, and a year to be exactly 365.25 days.
+
+
+
+Not all convenient formats are strings.  If TIME is a number
+
+(integer or floating point), that specifies a relative time
+
+measured in seconds.  The result of `encode-time' can also be used
+
+to specify an absolute value for TIME.
+
+
+
+In most cases, REPEAT has no effect on when _first_ call takes
+
+place--TIME alone specifies that.  There is one exception: if TIME
+
+is `t', then the timer runs whenever the time is a multiple of
+
+REPEAT seconds after the epoch.  This is useful for functions like
+
+`display-time'.
+
+
+
+The function `run-at-time' returns a timer value that identifies
+
+the particular scheduled future action.  You can use this value to
+
+call `cancel-timer' (see below).
+
+   #+END_QUOTE
+
+
+
+   * 配置项timer-max-repeats
+
+
+
+   由于Emacs只有在空闲时才会执行定时器,这时有可能会推迟定时器的执行. 但推迟定时器执行的动作不会对下一次定时器执行的时间产生影响.
+
+   即使说,若下一次定时器函数触发的时间并不是在上一次执行时间的基础上累加的. 因此推迟的时间太长,很可能会致使连续几次执行定时器函数.
+
+
+
+   该变量则限定了一次性定时器函数所能执行的最大的循环次数
+
+
+
+   * 命令(run-with-idle-time secs repeat function &rest args)
+
+
+
+   设置一个定时器,该定时器在下次Emacs空闲了SECS秒后执行
+
+
+
+   参数SECS可以是数字,也可以是`current-dile-time'返回的对象
+
+
+
+   若参数REPEAT为nil表示定时器只触发一次. 若为非nil表示 *每次Emacs空闲时间超过SECS秒后都触发一次*
+
+   #+BEGIN_QUOTE
+
+Do not write an idle timer function containing a loop which does a
+
+certain amount of processing each time around, and exits when
+
+`(input-pending-p)' is non-`nil'.  This approach seems very natural but
+
+has two problems:
+
+
+
+* It blocks out all process output (since Emacs accepts process
+
+  output only while waiting).
+
+
+
+  * It blocks out any idle timers that ought to run during that time.
+
+
+
+  Similarly, do not write an idle timer function that sets up another
+
+  idle timer (including the same idle timer) with SECS argument less than
+
+  or equal to the current idleness time.  Such a timer will run almost
+
+  immediately, and continue running again and again, instead of waiting
+
+  for the next time Emacs becomes idle.  The correct approach is to
+
+  reschedule with an appropriate increment of the current value of the
+
+  idleness time, as described below.
+
+   #+END_QUOTE
+
+
+
+   * (current-idle-time)
+
+
+
+   若Emacs处于空闲状态,该函数返回Emacs空闲的时间. 格式与`current0time'一致,为(SEC-HIGH SEC-LOW MICROSEC PICOSEC
+
+
+
+   若Emacs不处于idle状态,`current-idle-time'返回nil
+
+
+
+   * (cancel-timer timer)
+
+
+
+   取消定时器
+
+
+
+   * 宏(with-timeout (seconds timeout-forms...) bodys...)
+
+
+
+   执行bodys,但设置了超时时间为SECONDS秒.
+
+
+
+   若BODY在SECONDS秒内执行完成,则`with-timeout'返回正常的bodys执行结果.
+
+
+
+   但若BODY在执行期间超时了,则会执行timeout-forms,并返回timeout-forms的执行结果
+
+
+
+   该宏的内部使用定时器来完成超时功能,因此若Emacs执行bodys的过程中,没有等待输入的情况,则超时的功能没什么作用.

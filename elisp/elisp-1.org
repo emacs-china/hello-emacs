@@ -1,0 +1,13 @@
+#+TITLE: 有三种方式可以加载文件
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#有三种方式可以加载文件][有三种方式可以加载文件]]
+
+* 有三种方式可以加载文件
+
+  * load
+
+  * autoload
+
+  * require

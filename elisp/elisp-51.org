@@ -1,0 +1,13 @@
+#+TITLE: 版本信息
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#版本信息][版本信息]]
+
+* 版本信息
+
+  * 变量emacs-version
+
+  * 变量emacs-major-version
+
+  * 变量emacs-minor-version

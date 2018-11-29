@@ -1,0 +1,455 @@
+#+TITLE: Window
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#window][Window]]
+  - [[#基本概念][基本概念]]
+    - [[#live-window][live window]]
+    - [[#valid-window][valid window]]
+    - [[#selected-window][selected-window]]
+  - [[#window与frame的关系][window与frame的关系]]
+  - [[#获得窗口对象][获得窗口对象]]
+  - [[#窗口操作][窗口操作]]
+  - [[#窗口信息][窗口信息]]
+
+* Window
+
+** 基本概念
+
+*** live window
+
+
+
+    有buffer显示的window被称为live window, 可以通过 ~(window-livep object)~ 来判断
+
+
+
+*** valid window
+
+    valid window可能是live window或internal window. 要注意它与live window的区别.
+
+    一个valid window可能被删除,则变成invalid window,但它仍可能被其他lisp对象所引用.
+
+    并且一个被删除的window可能通过恢复之前报错的window configuration变回valid window
+
+
+
+    使用 ~(window-valid-p object)~ 来判断是否为valid window
+
+
+
+*** selected-window
+
+
+
+    任何时候,不管有多少个frame,只有唯一一个selected window
+
+
+
+    一般来说,selected window的buffer就是"current buffer",但有一种情况例外,就是使用 ~set-buffer~ 之后.
+
+
+
+** window与frame的关系
+
+
+
+   一个window只可能属于一个frame.
+
+
+
+   + (window-frame &optional window)
+
+
+
+   该函数获取指定window所属的frame
+
+
+
+   + (window-list &optional frame minibuffer window)
+
+
+
+   该函数获取指定frame的所有 *live window* 列表.
+
+
+
+   MINIBUFFER参数指定了返回的live window列表是否包含minibuffer window.
+
+
+
+   - t :: 包含minbuffer window
+
+
+
+   - nil :: 当minibuffer被激活时才包含
+
+
+
+   - 其他 :: 不包含
+
+
+
+   WINDOW参数指定了live window列表中的第一个window,它应该是指定frame中的一个live window.
+
+
+
+   若未指定WINDOW参数,则selected window作为列表的第一个window
+
+
+
+
+
+   window在每个frame中都是以window tree的形式被组织起来的.
+
+   #+BEGIN_EXAMPLE
+
+     ______________________________________
+
+     | ______ ____________________________ |
+
+     ||      || __________________________ ||
+
+     ||      |||                          |||
+
+     ||      |||                          |||
+
+     ||      |||                          |||
+
+     ||      |||____________W4____________|||
+
+     ||      || __________________________ ||
+
+     ||      |||                          |||
+
+     ||      |||                          |||
+
+     ||      |||____________W5____________|||
+
+     ||__W2__||_____________W3_____________ |
+
+     |__________________W1__________________|
+
+   #+END_EXAMPLE
+
+
+
+   每个window tree的叶节点都是live window组成的.
+
+   window tree的中间节点则是由internal window组成,即哪些不显示buffer的window
+
+   internal window存在的目的是为了组织live window之间的关系.
+
+   window tree的root节点被称为root window. 它可以是live window也可以是internal window
+
+
+
+   *一般来说,window tree并不包含minibuffer window,除非整个frame只有这个minibuffer window*
+
+
+
+   当分割一个window后,分割出来的两个live window中有一个 *就是之前被分割的那个window对象*.
+
+   emacs会新建两个window对象:一个是分割出来的另一个live window,还有一个是internel window作为分割出两个live window的父window
+
+
+
+   每个internal window最少具有两个子窗口,若某internal window的子窗口数降为1,则Emacs自动删除该internal window.
+
+
+
+
+
+** 获得窗口对象
+
+
+
+   + (frame-root-window &optional frame-or-window)
+
+
+
+   该函数返回FRAME-OR-WINDOW的root window
+
+
+
+   参数FRAME-OR-WINDOW若为nil则表示返回当前选中frame的root window
+
+
+
+   + (window-parent &optional window)
+
+
+
+   WINDOW的父window, 默认为选中窗口的父window
+
+
+
+   + (window-top-child &optional window)
+
+
+
+   返回指定WINDOW的最上方的子window
+
+
+
+   当然WINDOW必须是是internal window且其子窗口应是垂直组合的,否则该函数返回nil
+
+
+
+   + (window-left-child *optional window)
+
+
+
+   返回指定WINDOW的最左方的子window
+
+
+
+   当然WINDOW必须是是internal window且其子窗口应是水平组合的,否则该函数返回nil
+
+
+
+   + (window-child window)
+
+
+
+   该函数返回指定WINDOW的第一个子window.
+
+
+
+   该函数自动判断WINDOW中子window的排列方式,并返回最上方会最左方的子window
+
+
+
+   WINDOW必须是internal window,否则返回nil
+
+
+
+   + (window-combined-p &optional window horizontal)
+
+
+
+   判断WINDOW是否与其他WINDOW垂直/水平排列.
+
+
+
+   参数HORIZONTAL为nil表示判断是否垂直排列,否则判断是否水平排列
+
+
+
+   + (window-next-sibling &optional window)
+
+
+
+   返回WINDOW的下一个兄弟window
+
+
+
+   + (window-prev-sibling &optional window)
+
+
+
+   返回WINDOW的上一个兄弟window
+
+
+
+   + (frame-first-window &optional frame-or-window)
+
+
+
+   返回指定FRAME中的最最上方的live window
+
+
+
+   + (window-in-direction direction &optional window ignore sign wrap mini)
+
+
+
+   返回与WINDOW在DIRECATION方向上相邻的live window
+
+
+
+   参数DIRECTION可能是above,below,left,right
+
+
+
+   参数WINDOW必须是live window,且默认为选中的window
+
+
+
+   一般情况下, *该函数会跳过那些参数`no-other-window'为非nil的window*,但若参数IGNORE为非nil,则该函数不跳过
+
+
+
+   If the optional argument sign is a negative number, it means to use the right or bottom edge ofwindowas reference position instead ofwindow-point. If sign is a positive number, it means to use the left or top edge ofwindowas reference position.
+
+
+
+   参数WRAP若为非nil,则表示允许越过frame边界,例如最右边的右边调到了最左边.
+
+
+
+   参数mini指定了什么情况下返回minibuffer window,且若WRAP为非nil,则该函数只有在minibuffer被激活状态才返回minibuffer window
+
+
+
+   + (window-tree &optional frame)
+
+
+
+   返回指定frame的window-tree
+
+
+
+   + 得到当前光标所在的窗口对象
+
+
+
+   selected-window
+
+   + 得到当前frame里的所有窗口
+
+
+
+   window-list
+
+   + window-lists里排在某个window之后/之前的窗口对象
+
+
+
+   next-window / previous-window
+
+   + 查找符合某个条件的窗口
+
+
+
+   get-window-with-predicate
+
+   + 根据buffer获得window(如果有多个窗口显示同一个缓冲区,那么函数由window-list决定返回哪个).
+
+
+
+   get-buffer-window
+
+   + 根据buffer获得全部的相应window
+
+
+
+   get-buffer-window-list
+
+   + 根据给定的文件名,返回缓冲区
+
+
+
+   find-buffer-visiting
+
+** 窗口操作
+
+   * 分割window
+
+
+
+   split-window
+
+   * 删除当前选中的窗口
+
+
+
+   delete-window
+
+   * 删除其他窗口
+
+
+
+   delete-other-windows
+
+   * 得到当前窗口配置信息,可以用setq保存起来
+
+
+
+   current-window-configuration
+
+   * 设置当前窗口配置信息
+
+
+
+   set-window-configuration
+
+   * 使某个窗口对象变成选中的窗口
+
+
+
+   select-window
+
+   * 执行的语句结束后,选择的窗口仍留在执行语句之前的窗口
+
+
+
+   save-selected-window / with-selected-window
+
+   * 遍历窗口操作
+
+
+
+   walk-windows
+
+   * 让某个窗口显示某个缓冲区
+
+
+
+   set-window-buffer
+
+   * 让选中的窗口显示某个缓冲区
+
+
+
+   switch-to-buffer
+
+** 窗口信息
+
+   * 得到当前窗口的结构
+
+
+
+   window-tree
+
+   * 判断窗口对象是否存在
+
+
+
+   window-live-p
+
+   * 获得窗口的高度(包括了mode line和 header line)
+
+
+
+   window-height
+
+   * 获得窗口的高度(排除了mode line和 header line)
+
+
+
+   window-body-height
+
+   * 窗口的宽度,不包括滚动条和边缘
+
+
+
+   window-width
+
+   * 返回各顶点的坐标信息(包括滚动条,边缘,mode line ,header line)
+
+
+
+   window-edges
+
+   * 返回窗口的文本区域的坐标信息
+
+
+
+   window-inside-edges
+
+   * 用像素表示的window位置
+
+
+
+   window-pixel-edges / window-inside-pixel-edges

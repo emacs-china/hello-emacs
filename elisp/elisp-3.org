@@ -1,0 +1,104 @@
+#+TITLE: emacs中的变量作用域
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#emacs中的变量作用域][emacs中的变量作用域]]
+  - [[#buffer-local变量][buffer-local变量]]
+    - [[#声明buffer-local变量][声明buffer-local变量]]
+    - [[#buffer相关函数][buffer相关函数]]
+      - [[#with-current-buffer][with-current-buffer]]
+      - [[#get-buffer][get-buffer]]
+      - [[#default-value][default-value]]
+      - [[#setq-default][setq-default]]
+      - [[#local-variable-p][local-variable-p]]
+      - [[#buffer-local-value][buffer-local-value]]
+      - [[#default-boundp][default-boundp]]
+      - [[#makunbound][makunbound]]
+      - [[#kill-local-variable][kill-local-variable]]
+      - [[#kill-all-local-variables][kill-all-local-variables]]
+    - [[#文件中的本地变量列表][文件中的本地变量列表]]
+  - [[#变量本地化][变量本地化]]
+
+* emacs中的变量作用域
+** buffer-local变量
+*** 声明buffer-local变量
+    * make-variable-buffer-local
+    各个缓冲区都有各自的buffer-local变量
+    * make-local-variable
+    当前缓冲区产生一个局部变量,其他缓冲区仍然使用全局变量(推荐使用)
+*** buffer相关函数
+**** with-current-buffer
+     #+BEGIN_SRC elisp
+                                               ;使其中的body表达式在指定的缓冲区里执行(使用指定buffer的配置信息执行body表达式)
+       (with-current-buffer buffer
+         body)
+     #+END_SRC
+**** get-buffer
+     #+BEGIN_SRC elisp
+                                               ;得到缓冲区名字的对应缓冲区对象,如果没有这个名字的缓冲区,返回nil
+       (get-buffer buffer-name)
+     #+END_SRC
+**** default-value
+     #+begin_src elisp
+                                               ;访问符号的全局变量的值
+       (default-value symbol)
+     #+end_src
+**** setq-default
+     #+begin_src elisp
+                                               ;修改符号作为全局变量的值
+       (setq-default symbol-name)
+     #+end_src
+**** local-variable-p
+     #+begin_src elisp
+                                               ;测试变量是不是buffer-local的
+       (local-variable-p symbol [buffer对象])
+     #+end_src
+**** buffer-local-value
+     #+begin_src elisp
+                                               ;得到其他缓冲区内的buffer-local变量值
+       (buffer-local-value 符号 buffer对象)
+     #+end_src
+**** default-boundp
+     #+begin_src elisp
+                                               ;判断符号是否有全局值
+       (default-boundp 符号)
+     #+end_src
+**** makunbound
+     #+begin_src elisp
+                                               ;使一个变量的值重新为空
+       (makunbound 符号)
+     #+end_src
+**** kill-local-variable
+     #+begin_src elisp
+                                               ;清除一个buffer-local变量
+       (kill-local-variable 符号)
+     #+end_src
+**** kill-all-local-variables
+     #+begin_src elisp
+                                               ;清除所有的buffer-local变量,但是带有属性permanent-local的不会清除,带有这些标记的变量一般都是和缓冲区模式无关的
+       (kill-all-local-variables)
+     #+end_src
+*** 文件中的本地变量列表
+    * "本地变量列表"可以位于任何文件的结尾位置,它的形式如下所示
+    #+begin_src elisp
+      Local variables:
+      var1 : value1
+      var2 : value2
+      ...
+      eval : form1
+      eval : form2
+      ...
+      End:
+    #+end_src
+    这里定义的var自动是buffer-local的,类似宏一样,value被认为是被引用的
+    这里的form则会自动执行.
+    * 可以通过在.emacs中加入
+    #+begin_src elisp
+      (setq enable-local-variables 'query)
+    #+end_src
+    来阻止"本地变量列表"生效
+** 变量本地化
+   * 普通变量通过make-localvariable或make-variable-buffer-local变为buffer－local的
+   * make-variable-buffer-local使指定的变量在每个buffer中都是独立的
+   * make-local-variable使变量在当前buffer是独立的，而其他buffer依然共享全局变量
+   * hook变量智能通过make-local-hook变为buffer-local的

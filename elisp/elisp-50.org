@@ -1,0 +1,29 @@
+#+TITLE: Org相关函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#org相关函数][Org相关函数]]
+
+* Org相关函数
+
+  + 取entry属性 :: (org-entry-get nil "属性名" 是否继承属性)
+
+  + 取entry的tag list :: (org-get-tags)
+
+  + 取entry的TODO state :: org-get-tags
+
+  + 判断哪些state是完成状态 :: org-done-keywords
+
+  + 跳转到headline :: (org-back-to-heading)
+
+  + 判断是否处于clockin状态 :: org-clock-clocking-in
+
+  + clock in :: (org-clock-in)
+
+  + clock out :: (org-clock-out)
+
+  + 当前clock entry的headline :: org-clock-heading
+
+  + clock out触发的hook :: org-clock-out-hook
+
+  + 更新mode-line的内容 :: (org-clock-update-mode-line)

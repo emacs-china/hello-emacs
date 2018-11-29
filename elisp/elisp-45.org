@@ -1,0 +1,2307 @@
+#+TITLE: Processes
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#processes][Processes]]
+  - [[#创建子进程][创建子进程]]
+  - [[#deleting-processes][Deleting Processes]]
+  - [[#process的属性][process的属性]]
+  - [[#与process的交互][与Process的交互]]
+    - [[#sending-input-to-processes][Sending Input to Processes]]
+    - [[#sending-signals-to-processes][Sending Signals to Processes]]
+    -  [[#receiving-output-from-process][Receiving Output from Process]]
+  - [[#accessing-other-processes][Accessing Other Processes]]
+  - [[#交易队列][交易队列]]
+  - [[#network-process][Network Process]]
+    - [[#创建表示网络连接网络服务的process-object][创建表示网络连接/网络服务的process object]]
+    - [[#测试network特性][测试Network特性]]
+    - [[#其他network函数][其他Network函数]]
+  - [[#serial-port-process][Serial Port Process]]
+
+* Processes
+
+  Emacs可以同步或异步的方式创建子进程,并以process对象的形式表现出来.
+
+
+
+  除了管理Emacs的子进程之外,Emacs还可以管理操作系统中的其他非Emacs子进程.
+
+
+
+  * (processp object)
+
+
+
+  判断object是否为Emacs的子进程
+
+** 创建子进程
+
+
+
+   可以使用`start-process'创建异步进程,并获得process object. 也可以使用`call-process'和`call-process-region'创建同步进程.
+
+
+
+   Emacs创建的子进程继承了Emacs的运行环境,但可以使用`process-environment'覆盖默认的运行环境.
+
+
+
+   参数program表示要执行的程序名称. 需要注意: *program应该只包含要执行的程序名称,而不能包括参数*
+
+
+
+   参数buffer-or-name指定了程序的输出显示在哪个buffer中,nil表示丢弃输出. unless a custom filter function handles it. 对于同步进程,可以指定输出到文件中而不是buffer
+
+
+
+   参数args表示传递到程序的参数,所有的args都是string类型的. 在这些string中, *扩展字符和其他shell特殊字符并不会经过shell展开*,因为参数是直接传递给指定程序的.
+
+
+
+   * 配置项exec-suffixes
+
+
+
+   一个包含后缀字符串的list. 当搜索可执行程序时,会添加该列表中的后缀到执行程序名称的后面.
+
+
+
+   * exec-directory
+
+
+
+   该变量是一个表示目录的字符串,该目录存放的是Emacs自带的一些程序
+
+
+
+   * 配置项exec-path
+
+
+
+   当Emacs创建子进程时,若参数program为相对路径,会从该list中指定的目录中搜索要执行的程序.
+
+
+
+   该list中的每个元素都是一个表示目录的字符串,若为nil则表示default directory(变量`default-directory'的值)
+
+
+
+   * (shell-quote-argument argument)
+
+
+
+   转义argument,使得返回的字符串以shell语法来看,其真实的内容就是argument
+
+
+
+   该函数常用于将特殊参数按字面上的意义转递給shell去执行
+
+   #+BEGIN_SRC emacs-lisp
+
+     ;; This example shows the behavior on GNU and Unix systems.
+
+     (shell-quote-argument "foo > bar")      ; => "foo\\ \\>\\ bar"
+
+
+
+     ;; This example shows the behavior on MS-DOS and MS-Windows.
+
+     (shell-quote-argument "foo > bar")      ; => "\"foo > bar\""
+
+   #+END_SRC
+
+
+
+   * (split-string-and-unquote string &optional separators)
+
+
+
+   该函数常用于将一个字符串分拆成由独立的command-line argument组成的list,可以直接作为创建子进程时的arg参数来使用
+
+
+
+   该函数根据正则separators的要求将string进行分拆, 并对substring进行反引用
+
+
+
+   * (combine-and-quote-string list-of-strings &optional seprator)
+
+
+
+   该函数可以认为是`split-string-and-unquote'的反作用.
+
+
+
+   该函数将list-of-string合并成一个单独的string, 若有必要的话,还会对list中的每个string先做一次引用转换.
+
+
+
+   * (call-process program &optional infile destination display &rest args)
+
+
+
+   同步调用program,这时Emacs会暂停一直等到子进程结束,并返回结束码
+
+
+
+   若参数infile不为nil,表示program从哪个文件读取输入. nil表示从null device读取输入
+
+
+
+   若参数display为非nil,则`call-process'会在有内容输出时,刷新buffer的显示.
+
+
+
+   参数args表示传递給program的参数
+
+
+
+   参数destination表示program的output输出到哪:
+
+
+
+   * buffer-or-string
+
+
+
+   插入到buffer中
+
+
+
+   * t
+
+
+
+   插入到当前buffer
+
+
+
+   * nil
+
+
+
+   丢弃输出
+
+
+
+   * 0
+
+
+
+   丢弃输出,并且不等待子进程结束就直接返回nil.
+
+
+
+   * (:file FILE-NAME)
+
+
+
+   覆盖FILE-NAME指代的文件内容
+
+
+
+   * (REAL-DESTINATION ERROR-DESTINATION)
+
+
+
+   区分输出stdout和stderr.
+
+
+
+   若error-destination为nil表示丢弃stderr,若为t表示与stdout输出到一个地方,若为字符串表示输出stderr到文件中.
+
+
+
+   注意: *你无法将error-destincation设置为某个buffer*,因为实现起来太难了.
+
+
+
+   * (process-file program &optional infile buffer display &rest args)
+
+
+
+   类似`call-process',但根据变量`default-directory'的值不同,可能会invoke a file handler
+
+
+
+   参数的意思跟`call-process'极其相似,其区别在于:
+
+
+
+   * Some file handlers may not support all combinations and forms of the arguments INFILE, BUFFER, and DISPLAY.
+
+
+
+   * 当file handler被调用时,该file handler根据参数program来决定应该运行哪个程序.
+
+
+
+   例如,suppose that a handler for remote files is invoked.  Then the path that is used for searching for the program might be different from `exec-path'
+
+
+
+   * 参数infile也可能调用file handler. 该file handler可能与`process-file'自己选择的file-handler不一样
+
+
+
+   * 若参数buffer使用'(REAL-DESTINATION ERROR-DESTINATION)这样的格式,并且ERROR-DESTINATION为表示文件的字符串,则跟infile一样,可能调用起其他的file-handler
+
+
+
+   * process-file-side-effect
+
+
+
+   该变量指定了当调用`process-file'时,是否可以修改远程文件.
+
+
+
+   默认为t,表示可以修改.
+
+
+
+   *该参数只能用在let-binding中,不要用在setq中*
+
+
+
+   * (call-process-region start end program &optional delete destination display &rest args)
+
+
+
+   类似`call-process',该函数同步调用子进程,并将从start到end处的文本作为进程的stdin.
+
+
+
+   若参数delete为非nil,则会删掉从start到end处的文本内容,这在参数destination为t时,可以实现替代的功能.
+
+
+
+   * (call-process-shell-command command &optional infile destination display &rest args)
+
+
+
+   该函数同步执行shell命令command
+
+
+
+   其参数说明与`call-process'类似
+
+
+
+   * (process-file-shell-command command &optional infile destination display &rest args)
+
+
+
+   类似`call-process-shell-command',但是内部使用`process-file'代替`call-process'
+
+
+
+   * (shell-command-to-string command)
+
+
+
+   该函数将command作为shell command来执行,并将执行结果作为string返回
+
+
+
+   * (process-lines program &rest args)
+
+
+
+   该函数运行program,等待它执行完成,然后以字符串list的形式返回输出.
+
+
+
+   若参数program退出时返回非0的退出码,该函数会抛出error
+
+
+
+   * (start-process name buffer-or-name program &rest args)
+
+
+
+   该函数异步创建PROGRAM子进程,并返回一个process object.
+
+
+
+   参数NAME指定了返回process object的名称. 若改名称的process已经存在,则NAME会被修改(通过在后面添加<1>,<2>...)成唯一的名称.
+
+
+
+   参数BUFFER-OR-NAME是与process相关联的buffer
+
+
+
+   若PROGRAM为nil,则Emacs创建一个新的伪终端(pty)并且将它的input和output与BUFFER-OR-NAME指定的buffer相关联,但是不会去创建子进程,而且参数ARGS被忽略
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (start-process "my-process" "foo" "sleep" "100")
+
+     ;;=> #<process my-process>
+
+
+
+     (start-process "my-process" "foo" "ls" "-l" "/bin")
+
+     ;;=> #<process my-process<1>>
+
+   #+END_SRC
+
+
+
+   * (start-file-process name buffer-or-name program &rest args)
+
+
+
+   类似`start-process',但是根据`default-directory'的值不同,可能会调用file handler
+
+
+
+   This function does not try to invoke file name handlers for PROGRAM or for the PROGRAM-ARGS.
+
+
+
+   有些file handler不能支持`start-file-process'(例如函数`ange-ftp-hook-function'). 这种情况下,该函数什么也不做并返回nil
+
+
+
+   * (start-process-shell-command name buffer-or-name command)
+
+
+
+   类似`start-process',只是它使用shell来执行COMMAND. 使用哪种shell由变量`shell-file-name'决定
+
+
+
+   与直接用`start-process'来执行COMMAND相比,使用shell来执行COMMAND的好处在于可以使用shell特性来处理参数力的通配符.
+
+   也正因为这样,当在命令中包含任何特殊字符时,都需要使用`shell-quote-argument'来转义.
+
+   同样的,执行的命令来自于用户的输入,则为了安全考虑,也需要做一下转义
+
+
+
+   * (start-file-process-shell-command name buffer-or-name command)
+
+
+
+   类似`start-process-shell-command',但是在内部使用`start-file-process'代替`start-process'
+
+
+
+   * process-connection-type
+
+
+
+   Emacs通过"pty"或"pipe"来控制异步进程. 具体使用哪种方式由该变量的值决定.
+
+
+
+   non-nil表示使用pty,nil表示使用pipe
+
+
+
+   #+BEGIN_SRC emacs-lisp
+
+     (let ((process-connection-type nil))  ; use a pipe
+
+       (start-process ...))
+
+   #+END_SRC
+
+
+
+   对于那些用户可见的进程,使用"pty"更好点,因为它允许用户在进程与它的子进程之间进行job control(`C-c',`C-z'等操作)
+
+
+
+   而对于程序内部使用的进程来说,偏向使用"pipe",因为它更有效率,and because they are immune to stray character injections that ptys introduce for large (around 500 byte) messages. 而且pty的总数是有限制的,最好不要浪费
+
+** Deleting Processes
+
+
+
+   delete process会立即断开Emacs与process的连接,并且Emacs会发送信号去终止process的执行,并调用process sentinel
+
+
+
+   要注意: *process被删除掉,不代表process object会被立刻回收* 有些函数可以接收表示被删除process的process object,但是尝试对它作IO操作,发发送信号給它时,会爆出错误.
+
+
+
+   * 配置项delete-exited-processes
+
+
+
+   该变量决定了当一个process终止运行了,是否自动删除它.
+
+
+
+   若为nil则不自动删除,直到运行`list-processes'命令才作删除
+
+
+
+   非nil表示process退出时,自动删除它
+
+
+
+   * (delete-process process)
+
+
+
+   该函数主动删除process,会发送`SIGKILL'信号来关闭进程.
+
+
+
+   参数process可以是一个process,process的名称,process关联的buffer,process关联的buffer名称.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (delete-process "*shell*")              ; => nil
+
+   #+END_SRC
+
+** process的属性
+
+   * 命令(list-processes &optional query-only buffer)
+
+
+
+   该命令显示所有living process,并且会删除那些状态为`Exited'或`Signaled'的process. 该函数返回nil
+
+
+
+   参数buffer指定了结果显示到哪个buffer中,默认为`*Process List*',它的major mode需要是Process Menu mode
+
+
+
+   若参数query-only为非nil,则只列出那些query flag为非nil的process
+
+
+
+   * (process-list)
+
+
+
+   列出未删除掉的process的列表
+
+   #+BEGIN_SRC emacs-lisp
+
+     (process-list)
+
+     => (#<process display-time> #<process shell>)
+
+   #+END_SRC
+
+
+
+   * (get-process name)
+
+
+
+   获取名称为name的process object,若没有,则返回nil
+
+   #+BEGIN_SRC emacs-lisp
+
+     (get-process "shell")
+
+     => #<process shell>
+
+   #+END_SRC
+
+
+
+   * (process-command process)
+
+
+
+   该函数返回PROCESS的执行命令. 该结果为string的列表,第一个元素为执行的program,剩下的元素为args
+
+   #+BEGIN_SRC emacs-lisp
+
+     (process-command (get-process "shell"))
+
+     => ("bash" "-i")
+
+   #+END_SRC
+
+
+
+   * (process-contact process &optional key)
+
+
+
+   该函数返回serial process/network的set up的相关信息
+
+
+
+   参数process可能为一个process,也可能一个connection
+
+
+
+   若参数KEY为nil,则返回serial process的'(PORT SPEED)信息,或返回network process的'(HOSTNAME SERVICE)信息
+
+
+
+   若参数KEY为t,则返回的值包含了connection,server或serial port的完整信息(即使用`make-network-process'或`make-serial-process'创建process时指定的所有keyword的值)
+
+
+
+   若参数KEY为某个特定的keyword,则只返回对应的value
+
+
+
+   若process为普通的child process则该函数总是返回t
+
+
+
+   * (process-id process)
+
+
+
+   获取PROCESS的pid
+
+
+
+   * (process-name process)
+
+
+
+   以string的形式返回PROCESS的名字
+
+
+
+   * (process-status process-or-name-or-buffer)
+
+
+
+   以symbol类型返回process的状态
+
+
+
+   参数process-or-name-or-buffer必须是process,buffer或process-name中的一个.
+
+
+
+   返回值说明如下:
+
+   * 'run
+
+
+
+   进程正在运行
+
+
+
+   * 'stop
+
+
+
+   进程被暂停执行,但等到时间片后会继续执行
+
+
+
+   * 'exit
+
+
+
+   进程已经退出
+
+
+
+   * 'signal
+
+
+
+   进程已经收到致命signal
+
+
+
+   * 'open
+
+
+
+   process为network connection,该连接是open的
+
+
+
+   * 'closed
+
+
+
+   process为network connection,该连接已关闭
+
+
+
+   * 'connect
+
+
+
+   process为non-blocking connection,等待连接完成
+
+
+
+   * 'failed
+
+
+
+   process为non-blocking connection,连接失败
+
+
+
+   * 'listen
+
+
+
+   process为network server,正在监听
+
+
+
+   * nil
+
+
+
+   process不存在
+
+
+
+   * (process-live-p process)
+
+
+
+   process是否alive.
+
+
+
+   所谓alive指的它的status为'run,'open,'listen,'connect或stop
+
+
+
+   * (process-type process)
+
+
+
+   返回process的类型.
+
+
+
+   'network表示process为network connection或server
+
+
+
+   'serial表示process为serial port connection
+
+
+
+   'real表示process为real subprocess
+
+
+
+   * (process-exit-status process)
+
+
+
+   返回PROCESS的exit status或被kill时的signal number. 若PROCESS没有终止运行,则返回0
+
+
+
+   * (process-tty-name process)
+
+
+
+   该函数返回PROCESS用来与Emacs交流时使用的terminal name
+
+
+
+   若process使用pipe,则返回nil
+
+
+
+   若process表示一个在remote host上运行的程序,则terminal name为process的peroperty `remote-tty'
+
+
+
+   * (process-coding-system process)
+
+
+
+   以'(DECODE . ENCODE)的格式描述decode process的输出时使用到编码,和encode process的输入时使用的编码
+
+
+
+   * (set-process-coding-system process &optional decoding-system encoding-sytem)
+
+
+
+   设置ENCODE/DECODE PROCESS的输入/输出时使用的编码规则
+
+
+
+   * (process-buffer process)
+
+
+
+   该函数返回PROCESS的关联buffer
+
+
+
+   process的关联buffer有两个用处:存储process的输出内容和决定何时kill掉该process.
+
+
+
+   关闭与process相关联的buffer,也会关闭对应的process.
+
+
+
+   * (process-mark process)
+
+
+
+   返回PROCESS的process-mark,
+
+
+
+   默认的filter函数会将process的输出插入到关联的buffer. 插入的位置由函数`process-mark'的返回值决定,通常情况下,为buffer的尾端
+
+
+
+   * (set-process-buffer process buffer)
+
+
+
+   该函数设置PROCESS的关联buffer,若参数BUFFER为nil,则PROCESS无关联buffer
+
+
+
+   * (get-buffer-process buffer-or-name)
+
+
+
+   返回关联到该buffer的未删除process
+
+
+
+   若有多个process关联到该buffer,则只会返回其中之一的process
+
+
+
+   * (process-filter process)
+
+
+
+   返回PROCESS的filter function
+
+
+
+   subprocess的stdout会传递給"filter function"来处理.
+
+
+
+   * (set-process-filter process filter)
+
+
+
+   设置PROCESS的filter function,若FILTER为nil表示使用默认的filter function
+
+
+
+   filter function需要接收2个参数:关联的process和输出的字符串.
+
+
+
+   一般情况下,会在filter function中屏蔽调quitting. 否则按下C-g可能会发生无法预料的结果.
+
+
+
+   在执行filter function时抛出的error默认情况下会自动被捕获,这样就不会影响正在执行的program. 然而若`debug-on-error'为non-nil,则error不会被自动捕获,这使得使用Lisp debugger调试filter function称为i可能.
+
+
+
+   一个普通的filter function模板大概如下:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun ordinary-insertion-filter (proc string)
+
+       (when (buffer-live-p (process-buffer proc))
+
+         (with-current-buffer (process-buffer proc)
+
+           (let ((moving (= (point) (process-mark proc))))
+
+             (save-excursion
+
+               ;; Insert the text, advancing the process marker.
+
+               (goto-char (process-mark proc))
+
+               (insert string)
+
+               (set-marker (process-mark proc) (point)))
+
+             (if moving (goto-char (process-mark proc)))))))
+
+   #+END_SRC
+
+
+
+   Note that Emacs automatically saves and restores the match data while executing filter functions.
+
+
+
+   另外,需要注意: *传递給filter function的输出内容,可能是任意大小的一块输出,很可能一整个句子会被拆分成很多块传递过来.*
+
+
+
+   * (process-sentinel process)
+
+
+
+   返回process的sentinel
+
+
+
+   * (set-process-sentinel process sentinel)
+
+
+
+   设置process的sentinel. 若参数sentinel为nil,则使用默认的sentinel(它仅仅将message插入process buffer中)
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun msg-me (process event)
+
+       (princ
+
+        (format "Process: %s had the event `%s'" process event)))
+
+     (set-process-sentinel (get-process "shell") 'msg-me)
+
+     => msg-me
+
+     (kill-process (get-process "shell"))
+
+     -| Process: #<process shell> had the event `killed'
+
+     => #<process shell>
+
+   #+END_SRC
+
+
+
+   "process sentinel"是一种函数,该函数在每次所关联的process的status发生改变时,都会被调用一次(包括程序退出时)
+
+
+
+   sentinel function接收两个参数:process和描述事件类型的字符串
+
+
+
+   其中字符串格式有下面几种:
+
+
+
+   * "finished\n"
+
+
+
+   * "exited abnormally with code EXITCODE\n"
+
+
+
+   * "NAME-OF-SIGNAL\n"
+
+
+
+   * "NAME-OF-SIGNAL (core dumped)\n"
+
+
+
+   类似fileter function, 只有在Emacs处于waiting状态时,才会调用sentinel function.
+
+
+
+   Emacs不会使用一个队列来保持调用sentinel的原因,它只记录当前状态和发生改变的原因. 因此若状态在很短时间内发生连续变化,只能触发一次sentinel的调用. 不过由于process终止运行后就不会再发生状态变更了,所以process终止操作总会触发一次sentinel
+
+
+
+   *每次运行process sentinel前,Emacs都会明确地检查一次process是否有输出*
+
+
+
+   *若sentinel要将输出写到process buffer中时,一定要记得检查buffer是否还在,往被kill掉的buffer中写入会引发错误.* 可以用`(buffer-name (process-buffer PROCESS))'是否为nil来检查buffer是否存在
+
+
+
+   sentinel在处理quiting和error时,跟filter function一样. 默认情况下都会屏蔽quitting和自动捕获error
+
+
+
+   在sentinel的执行期间,process的sentinel会临时设置为nil,以防止sentinel的重复调用
+
+
+
+   Note that Emacs automatically saves and restores the match data while executing sentinels.
+
+
+
+   * (waiting-for-user-input-p)
+
+
+
+   当sentinel或fileter function正在运行时,该函数返回nil.
+
+
+
+   * (process-query-on-exit-flag process)
+
+
+
+   返回PROCESS的query flag
+
+
+
+   每个程序都由个query flag,若参数为t,则表示kill该process之前询问用户是否确定要作这项操作,默认为t
+
+
+
+   * (set-process-query-on-exit-flag process flag)
+
+
+
+   设置process的query flag
+
+
+
+   每个process跟symbol类型,也带有自己的property list.
+
+
+
+   * (process-get process property)
+
+
+
+   获取process的property的value
+
+
+
+   * (process-put process property value)
+
+
+
+   设置process的property的值为value
+
+
+
+   * (process-plist process)
+
+
+
+   获取process的plist
+
+
+
+   * (set-process-plist process plist)
+
+
+
+   设置process的plist
+
+** 与Process的交互
+
+*** Sending Input to Processes
+
+    可以使用如下命令为异步process的stdio流发送数据,在这些函数中,参数 *PROCESS可以为process object或process的名称,或buffer或buffer的名称,或nil表示当前buffer的process*
+
+
+
+    * (process-send-string process string)
+
+
+
+    給process的stdio发送string,该函数返回nil
+
+
+
+    * (process-send-region process start end)
+
+
+
+    将region的内容作为process的stdio
+
+
+
+    参数START,END必须是integer或marker,否则会报错
+
+
+
+    * (process-send-eof &optional process)
+
+
+
+    传递eof到process的stdio
+
+
+
+    process若为nil,则表示属于当前buffer的process
+
+
+
+    该函数返回process
+
+
+
+    * (process-running-child-p &optional process)
+
+
+
+    该函数告诉你,process是否将对terminal的控制权交给了它的child process.
+
+
+
+    注意: *当Emacs无法分辨时,也返回t*
+
+*** Sending Signals to Processes
+
+
+
+    每个发送signal給process的函数都接收两个可选参数:PROCESS和CURRENT-GROUP
+
+
+
+    参数PROCESS必须为process object或process的名称或buffer或buffer name或nil(表示当前buffer的process).
+
+
+
+    参数CURRENT-GROUP是一个标志,当运行一个job-control shell作为Emacs的subprocess时,该标志的不同值才有不同的意思.
+
+
+
+    当参数CURRENT-GROUP的值为非nil,则信号是发送到Emacs与subprocess交互所使用的那个Terminal的process-group,而不是process的process group.  *若process本身就是个job-control shell,表示中断的是shell的current subjob而不是shell本身(注意,这时Emacs是在与shell的当前job交互而不是shell交互)*
+
+
+
+    若参数CURRENT-GROUOP的值为nil,则信号发送到Emacs的直接子进程的process group.  *若subproces为job-control shell,这就是shell本身*
+
+
+
+    当Emacs使用pipe与subprocess交互时,参数CURENT-GROUP是无效的.
+
+
+
+    * (interrupt-process &optioal process current-group)
+
+
+
+    发送SIGINT給process
+
+
+
+    * (kill-process &optioal process current-group)
+
+
+
+    发送SIGKILL
+
+
+
+    * (quit-process &optioal process current-group)
+
+
+
+    发送SIGQUIT
+
+
+
+    * (stop-process &optioal process current-group)
+
+
+
+    发送SIGSTP. 进程暂停后,可以使用`continue-process'再次让它运行起来
+
+
+
+    * (continue-process &optioal process current-group)
+
+
+
+    发送SIGCONT
+
+
+
+    * 命令(signal-process process signal)
+
+
+
+    向process发信号
+
+
+
+    参数signal必须为一个整数,或以signal为名称的symbol
+
+
+
+    参数process除了可以使process object,process的名称,buffer,和buffer的名称外,可以为 *process的pid*,这允许你发送信号給非Emacs的子进程
+
+***  Receiving Output from Process
+
+
+
+    subprocess的stdout会传递給"filter function"来处理.
+
+
+
+    默认的filter function只是简单的将内容插入到process相关联的buffer中去, 若process没有相关联的buffer,则丢弃该输出
+
+
+
+    当subprocess结束运行后,Emacs reads any pending output, 然后就不再从subprocess中读取任何输出了,即使这时候subprocess的child process还有输出也不管.
+
+
+
+    需要注意的是:subprocess的输出只有当Emacs处于waiting时才回被读取,即Emacs读取terminal input或调用`accept-process-output'时才会被读取.
+
+
+
+    在某些操作系统中,当Emacs读取subprocess的输出时,输出的内容是以一小块一小块的方式被读取的,这就照成了读取的效率低下. 通过设置`process-adaptive-read-buffering'可以适当提高一些效率,因为它对这些进程进行延迟读取,等他们产生更多的输出时再读取出来.
+
+
+
+    *要区分subprocess中的stdout和stderr是不可能的,因为Emacs通常在pty中调用子进程,而pty只有一个stdout,若想区分他们,只能将其中一个重定向到文件中*
+
+
+
+    * (accept-process-output &optional process seconds millisec just-this-one)
+
+
+
+    该函数允许Emacs读取PROCESS的输出.
+
+
+
+    若参数PROCESS为非nil,则该函数会一直等待,直到从PROCESS读取到输出为止.
+
+
+
+    参数SECONDS和MILLISEC为超时时间. 由于参数SECONDS可以是浮点型,因此参数MILLISEC不推荐使用.
+
+
+
+    若参数PROCESS为非nil,而参数JUST-THIS-ONE为非nil,则只有该process的输出被处理.
+
+    若JUST-THIS-ONE为一个整数,则还会暂停定时器的执行
+
+
+
+    若`accept-process-output'等待超时而没有读到任何东西,则返回nil
+
+** Accessing Other Processes
+
+   Emacs除了可以与自己创建的subprocess交互外,也能与同机器上的其他进程交互,这些进程称为"System process"
+
+
+
+   * (list-system-processes)
+
+
+
+   列出所有正在运行的进程pid的list
+
+
+
+   * (process-attributes pid)
+
+
+
+   返回指定system process的属性组成的alist
+
+
+
+   这些属性有:
+
+
+
+   * euid
+
+
+
+   effective user id
+
+
+
+   * user
+
+
+
+   * egid
+
+
+
+   The group id of the effective user id
+
+
+
+   * group
+
+
+
+   * comm
+
+
+
+   运行该process的command
+
+
+
+   * state
+
+
+
+   该process的状态码
+
+   | 状态码 | 说明                                                                  |
+
+   | "D"    | uninterruptible sleep (usually I/O)                                   |
+
+   | "R"    | running                                                               |
+
+   | "S"    | interruptible sleep (waiting for some event)                          |
+
+   | "T"    | stopped, e.g., by a job control signal                                |
+
+   | "Z"    | "zombie": a process that terminated, but was not reaped by its parent |
+
+
+
+   * ppid
+
+
+
+   * pgrp
+
+
+
+   * sess
+
+
+
+   session ID of the process
+
+
+
+   * ttname
+
+
+
+   process的控制终端的名称
+
+
+
+   * tpgid
+
+
+
+   The numerical process group ID of the foreground process group that uses the process's terminal.
+
+
+
+   * minflt
+
+
+
+   The number of minor page faults caused by the process since its beginning.
+
+   (Minor page faults are those that don't involve reading from disk.)
+
+
+
+   * majflt
+
+
+
+   The number of major page faults caused by the process since its beginning.
+
+   (Major page faults require a disk to be read, and are thus more expensive than minor page faults.)
+
+
+
+   * cminflt / cmajft
+
+
+
+   Like `minflt' and `majflt', but include the number of page faults for all the child processes of the given process.
+
+
+
+   * utime
+
+
+
+   process在user context下的运行时间(消耗CPU时间片的时间)
+
+
+
+   * stime
+
+
+
+   process在system context下的运行时间
+
+
+
+   * time
+
+
+
+   utime+stime
+
+
+
+   * cutime / cstime / ctime
+
+
+
+   类似utime,stime,time,但是包括指定process下的子进程
+
+
+
+   * pri
+
+
+
+   优先级
+
+
+
+   * nice
+
+
+
+   * thcount
+
+
+
+   process中的进程数
+
+
+
+   * start
+
+
+
+   process开始的时间
+
+
+
+   * etime
+
+
+
+   process开始后,经过了多少时间
+
+
+
+   * vsize
+
+
+
+   process占用虚拟内存的大小,kb为单位
+
+
+
+   * rss
+
+
+
+   process占用物理空间的大小,kb为单位
+
+
+
+   * pcpu
+
+
+
+   占cpu的百分比
+
+
+
+   * pmen
+
+
+
+   占总物理内存的百分比
+
+
+
+   * args
+
+
+
+   command的参数
+
+** 交易队列
+
+
+
+   通过交易队列,可以使用交易与process进行通讯.
+
+
+
+   首先使用`tq-create'创建交易队列,然后使用`tq-enqueue'发送交易
+
+
+
+   * (tq-create process)
+
+
+
+   创建与PROCESS通讯的交易队列
+
+
+
+   参数PROCESS必须可读写的,既可以是子进程, *也可以是网络连接.*
+
+
+
+   * (tq-equeue queue question regexp closure fn &optional delay-question)
+
+
+
+   发送交易到队列QUEUE
+
+
+
+   参数QUESTION为发送的消息
+
+
+
+   参数FN为当answer回来时的回调函数. 他接收两个参数:参数CLOSURE和接收到的answer
+
+
+
+   参数REGEXP为一个正则表达式,该正则表达式应该匹配整个完整答案结束时的文本. `tq-enqueue'使用该正则来判断answer是否已经接收完全
+
+
+
+   若参数DELAY-QUESTION为非nil,则会暂缓question的发送,直到process对之前的question都回应完后再发送. 对某些process来说,这样会得到比较靠谱的answer
+
+
+
+   * (tq-close queue)
+
+
+
+   等待所有的交易完成,然后关闭队列
+
+
+
+   Transaction queues的实现依靠filter function
+
+** Network Process
+
+   Emacs Lisp程序可以创建TCP/UDP链接(通过内建/外部支持,甚至还能创建加密的网络连接)，既能创建客户端,也能创建服务端.
+
+
+
+   Elisp把网络链接看成时跟subprocess类似的东西，也用process object来表示。当然这种process object没有pid，也不能对它发送信号什么的。
+
+
+
+   通过调用`make-network-process‘可以创建Network connection和Network server。 该函数接受keyword参数`:server t’表示创建Network server process. `:type datagram'表示创建UDP链接
+
+
+
+   可以通过`stop-process'和`continue-process'来stop/resume network process的操作.
+
+   对于server process来说,stop意味着不再接收新连接请求.
+
+   对于network connection来说,stop意味着不再接收输入流
+
+
+
+
+
+   通过带参数`:server t'调用`make-network-process'创建的network server. 它接受客户端的连接请求,并创建一个新的process object表示这个新的network connection.
+
+   这个新生成的表示network connection的process object有如下几个特征:
+
+   * connection process的名称为server process的名称+客户端唯一标识
+
+   * 若server process没有默认的filter function,则connection process没有自己独立的process buffer. 否则Emacs为process buffer创建自己独立的buffer,buffer名称为server的buffer名称或process名称加上client的唯一标识
+
+   * connection process的链接类型,filter connection和sentinel都继承至server process
+
+   * connection process的process contact信息根据client端的地址信息来设置
+
+   * connection process的本地地址根据用于该链接的端口号决定
+
+   * client process的plist初始化为server process的plist一样
+
+*** 创建表示网络连接/网络服务的process object
+
+    * (make-network-process &rest args)
+
+
+
+    该函数创建一个network connection或network server,并返回一个process object.
+
+
+
+    这里参数args可能是以下keyword:
+
+
+
+    * :name NAME
+
+
+
+    使用NAME作为process的名称
+
+
+
+    * :type TYPE
+
+
+
+    定义链接类型. nil表示TCP链接; 'datagram表示UDP链接;'seqpacket表示"sequenced packet stream"链接
+
+
+
+    * :server SERVER-FLAG
+
+
+
+    若参数为非nil,表示创建network server,否则为创建Network connection
+
+
+
+    若为stream type server(TCP类型的server),则该参数必须为一个整数,表示最大可以等待的连接数
+
+
+
+    * :host HOST
+
+
+
+    表示要连接的host. 它可以是一个表示Internet地址的字符串,或symbol 'local.
+
+
+
+    若为Network Server指定host,则Network Client必须连接到这个HOST的请求才会被接受
+
+
+
+    * :service SERVICE
+
+
+
+    SERVICE指定了要连接的端口. 它可以是表示service名称的字符串,或者表示端口号的整数
+
+
+
+    对于Network server.该参数还可以为t,表示让系统自己选择一个未用的port
+
+
+
+    * :family FAMILY
+
+
+
+    FAIMILY指定了链接协议的种类.
+
+
+
+    nil表示由系统自动选择.
+
+
+
+    'local表示为Unix socket,这种情况下:host参数可以被忽略
+
+
+
+    'ipv4或'ipv6表示使用IPv4和IPv6
+
+
+
+    * :Local LOCAL-ADDRESS
+
+
+
+    对于Network Server. LOCAL-ADDRSS为监听的地址.
+
+
+
+    该参数会覆盖FAMILY,HOST和SERVICE的值
+
+
+
+    其中LOCAL-ADDRESS的格式根据FAMILY的不同而不同
+
+
+
+    - IPv4的地址使用一个5元素的vector表示[A B C D Port]
+
+
+
+    - IPv6的地址使用一个9元素的vector表示[A B C D E F G H Port]
+
+
+
+    - 本地地址使用字符串表示
+
+
+
+    * :remote REMOTE-ADDRESS
+
+
+
+    对于Network connection来说REMOTE-ADDRESS为要连接到的地址. 该参数会覆盖FAMILY,HOST和SERVICE
+
+
+
+    对于UDP Server来说,REMOTE-ADDRESS指定了remote datagram address的初始设置
+
+
+
+    REMOTE-ADDRESS的格式参见LOCAL-ADDRESS的格式
+
+
+
+    * :nowait BOOL
+
+
+
+    若BOOL为非nil,则对于TCP connection来说,函数不等待连接完成就返回.
+
+
+
+    当链接连接成功或失败后,会调用process的sentinel function
+
+
+
+    * :stop STOPPED
+
+
+
+    若STOPPED为非nil,则创建的network connection或network server处于stopped状态
+
+
+
+    * :buffer BUFFER
+
+
+
+    使用BUFFER作为process buffer
+
+
+
+    * coding CODING
+
+
+
+    设置process的编码,格式为'(DECODING ENCODING)
+
+
+
+    * :noquery QUERY-FLAG
+
+
+
+    初始化process的query flag,若为非nil,则在delete 该process时会提升用户确认
+
+
+
+    * :filter FILTER
+
+
+
+    初始化process的filter function
+
+
+
+    * :filter-multibyte MULTIBYTE
+
+
+
+    若MULTIBYTE为非nil,则传递给process filter function的字符串为multbyte格式的.否则为unibyte格式的.
+
+
+
+    默认为参数`enable-multibyte-characters'的值
+
+
+
+    * :sentinel SENTINEL
+
+
+
+    初始化process的sentinel
+
+
+
+    * :log LOG
+
+
+
+    初始化Network server的log function.
+
+
+
+    每次server接受一次client发起的连接请求就会调用一次log function.
+
+
+
+    传递给log function的参数有:SERVER,CONNECTION和MESSAGE
+
+
+
+    * :plist PLIST
+
+
+
+    初始化process的plist
+
+
+
+    下面的参数是专为network connection使用的
+
+
+
+    * :bindtodevice DEVICE-NAME
+
+
+
+    指定绑定到哪张网卡,只有从该网卡接受到的报文才会被处理,若DEVICE-NAME为nil,表示任何网卡
+
+
+
+    * broadcast BROADCAST-FLAG
+
+
+
+    对于datagram process来说,若BROADCAST-FLAG为非nil,则process会接受发送到广播域的UDP报文,也能将UDP报文发送到广播域
+
+
+
+    对TCP 链接无效
+
+
+
+    * :dontroute DONTROUTE-FLAG
+
+
+
+    若DONTROUTE-FLAG为非nil,则表示不由路,及只能发送报文给统一网段的地址
+
+
+
+    * :keepalive KEEPALIVE-FLAG
+
+
+
+    若为TCP链接,且KEEPALIVE-FLAG为非nil,则开启low-level keep-alive messages交换功能
+
+
+
+    * linger LINGER-ARG
+
+
+
+    若LINGER-ARG为非nil,则会在关闭链接前会等待链路上的报文都转发成功后才关闭.
+
+
+
+    若LINGER-ARG为整数,它表示等待报文转发的最大时间.
+
+
+
+    默认参数nil表示关闭链接时直接丢弃所有未转发的报文
+
+
+
+    * :oobinline OOBINLINE-FLAG
+
+
+
+    若为TCP链接,且OOBINLINE-FLAG为非nil,则接受out-of-band数据包
+
+
+
+    * :priority PRIORITY
+
+
+
+    设置数据包的优先级,为整数.
+
+
+
+    该参数与系统,协议都相关
+
+
+
+    * :reuseaddr REUSEADDR-FLAG
+
+
+
+    该参数对stream server process生效.
+
+
+
+    默认REUSEADDR-FLAG为非nil,表示该服务可以立刻重用指定的端口.
+
+
+
+    若REUSEADDR-FLAG为nil,表示在一个进程使用了指定端口后,一段时间内该端口不能被其他进程所使用.
+
+
+
+    * (set-network-process-option process option value &optional no-error)
+
+
+
+    设置已存在network process的网络属性,可设置的属性参见`make-network-process'中的属性(但不包括reuseaddr属性)
+
+
+
+    若参数NO-ERROR为非nil,则当设置的参数不支持时不会抛出error,只返回nil
+
+
+
+    若设置成功,则返回t
+
+
+
+    * (open-network-stream name buffer host service &rest parameters)
+
+
+
+    该函数创建一个TCP连接(可选择加密),并返回一个process object
+
+
+
+    参数NAME表示该process object的名称,若有重复名称则会自动添加编号
+
+
+
+    参数BUFFER为与该connection相连的buffer. 默认情况下connection的输出会插入到该buffer中. 若BUFFER为nil表示没有连接的buffer
+
+
+
+    参数HOST和SERVICE指明了要连接的服务端的地址和端口. 其中host为字符串类型,SERVICE可以为字符串也可以为整数
+
+
+
+    剩下的参数PARAMETERS,是各种keyword参数:
+
+
+
+    * :nowait BOOLEAN
+
+
+
+    若为飞nil,则表示创建异步连接
+
+
+
+    * :type TYPE
+
+
+
+    连接的类型.
+
+
+
+    | TYPE          | 说明                                                                                                                     |
+
+    |---------------+--------------------------------------------------------------------------------------------------------------------------|
+
+    | plain         | 普通的,未加密的链接                                                                                                      |
+
+    | tls / ssl     | TLS链接                                                                                                                  |
+
+    | nil / network | 自动决定类型. 若系统支持参数:success和:capability-command,则先尝试通过STARTTLS建立加密链接,若失败了,使用普通的未加密链接 |
+
+    | starttls      | 类似nil,但是若通过STARTTLS创建链接失败了,则关闭该链接                                                                    |
+
+    | shell         | shell connection                                                                                                         |
+
+
+
+    * :always-query-capabilities BOOLEAN
+
+
+
+    若为非nil,则总是询问server端能支持的特性,及时创建的只是普通的链接
+
+
+
+    * :capability-command CAPABILITY-COMMAND
+
+
+
+    定义查询server端支持特性时的命令串
+
+
+
+    * :end-of-command REGEXP
+
+
+
+    匹配command结束的正则表达式
+
+
+
+    * :end-of-capability REGEXP
+
+
+
+    匹配CAPABILITY-COMMAND命令串结束的正则表达式,默认为:end-of-command的值
+
+
+
+    * :starttls-function FUNCTION
+
+
+
+    该function应该能接收一个参数,该参数为服务端对CAPABILITY-COMMAND的回应.
+
+
+
+    该function应该返回nil或激活STARTTLS的命令
+
+
+
+    * :success REGEXP
+
+
+
+    使用该正则表达式来判断是否正常开启STARTTLS特性
+
+
+
+    * :use-starttls-if-possible BOOLEAN
+
+
+
+    若值为非nil,计时Emacs没有内建TLS支持,也尝试开启STARTTLS特性
+
+
+
+    * :client-certificate LIST-OR-T
+
+
+
+    可以以'(KEY-FILE CERT-FILE)的格式明确指明了certificate key file和certificate file的地址
+
+
+
+    或者t表示通过查询`auth-source'来获取信息
+
+
+
+    * :return-list CONS-OR-NIL
+
+
+
+    指明`make-network-stream'的返回值.
+
+
+
+    若为nil则返回process object
+
+
+
+    否则返回'(PROCESS-OBJECT . PLIST). 其中PLIST包含如下keyword:
+
+
+
+    * :greeting STRING-OR-NIL
+
+
+
+    表示服务端返回的欢迎信息
+
+
+
+    * :capabilities STRING-OR-NIL
+
+
+
+    表示服务端的支持的特性信息
+
+
+
+    * :type SYMBOL
+
+
+
+    链接的类型,可能为'plain或'tls
+
+
+
+    * (process-datagram-address process)
+
+
+
+    若PROCESS为UDP connection或UDP server. 则该函数返回remote peer address
+
+
+
+    * (set-process-datagram-address process address)
+
+
+
+    若PROCESS为UDP connection或UDP server. 则该函数设置remote peer address为ADDRESS
+
+*** 测试Network特性
+
+    要测试本机上的make-network-process支持哪些特写特性,可以使用`featurep'函数:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (featurep 'make-network-process '(KEYWORD VALUE))
+
+    #+END_SRC
+
+    它表示`make-network-process'时KEYWORD的值是否为VALUE
+
+
+
+    下面是一些例子
+
+    | KEYWORD VALUE PAIRS | 说明                                                             |
+
+    |---------------------+------------------------------------------------------------------|
+
+    | (:nowait t)         | Non-`nil' if non-blocking connect is supported.                  |
+
+    | (:type datagram)    | Non-`nil' if datagrams are supported.                            |
+
+    | (:family local)     | Non-`nil' if local (a.k.a. "UNIX domain") sockets are supported. |
+
+    | (:family ipv6)      | Non-`nil' if IPv6 is supported.                                  |
+
+    | (:service t)        | Non-`nil' if the system can select the port for a server.        |
+
+
+
+    也可以使用如下格式的form来测试指定的network选项是否能设置
+
+    #+BEGIN_SRC emacs-lisp
+
+      (featurep 'make-network-process 'KEYWORD)
+
+    #+END_SRC
+
+*** 其他Network函数
+
+    这里的函数,需要操作系统的支持.
+
+
+
+    * (network-interface-list)
+
+
+
+    该函数返回当前机器中各网卡的描述列表.
+
+
+
+    该列表的格式为一个由'(NAME . ADDRESS)组成的alist
+
+    #+BEGIN_SRC emacs-lisp
+
+      (network-interface-list)
+
+      ;; ("wlan3" . [192 168 8 113 0]) ("lo" . [127 0 0 1 0])
+
+    #+END_SRC
+
+
+
+    * (network-interface-info interface-name)
+
+
+
+    该函数返回指定网卡的信息.
+
+
+
+    该信息是一个格式格式为'(ADDR BROADECAST-ADDR NETMASK HARDWARE-ADDR FLAGS)的list
+
+    #+BEGIN_SRC emacs-lisp
+
+      (network-interface-info "wlan3")
+
+      ;; (
+
+      ;; [192 168 8 113 0]
+
+      ;; [192 168 8 255 0]
+
+      ;; [255 255 255 0 0]
+
+      ;; (1 . [8 16 120 53 33 177])
+
+      ;; (multicast running broadcast up))
+
+    #+END_SRC
+
+
+
+    * (format-network-address address &optional omit-port)
+
+
+
+    该函数将lisp格式的网络地址转换为字符串表示
+
+
+
+    参数OMIT-PORT表示转换时是否不带端口信息
+
+** Serial Port Process
+
+   通过`make-serial-process'创建serial port process可以与serial port通讯
+
+
+
+   serial port process可以通过`serial-process-configure'实时的修改配置,而不用关闭后重新连接.
+
+
+
+   * (make-serial-process &rest args)
+
+
+
+   该函数创建serial port process及其相关连的buffer. 在内部会使用函数`serial-process-configure'进行真正的配置工作
+
+
+
+   args可以是如下keyword参数:
+
+
+
+   * :port PORT
+
+
+
+   serial port的名称(Unix下为/dev/ttyS0,Win下为COM1或\\.\COM10)
+
+
+
+   * :speed SPEED
+
+
+
+   serial port的速率
+
+
+
+   * :name NAME
+
+
+
+   process的名称,可能会添加后缀以保证唯一
+
+
+
+   * :buffer BUFFER-OR-NAME
+
+
+
+   相关连的buffer,若忽略该参数则与:name的参数值一样
+
+
+
+   * :coding CODING
+
+
+
+   读取的编码格式,参数格式为'(DECODING . ENCODING)
+
+
+
+   * :noquery QUERY-FLAG
+
+
+
+   初始化process的query flag. 决定被关闭时是否提示用户确认
+
+
+
+   * :stop BOOL
+
+
+
+   创建的process是否一开始就处于stopped状态,这是process不能接受数据,但是可以发送数据
+
+
+
+   * :filter FILTER
+
+
+
+   设置rocess filter function
+
+
+
+   * :sentinel SENTINEL
+
+
+
+   设置process的sentinel
+
+
+
+   * :plist PLIST
+
+
+
+   设置process的初始plist
+
+
+
+   * :bytesize BYTESIZE
+
+
+
+   设置每个byte包含多少bit,可以为7或8. 默认为8
+
+
+
+   * :parity PARITY
+
+
+
+   可以为nil,'odd或'even
+
+
+
+   * :stopbits STOPBITS
+
+
+
+   每个byte中用于终止传输的stopbit的位数. 可以是1或2. 默认为1
+
+
+
+   * :flowcontrol FLOWCONTROL
+
+
+
+   flow的类型决定了如何使用该链接. 可以是nil(不使用流控制特性),'hw(使用RTS/CTS硬件流控制),'sw(使用XON/XOFF软件流控制)
+
+
+
+   可以通过函数`process-conntact'查看那些参数可以被修改.
+
+
+
+   * (serial-process-configure &rest args)
+
+
+
+   重新设置serial port process的属性

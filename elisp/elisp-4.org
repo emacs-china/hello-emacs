@@ -1,0 +1,821 @@
+#+TITLE: elisp中的数据类型
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#elisp中的数据类型][elisp中的数据类型]]
+  - [[#number][Number]]
+    - [[#integer][Integer]]
+    - [[#float][Float]]
+      - [[#相关函数][相关函数]]
+  - [[#sequence][Sequence]]
+    - [[#array][Array]]
+      - [[#vector][vector]]
+      - [[#bool-vector][bool-vector]]
+      - [[#char-tables][char-tables]]
+      - [[#string][string]]
+    - [[#list][List]]
+      - [[#association-list--alist][association list / alist]]
+      - [[#property-list--plist][Property list / plist]]
+  - [[#hashtable][hashtable]]
+  - [[#symbol][symbol]]
+    - [[#符号的组成][符号的组成]]
+    - [[#符号的形成][符号的形成]]
+  - [[#char][Char]]
+    - [[#control-characters][Control characters]]
+    - [[#meta-character][Meta Character]]
+    - [[#shift-character][Shift Character]]
+    - [[#alt-character][Alt Character]]
+    - [[#hyper-character][Hyper Character]]
+    - [[#super-character][Super Character]]
+  - [[#其他类型][其他类型]]
+  - [[#循环结构][循环结构]]
+  - [[#数据类型之间的转换][数据类型之间的转换]]
+  - [[#类型判断][类型判断]]
+
+* elisp中的数据类型
+
+** Number
+
+*** Integer
+
+    根据机器的不同,Integer有不同的区间(分别由变量most-positive-fixnum和most-negative-fixnum来指示). 但elisp规定最少的范围是从-536870912到536870911.
+
+
+
+    任何超过Integer范围的值都认为是Float型
+
+
+
+    默认,Integer用10进制来表示数,但也可以用
+
+    * #bNNNN表示二进制数
+
+    * #oNNNN表示八进制数
+
+    * #xNNNN表示十六进制数
+
+    * #MrNNNN表示M进制的数
+
+*** Float
+
+    Elisp中Float的取值范围与C中的double型一样.
+
+
+
+    Float使用INF表示无穷大. Float还有一个特殊值名为NaN. 当数学函数计算非法表达式时会返回该值.
+
+    #+BEGIN_SRC emacs-lisp
+
+      (/ 0 0.0)                               ;-0.0e+NaN
+
+      (/ -0 0.0)                              ;-0.0e+NaN
+
+      (/ 1 0.0)                               ;1.0e+INF
+
+      (/ -1 0.0)                              ;-1.0e+INF
+
+
+
+    #+END_SRC
+
+**** 相关函数
+
+     * 判断是否为NAN
+
+
+
+     (isnan x)
+
+
+
+     * (frexp x)
+
+
+
+     返回一个元组(S . E),使得S*2^E == x,S的值在[0.5 1)
+
+
+
+     * (ldexp S E)
+
+
+
+     返回Float值x 使得x == S*2^E
+
+
+
+     * (copysign x1 x2)
+
+
+
+     假设x1 == S1*2^E1, x2 == S2*2^E2,则返回S1*2^E2的值
+
+
+
+     * (logb x)
+
+
+
+     返回log2(x)的值,向下取整. 例如(logb 10) => 3
+
+** Sequence
+
+   * 获取sequence的长度
+
+
+
+   (length mySequence)
+
+
+
+   需要注意的是length不能对点列表和环形列表求长度,但是可以用safe-length代替
+
+*** Array
+
+    除了char-table之外,创建其他类型的Array都需要指定一个固定长度.
+
+
+
+    char-table的长度是由character code的范围所决定的,不能人工指定
+
+**** vector
+
+     vecotr是sequence的一个子类型
+
+     * 如何创建一个vector
+
+
+
+     * 使用字面量语法:[val1 val2 val3...]
+
+
+
+     * 使用函数(vector val1 val2 val3...)
+
+
+
+     * 获取vector的长度
+
+
+
+     (length myVector)
+
+
+
+     * 获取element
+
+
+
+     (elt mySeq index)    # index从0开始
+
+
+
+     * 设置element
+
+
+
+     (aset mySeq index value)
+
+
+
+     * 将多个Sequence组合成一个vector
+
+
+
+     (voncat seq1 seq2 ...)
+
+
+
+     * 将vector转换成list
+
+
+
+     (append myVector nil)
+
+
+
+**** bool-vector
+
+     * bool-vector只能存放nil或t
+
+     * bool-vector的输出格式与字符串类似,但在前面加上`#&长度`作为标识:
+
+       #+BEGIN_SRC emacs-lisp
+
+         #&长度"内容"                            ;这里的长度表示bool-vector的长度,内容的二进制为vector的内容,内容的现实方式为字符串
+
+         (make-bool-vector 3 t)                  ; => #&3"^G" ?\C-g == 7
+
+         (make-bool-vector 3 nil)                ; => #&3"^@" ?\C-@ == 0
+
+         (equal #&3"\377" #&3"\007")             ; => t
+
+
+
+       #+END_SRC
+
+**** char-tables
+
+     * 类似vector,但它使用Character作为索引.
+
+     * char-tables的输出格式与vector类似,但前面加上`#^`作为标示
+
+     * 每个char-table对象都有一个symbol类型的"subtype",可以用于标识char-table的用处, 使用函数char-table-subtyple来查询该subtype
+
+     * char-table的subtype中的属性`char-table-extra-slots`决定了该char-table的扩展slot的个数(0-10之间)
+
+     * 每个char-table都可以有一个父char-table,子char-table从父char-table中继承索引的值.
+
+     * char-table还能够设定一个默认值.若发现char-table指定index的值为nil,则返回该默认值.
+
+**** string
+
+     * elisp中的string是不可变的.
+
+     * string中不能包含?\H-N ?\A-N ?\s-N 这些字符
+
+     * string中可以包含文本属性,包含文本属性的输出格式为:
+
+       #+BEGIN_SRC emacs-lisp
+
+         #("characters" property-data...)
+
+       #+END_SRC
+
+       * Emacs中,对字符串作比较的函数只有string=,string<函数,没有string>函数
+
+*** List
+
+    list是sequence的一个子类型
+
+    * 创建一个list
+
+
+
+    * 使用list函数:(list v1 v2...)
+
+
+
+    * 使用字面表达式'(v1 v2...)
+
+
+
+    * 获取element
+
+      | Function       | Purpose                     |
+
+      |----------------+-----------------------------|
+
+      | (car ℓ)        | first element               |
+
+      | (nth n ℓ)      | nth element (start from 0)  |
+
+      | (car (last ℓ)) | last element                |
+
+      | (cdr ℓ)        | 2nd to last elements        |
+
+      | (nthcdr n ℓ)   | nth to last elements        |
+
+      | (butlast ℓ n)  | without the last n elements |
+
+
+
+    * 获取list的长度
+
+
+
+    (length mySeq)
+
+
+
+    * 在list头添加element
+
+
+
+    (cons x myList)
+
+
+
+    * 合并两个list
+
+
+
+    (append list1 list2)
+
+
+
+    由此可以得出,在list尾部添加element的方法为
+
+
+
+    (append myList (list myVal))
+
+
+
+    * 修改list的函数
+
+      | Function       | Purpose                                                                          |
+
+      | (pop ℓ)        | Remove first element from the variable. Returns the removed element.             |
+
+      | (nbutlast ℓ n) | Remove last n elements from the variable. Returns the new value of the variable. |
+
+      | (setcar ℓ x)   | replaces the first element in ℓ with x. Returns x.                               |
+
+      | (setcdr ℓ x)   | replaces the rest of elements in ℓ with x. Returns x.                            |
+
+
+
+**** association list / alist
+
+     alist中的item是顺序的,且可以有重复键值
+
+
+
+     在elisp中,alist中可以存在某些element不是cons cell的情况,alist查询函数会自动略过这些异常的element
+
+     association list类似于C语言中的map,它的结构为
+
+
+
+     #+BEGIN_SRC lisp
+
+       (defvar *alist-example* '((key1 value1)
+
+                                 (key2 value2)))
+
+     #+END_SRC
+
+
+
+**** Property list / plist
+
+     plist的作用类似alist,也是用list表示一组键值对.
+
+
+
+     plist的key为symbol,它的结构为
+
+     #+BEGIN_SRC emacs-lisp
+
+       (key1 value1 key2 (value2) key3 "value3") ;=>键值对的对应关系为key1->value1;key2->'(value2);key3->"value3"
+
+     #+END_SRC
+
+
+
+     每一个symbol都可以attach一个plist
+
+
+
+     需要注意的是,plist中的 *key必须是唯一的* ,相比来说alist就没有这个限制了.
+
+** hashtable
+
+   hash table类似alist一样提供了键值配对的功能. 但比起alist来说,有如下三个方面的不同
+
+
+
+   * 在搜索大量的键值对集合时,使用hash table的搜索速度比alist快得多
+
+   * hash table中的的item是非排序的,不能有重复键值
+
+   * 两个hash table对象无法共享同一个结构体,而两个alist对象之间有可能使用共同的tail
+
+
+
+   hash table的输出格式以#s开头后接hash table的属性和内容
+
+   #+BEGIN_EXAMPLE
+
+     #s(hash-table size 65 test eql rehash-size 1.5 rehash-threshold 0.8 data
+
+                   ())
+
+   #+END_EXAMPLE
+
+
+
+** symbol
+
+   * Lisp中symbol类似于其他语言中的变量,但是它不仅仅只存储一个值.
+
+   * 列表的第一个表达式如果是一个符号,解释器会查找这个表达式的函数值.如果函数值是另一个符号,则会继续查找这个符号的函数值
+
+   * symbol中,\失去了转义的功能,因此'\t就是't而不时'<TAB>
+
+   * 一个符号既可以有value,也可以有function,即一个symbol可以同时求值和当作函数用
+
+*** 符号的组成
+
+    * 符号名称:使用函数symbol-name获取
+
+
+
+    * 符号值: 使用函数symbol-value获取
+
+
+
+    * 使用boundp测试符号是否有值
+
+    * 以`:`开头的符号的值不能变
+
+
+
+    * 函数:  使用symobl-function获取
+
+    * 使用fboundp测试符号是否设置了函数
+
+    * 其实function slot不仅仅可以存放function,还可以存放macro,symbol,keyboard marcro,keympa和autoload object
+
+
+
+    * 属性列表:使用symbol-plist获取
+
+    * 使用get/put来访问/修改某个属性值
+
+    * 使用plist-get/plist-put来访问/设置属性列表中的属性
+
+    * 属性列表是一个形如(prop1 value1 prop2 value2)的关联列表,但无法删除一个属性
+
+    * 可用使用属性列表来存储function的状态
+
+*** 符号的形成
+
+    当elisp读取到一个symbol时,它会先在一个名为`obarray`的vector中检查是否已经存在这个symbol, 若不存在,则elisp reader创建新的symbol并添加到obarray中(创建并添加symbol的过程被成为"interning",而该symbol被成为是"interned symbol").
+
+
+
+    如果想避免intern一个symbol,可以在符号名前加上`#::`,这些符号被称为`uninterned symbols`
+
+    #+BEGIN_SRC elisp
+
+      (intern-soft "abc") ; => nil
+
+      'abc ; => abc
+
+      (intern-soft "abc") ; => abc
+
+      (intern-soft "abcd") ; => nil
+
+      '#:abcd ; => abcd
+
+      (intern-soft "abcd") ; => nil
+
+    #+END_SRC
+
+
+
+    obarray也是一种类型名称
+
+
+
+    由于在elisp中,obarray就是一个vector,因此可以使用(make-vecotr LENGTH 0)来创建一个空的obarray, 而要把symbol插入一个obarray,则必须使用如下的intern系列函数来进行.
+
+    * intern
+
+    * intern-soft
+
+    * unintern
+
+    * mapatoms
+
+
+
+** Char
+
+   类似C,Elisp中的Char其实就是integer(值从0到(max-char)的范围都可以认为是character). Char类型的字面量结构为`?字母`,例如
+
+   #+BEGIN_SRC emacs-lisp
+
+
+
+     (message "%d" ?A)      ;65
+
+     (message "%d" ?\.)     ;46 标点一般在前面加\
+
+     (message "%d" ?我)     ;25105
+
+
+
+     ?\a ;=> 7                 ; control-g, `C-g'
+
+     ?\b ;=> 8                 ; backspace, <BS>, `C-h'
+
+     ?\t ;=> 9                 ; tab, <TAB>, `C-i'
+
+     ?\n ;=> 10                ; newline, `C-j'
+
+     ?\v ;=> 11                ; vertical tab, `C-k'
+
+     ?\f ;=> 12                ; formfeed character, `C-l'
+
+     ?\r ;=> 13                ; carriage return, <RET>, `C-m'
+
+     ?\e ;=> 27                ; escape character, <ESC>, `C-['
+
+     ?\s ;=> 32                ; space character, <SPC>
+
+     ?\\ ;=> 92                ; backslash character, `\'
+
+     ?\d ;=> 127               ; delete character, <DEL>
+
+     ?\uNNNN                                 ;这里N为16进制数,表示U+NNNN的Unicode字符
+
+     ?\U00NNNNNN                             ;
+
+
+
+     ?\x十六进制代码            ; ?\x41 = \?A
+
+     ?\三个八进制代码           ; ?\001 = `C-a`
+
+
+
+   #+END_SRC
+
+
+
+
+
+   * 没有charp,因为字符就是整数,但是有char-or-string-p函数
+
+   * 使用char-equal比较字符时,需要注意case-fold-search变量的值,t表示忽略大小写
+
+*** Control characters
+
+    Ctrl-N的字面表达式为`?\^字母`(这里的字母不区分大小写)
+
+    #+BEGIN_SRC emacs-lisp
+
+
+
+      ?\^I ; == ?\^i  == C-i == 9
+
+    #+END_SRC
+
+
+
+    还可以表示为`?\C-字母`
+
+    #+BEGIN_SRC emacs-lisp
+
+      ?\C-g                                   ;== ?\^g == C-g
+
+    #+END_SRC
+
+
+
+    需要注意的是,?\C-G不时?\C-S-g的意思,它跟?\C-g的意义一样
+
+    由于历史的原因,Emacs把<DEL>看成是C-?
+
+*** Meta Character
+
+    M-N的字面表示方式为`?\M-字母`
+
+*** Shift Character
+
+    ?\S-N
+
+*** Alt Character
+
+    ?\A-N
+
+*** Hyper Character
+
+    ?\H-N
+
+*** Super Character
+
+    ?\s-N
+
+** 其他类型
+
+   * Buffer
+
+   * Marker
+
+   * Window
+
+   * Frame
+
+   * Terminal
+
+   * Window Configuration
+
+   * Frame Configuration
+
+   * Process
+
+   * Stream
+
+   * nil指`standard-input`和`standard-output`
+
+   * t指代`从minibuffer输入`或输出到`echo area`
+
+   * Keymap
+
+   * Overlay
+
+   Overlay用来給buffer的一部分内容加上不同的显示风格
+
+   * Font
+
+** 循环结构
+
+   需要使用`#N=`和`#N#`来定义循环点和引用循环点,这里N为数字
+
+   #+BEGIN_SRC emacs-lisp
+
+
+
+     '(#1=(a) b #1#)
+
+     #1='(a #1#)
+
+   #+END_SRC
+
+** 数据类型之间的转换
+
+   * number-to-string / string-to-number
+
+   * concat可以将序列转换成字符串
+
+   #+BEGIN_SRC elisp
+
+     (concat '(?a ?b ?c ?d ?e)) ; => "abcde"
+
+     (concat [?a ?b ?c ?d ?e]) ; => "abcde"
+
+   #+END_SRC
+
+   * vconcat可以把字符串转换成向量
+
+   #+BEGIN_SRC elisp
+
+     (vconcat "abdef") ; => [97 98 100 101 102]
+
+   #+END_SRC
+
+   * append可以把字符串转换成一个列表
+
+   #+BEGIN_SRC elisp
+
+     (append "abcdef" nil) ; => (97 98 99 100 101 102)
+
+   #+END_SRC
+
+   * (byte-to-string BYTE)
+
+   * 大小写转换
+
+
+
+   elisp通过case table来确定大小写的对应关系,每个buffer都可以设置自己的case table.
+
+   * (downcase string-or-char)
+
+
+
+   * (upcase string-or-char)
+
+
+
+   * (capitalize string-or-char)
+
+
+
+   string中的所有单词都被格式化为capitalize的格式
+
+
+
+   若参数为char类型,则效果跟upcase一样
+
+
+
+   * (upcase-initials string-or-char)
+
+
+
+   对string中的每个单词的第一个字母转化了大写字母,其他字母不变.
+
+
+
+   * 转换数字为Float型
+
+
+
+   (float number)
+
+
+
+   * 转换数字为Integer型
+
+
+
+   有8个函数可以用来转换Float到Integer型. 有些函数都带有一个可选参数DIVISOR, 若传入了DIVISOR则返回NUMBER/DIVISOR的整数化的值. 若DIVISOR为0,则Elisp报arith-error
+
+
+
+   (truncate number &optional divisor) / (ftruncate float)
+
+
+
+   截断小数位
+
+
+
+   (floor number &optional divisor) / (ffloor float)
+
+
+
+   截断成一个更小的整数
+
+
+
+   (ceiling number &optional divisor) / (fceiling float)
+
+
+
+   截断成一个更大的整数
+
+
+
+   (round number &optional divisor) / (fround float)
+
+
+
+   转换成最近的整数,若小数为为0.5,则转换为偶数,例如(round 1.5)=>2 (round 2.5)=>2
+
+
+
+   * 字符串与数字之间的相互转换
+
+
+
+   (string-to-number "N" &optional base)
+
+
+
+   (number-to-string N)
+
+
+
+   (format "%d" N)
+
+
+
+   * Object转换为String
+
+
+
+   (format "%s" object)
+
+
+
+   (prin1-to-string object)
+
+
+
+   * String转换为Object
+
+
+
+   (read-from-string string)
+
+
+
+   * symbol转换为string
+
+
+
+   (symbol-name symbol)
+
+
+
+   * string转换为symbol
+
+
+
+   (intern string)
+
+** 类型判断
+
+   * (cl-typep object type)
+
+
+
+   检查object是否为type类型.
+
+
+
+   参数type为common lisp形式
+
+
+
+   * (type-of object)
+
+
+
+   返回object的 *基本* 类型

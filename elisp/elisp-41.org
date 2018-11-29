@@ -1,0 +1,122 @@
+#+TITLE: Evaluation
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#evaluation][Evaluation]]
+  - [[#反引号][`(反引号)]]
+  - [[#函数][函数]]
+  - [[#选项][选项]]
+
+* Evaluation
+
+** `(反引号)
+
+   `类似', 但当object前带了`,'时则会对该object进行求值, 当object前带了`,@`,则会将object的求值结果中的各个元素打散插入.
+
+
+
+   对于,@的使用，还另有限制:
+
+
+
+   1. 为了确保其参数可以被拼接，,@必须出现在序列(sequence)Ʈ中。形如`,@b的说法是错误的,因为无处可供b的值进行拼接。
+
+
+
+   2. 要进行拼接的对象必须是个列表，除非它出现在列表最后。
+
+
+
+   表达式 =`(a ,@1)= 将被求值成 =(a . 1)=.
+
+
+
+   但如果尝试将原子拼接到列表的中间位置,例如 =`(a ,@1 b)=,将导致一个错误.
+
+
+
+   3. 反引用并不是只能使用在.你可以在任何需要构造序列的场合使用反引用.
+
+
+
+** 函数
+
+   * (eval form &optional lexical)
+
+   在当前环境下执行form
+
+
+
+   参数lexical决定了form中的本地变量采用的是静态作用域还是动态作用域.
+
+   * nil 表示使用动态作用域
+
+
+
+   * t 表示使用静态作用域
+
+
+
+   * 某个非空的alist 表示alist中所指定变量采用静态作用域,其他变量为动态作用域
+
+
+
+   * (eval-region start end &optional stream read-function)
+
+   运行由start和end所标识的region
+
+
+
+   默认情况下,eval-region并不产生任何输出,但通过传递一个非nil的stream参数,可以将期间产生的输出输出到stream中
+
+
+
+   若read-function为非nil,则使用指定的read-function来取代read函数读取表达式. 该函数需要接收一个参数:读取输入的stream
+
+
+
+   * (eval-buffer &optioanl buffer-or-name stream filename unibyte print)
+
+   运行指定buffer的可见部分所组成的region.
+
+
+
+   buffer-or-name可以为buffer或string,也可以为nil表示当前buffer
+
+
+
+   stream的作用跟eval-region中的stream类似,但若stream为nil而print为非nil,则执行的结果依然会被丢弃,但执行的过程中所产生的哪些输出会被输出到echo area中.
+
+
+
+   filename是給load-history使用的文件名称.
+
+
+
+   若inibyte为非nil,则elisp reader尽可能的将string转换为unibyte格式.
+
+
+
+** 选项
+
+   * max-lisp-eval-depth
+
+
+
+   * max-specpdl-size
+
+
+
+   * values
+
+   该变量的值为一个list,每个list元素都是执行form的结果,最近的结果放到第一位.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq x 1)                              ; => 1
+
+     (list 'A (1+ 2) auto-save-default)      ; => (A 3 t)
+
+     values                                  ; => ((A 3 t) 1 ...)
+
+   #+END_SRC

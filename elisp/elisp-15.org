@@ -1,0 +1,217 @@
+#+TITLE: Byte Compilation
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#byte-compilation][Byte Compilation]]
+  - [[#相关函数][相关函数]]
+  - [[#编译期执行语句][编译期执行语句]]
+  - [[#compiler-errors][Compiler Errors]]
+  - [[#disassembly][Disassembly]]
+
+* Byte Compilation
+
+  Elisp的Byte Compilation为伪编译,它将lisp编译为字节码格式,由特定的字节码解释器解释,而不是编译为与硬件相关的代码. 这使得它的速度会稍微慢点,但同时也保证了不同硬件平台之间的可移植性
+
+
+
+  若希望某个lisp file不被编译,设置file-local变量no-byte-compile的值为t
+
+  格式为:`;; -*-no-byte-compile: t; -*-'
+
+
+
+  当编译的文件中包含宏时要特别注意,因为在编译阶段,宏会被展开,这时可能宏的定义还未加载到Emacs中. 为了应付这种情况,一般使用require语句指定包含所需宏的文件(require在编译阶段会被执行). 为了防止用户在执行编译后程序时依然执行require语句,可以使用`eval-when-compile'包含`require'语句
+
+
+
+
+
+** 相关函数
+
+   * (byte-compile symbol)
+
+
+
+   编译symbol的函数定义成字节码格式.
+
+
+
+   参数symbol的函数定义必须是函数的真实代码,而不能是引用函数.
+
+
+
+   参数symbol也可以是lambda表达式,但这种情况下,byte-compile只是返回对应的编译后代码,而并不存储它
+
+
+
+   若symbol的函数定义是一个已经编译为字节码格式的函数,则该函数什么也不做,只是返回nil
+
+
+
+   * 命令(copmile-defun &optional arg)
+
+
+
+   编译并执行当前top-level form,并将结果输出到echo area中.
+
+
+
+   若参数arg为非nil,则将结果插入到当前buffer中,执行的form位置后
+
+
+
+   * 命令(byte-compile-file filename &optional load)
+
+
+
+   该命令将lisp格式的filename编译为字节码格式的文件,生成的文件名称是原filename的.el后缀改为.elc后缀,若filename不带.el后缀,则生成的文件名为filename.elc
+
+
+
+   若load参数为非nil,则在编译完filename后,还是加载编译后的文件.
+
+
+
+   若byte-compile-file作为命令执行时,会提示输入要编译的文件,这时参数load额值为prefix argument
+
+
+
+   * 命令(byte-recompile-directory directory &optional flag force)
+
+
+
+   该命令重新编译directory及其子目录中的所有需要重新编译的.el文件(存在.elc文件比.el文件旧的.el文件)
+
+
+
+   若存在没有对应.elc文件的.el文件,则由参数flag来说明该如何处理,nil表示不编译这些文件,0表示编译他们,其他值表示询问用户
+
+
+
+   若参数force为非nil,则命令在重编译所有有对应.elc文件的.el文件.
+
+
+
+   * (batch-byte-compile &optional noforce)
+
+
+
+   该函数调用`byte-compile-file'编译命令行中指定的文件.
+
+
+
+   该函数必须当Emacs处于batch状态时才能使用,因为当编译完成后,它会关闭Emacs.
+
+   #+BEGIN_SRC sh
+
+     emacs -batch -f batch-byte-compile *.el
+
+   #+END_SRC
+
+
+
+   编译一个文件出错,不会妨碍其编译下一个文件,但这时,Emacs退出时会设置非0的状态码.
+
+
+
+   若参数noforce为非nil,则,该函数不会编译那些已经有更新版本的.elc文件的.el文件
+
+
+
+   * 配置项byte-compile-dynamic-docstrings
+
+
+
+   默认情况下,Emacs从字节码文件中加载函数和变量时不会加载 他们的doc-string,当需要时才动态的从字节码文件中加载进来. 这就产生了一个后果:若此时字节码文件被更新了,那么原来的doc-string就被覆盖了.
+
+
+
+   设置该配置项为nil,可以静止Emacs动态加载doc-string的行为.
+
+
+
+   可以在lisp文件中添加一行"-*-byte-compile-dynamic-docstrings: nil;-*"
+
+
+
+   * 变量byte-compile-dynamic
+
+
+
+   若为非nil,则表示开启"dynamic function loading"功能. 这时加载该文件并不会读取其中函数的真实定义,只有在正在调用该函数时采取临时读取该函数的定义.
+
+
+
+   * (fetch-bytecode function)
+
+
+
+   若function为byte-code function object,则立即从字节码文件中加载function的字节码.
+
+
+
+   返回参数function
+
+
+
+** 编译期执行语句
+
+   * (eval-and-compile bodys...)
+
+
+
+   在编译期间和执行期间都执行bodys
+
+
+
+   想过类似于将bodys放入file中,然后(require file)
+
+
+
+   autoload和require在编译期和执行期都会执行.
+
+
+
+   * (eval-when-compile bodys...)
+
+
+
+   只在编译期才计算bodys的值. *这时bodys的值被作为常量存储起来,当正常执行该段代码时,直接返回该常量*
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defvar my-regexp
+
+       (eval-when-compile (regexp-opt '("aaa" "aba" "abb"))))
+
+   #+END_SRC
+
+
+
+** Compiler Errors
+
+   * (with-no-warning bodys...)
+
+
+
+   执行bodys时,不出现warnning警告
+
+
+
+   * 变量`byte-compile-warnings'
+
+
+
+   控制编译时什么样的警告会被抛出
+
+
+
+** Disassembly
+
+
+
+   * (disassemble object &optional buffer-or-name)
+
+
+
+   显示object的反编译代码

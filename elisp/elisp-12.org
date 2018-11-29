@@ -1,0 +1,1110 @@
+#+TITLE: Elisp中的变量
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#elisp中的变量][Elisp中的变量]]
+  - [[#全局变量][全局变量]]
+  - [[#常量][常量]]
+  - [[#局部变量][局部变量]]
+  - [[#buffer-local变量][Buffer-Local变量]]
+  - [[#file-local变量][File-Local变量]]
+  - [[#directory-local变量][Directory-Local变量]]
+    - [[#相关函数][相关函数]]
+  - [[#terminal-lock变量][Terminal-Lock变量]]
+  - [[#空变量][空变量]]
+  - [[#变量别名][变量别名]]
+  - [[#废弃变量][废弃变量]]
+  - [[#受限的变量][受限的变量]]
+  - [[#变量的作用域][变量的作用域]]
+    - [[#动态作用域][动态作用域]]
+    - [[#静态作用域][静态作用域]]
+  - [[#泛化变量generalized-variables][泛化变量(Generalized Variables)]]
+  - [[#取变量值][取变量值]]
+
+* Elisp中的变量
+
+  在Elisp中,一个变量就是一个lisp symbol. 变量名为该symbol的名称,变量值为该symbol的value cell中存储的值.
+
+** 全局变量
+
+   可以使用defvar,defconst,defcustom来定义全局变量.
+
+
+
+   * (defvar symbol &optional value doc-string)
+
+
+
+   定义名为symbol-name的变量,并初始化值为value.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defvar project-root "~/project/"
+
+       "项目根目录")
+
+   #+END_SRC
+
+
+
+   若省略value的值,则定义出来的变量为空变量.不能直接被访问.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defvar void-var)
+
+     void-var                                ;Lisp error: (void-variable void-var)
+
+   #+END_SRC
+
+
+
+   *需要注意的是:* 若symbol已经有值,则defvar并不会更改symbol的值.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defvar var 'some-value)
+
+     var                                     ;some-value
+
+     (defvar var 'other-value)
+
+     var                                     ;some-value
+
+   #+END_SRC
+
+
+
+   另外,defvar绑定的是symbol在动态域下的默认值,它并不会影响symbol的buffer-local值,也不改变symbol的静态绑定值.
+
+
+
+   * (defconst symbol value &optional doc-string)
+
+
+
+   与defvardefconst也定义一个名为symbol-name的变量,它的值为value.
+
+
+
+   另外,defconst绑定的也是symbol在动态域下的默认值,它并不会影响symbol的buffer-local值,也不改变symbol的静态绑定值.
+
+
+
+   它跟defvar不一样的地方在与,它总是使symbol赋值为value,而不管是否已经有值.
+
+
+
+   但正如名称所表示的,它表示定义的变量通常应该是一个常量. 不 *建议* 修改它的值(但不是强制性的)
+
+** 常量
+
+   在Elisp中,nil,t和任何以`:`开头的symbol(我们常常称呼这种symbol为keyword)都是系统的保留常量.
+
+
+
+   任何对这些系统的保留常量的值进行修改的动作,都会抛出`setting-constant` error.
+
+
+
+   还有一类是用户使用defconst来自定义的常量,对这类常量的值进行修改,并不会抛出error,而且修改行为也能成功
+
+** 局部变量
+
+   与C++一样,函数中的参数,天生就是局部变量,它的作用范围就是整个函数内部.
+
+
+
+   而要实现类似C++的代码块内的局部变量({}内定义的局部变量),需要使用let*语句.
+
+
+
+   * (let* (bings...) forms...)
+
+
+
+   这里,bingding为定义局部变量的语句,在这里定义的局部变量,只能在后面的bodys中访问.
+
+
+
+   每个bingding可以是一个symbol,这表示定义一个局部变量,并且该局部变量的值为nil.
+
+   也可以是一个(symbol value-form)格式的list,表示定义一个局部变量,并且该局部变量的值为value-form的计算结果. 当然value-form也可以省略,表示nil.
+
+
+
+   下面是一个例子
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq y 2)                              ; => 2
+
+
+
+     (let* ((y 1)
+
+            (z y))
+
+       (list y z))                           ; => (1 1)
+
+   #+END_SRC
+
+
+
+   * (let (bindings...) bodys...)
+
+
+
+   类似let*语句, *但是需要注意的是:* let语句中,在整个(bingings)没有完成之前,所有的局部变量都是不生效的. 举个例子
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq y 2)                              ; => 2
+
+     ;; 这里在执行(z y)时,局部变量y还未生效,这时的y是全局变量y,即它的值为2
+
+     (let ((y 1)
+
+           (z y))
+
+       (list y z))                           ; => (1 2)
+
+   #+END_SRC
+
+
+
+** Buffer-Local变量
+
+   Buffer-Local变量应该说是Elisp所特有的一种变量类型了. 这种变量的作用域仅限于某个buffer.
+
+
+
+   换句话说,一个变量它在不同作用域下有不同的绑定值. 若它处于buffer作用域下,则该变量的值根据buffer的不同而不同. 而之前提到的与buffer无关的动态作用域的值,我们称它为变量的默认值.
+
+
+
+   *需要注意:* 即使一个变量被标记为buffer-local变量,当使用defvar和defconst时,改变的依然是它的默认值.而不是buffer作用域下的值.
+
+
+
+   * (make-local-variable symbol)
+
+
+
+   可以使用命令`make-local-variable`来标注一个变量为Buffer-Local变量. 这时,该变量在当前buffer中的值变得跟其他buffer独立开来. 在当前buffer中,该变量处于buffer作用域中,而在其他buffer中则共享该变量的默认值.
+
+
+
+   该变量在buffer作用域下的值,在创建时与该buffer的默认值是一样的.
+
+
+
+   若一个变量是terminal-local变量,则该函数会抛出error. terminal-local变量不能有buffer作用域下的值.
+
+
+
+   *注意:* 不要用该函数来将hook变量设置为buffer-local变量,而应该在使用add-hook和remove-hook时将local参数设为t
+
+
+
+   * (setq-local symbol-name value)
+
+
+
+   将symbol变量标注为buffer-local变量,同时赋值为value. 它等于是先调用make-local-variable后再用setq进行赋值.
+
+
+
+   * (make-variable-buffer-local symbol)
+
+
+
+   也可以使用命令`make-variable-buffer-local`来标注一个变量在所有的buffer中都处于buffer-local作用域下,包括那些还未被创建的buffer. 我们称呼这种变量为automatically buffer-local变量
+
+
+
+   所有buffer中的值一开始时默认就是该变量的默认值.
+
+
+
+   当symbol变量的默认值为空时,该语句会自动为变量在buffer作用域下的值赋值为nil.
+
+
+
+
+
+   * (defvar-local symbol-name value &optional docstring)
+
+
+
+   定义以symbol-name为名称的变量,并赋初值为value,并把该变量标注为自动的buffer-local变量.
+
+
+
+   该红等价于先执行make-variable-buffer-local,然后再执行defvar
+
+
+
+   * (local-variable-p symbol &optional buffer)
+
+
+
+   判断symbol所表示的变量在buffer中是否为buffer-local变量,若省略buffer参数则指的当前buffer.
+
+
+
+   *注意:该函数在判断automatically buffer-local变量时返回nil*
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defvar-local a 1)                     ;这时a为automatically buffer-local变量
+
+     (local-variable-p 'a)                  ;=>nil
+
+   #+END_SRC
+
+
+
+   * (local-variable-if-set-p symbol &optional buffer)
+
+
+
+   跟local-variable-p类似,但当symbol为automatically buffer-local变量时,该函数也返回t
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defvar-local a 1)                     ;这时a为automatically buffer-local变量
+
+     (local-variable-if-set-p 'a)           ;=> t
+
+   #+END_SRC
+
+
+
+   * (buffer-local-value symbol buffer)
+
+
+
+   返回symbol变量在指定buffer中的buffer作用域中的值, 若symbol变量在指定buffer中没有buffer-local绑定值,则返回它的默认值.
+
+
+
+   * (buffer-local-variables &optional buffer)
+
+
+
+   以list的方式返回当前buffer中的所有buffer-local变量. 若buffer参数被省略,则表示当前buffer.
+
+
+
+   返回的list中的每个元素的格式为'(symbol . value), 但若symbol变量在buffer作用域下的值为空(不是nil),则元素的格式只是单个的symbol
+
+   #+BEGIN_SRC emacs-lisp
+
+     (make-local-variable 'foobar)
+
+     (makunbound 'foobar)
+
+     (make-local-variable 'bind-me)
+
+     (setq bind-me 69)
+
+     (setq lcl (buffer-local-variables))
+
+     ;; =>
+
+     (foobar                             ;foobar为void变量,格式为单个的symbol
+
+      (bind-me . 69))                     ;bind-me变量有值,因此格式为(symbol . value)
+
+
+
+   #+END_SRC
+
+
+
+   * (kill-local-variable symbol)
+
+
+
+   删除symbol变量在当前buffer中的buffer-local标识,使之在当前buffer中作为一个普通变量来处理.
+
+
+
+   *要注意的是:* 若对一个automatical buffer-local变量执行该函数,则该变量在当前buffer中访问时会作为一个普通变量来处理,然而, *一旦对这个变量再次赋值,该变量又变成为buffer-local变量*
+
+
+
+   * (kill-all-local-variables)
+
+
+
+   删除当前buffer中所有buffer-local变量(包括函数)的buffer-local标识,但那些标注为"permanent"的变量和"permanent-local-hook"属性为非nil的函数除外.
+
+
+
+   该函数返回nil
+
+
+
+   *该函数执行的第一件事就会执行change-major-mode-hook,因为它会把当前buffer的major mode先改为fundamental mode*
+
+
+
+   _所谓标注为permanent的变量,指的是symbol的permanent-local属性为非nil_
+
+
+
+   当在某buffer中标注某变量问buffer-local变量后,再使用setq来更改变量值时只会更改该变量在该buffer作用域下的值了,要想更改它的默认值,需要使用语句set-default / setq-default了
+
+   * (setq-default symbol1-name value1 symbol2-name value2 ...)
+
+
+
+   设置每个变量的默认值
+
+
+
+   * (set-default symbol value)
+
+
+
+   设置symbol变量的默认值
+
+
+
+   同样的,使用let对一个buffer-local变量进行局部绑定时,修改的也是该变量在buffer作用域下的值.
+
+
+
+** File-Local变量
+
+
+
+   在文件中指定了某个变量为File-local变量后,当某个buffer访问该文件后,相关变量自动成为buffer-local变量.
+
+
+
+   处于安全考虑,若某个File-local变量为函数或S表达式,则只有那些明确标记为safe的file-local变量才会自动生效,其他的file-local变量需要用于认可才回生效.
+
+
+
+   你可以通过修改一个变量的safe-local-variable属性来决定哪些值对于该参数来说是有效的,该属性接收该参数的值,返回非nil则表示该参数safe(有效),nil表示unsafe(无效).
+
+
+
+   此外,当Emacs读取file-local变量时,`read-circle`变量会临时设为nil.
+
+
+
+   * 变量enable-local-variables
+
+
+
+   该变量控制了是否让file-local变量生效.
+
+
+
+   该变量有可以设置为:
+
+   1. t (默认)
+
+
+
+   表示自动生效那些标记为safe的变量,而那些unsafe的变量需要提示用户确认后才生效
+
+
+
+   2. :safe
+
+
+
+   只有标记为safe的变量才生效,其他的unsafe变量不生效
+
+
+
+   3. :all
+
+
+
+   所有的变量,不管safe或unsafe,都生效
+
+
+
+   4. nil
+
+
+
+   所有的变量,不管safe或unsafe,都不生效
+
+
+
+   5. 其他
+
+
+
+   素有变量,不管safe或unsafe,都需要用户确认过之后才生效
+
+
+
+   * 变量inhibit-local-variables-regexps
+
+
+
+   该变量是一个由正则表达式组成的list. 如果某个文件名符合list中某元素的个正则表达式,则该文件中的file-loca变量不生效
+
+
+
+   * (hack-local-variables &optional mode-only)
+
+
+
+   启用该buffer所访问file中的file-local变量.
+
+
+
+   *注意:* 执行该函数时,会按照变量`enable-local-variables`的不同值,而有不同的生效方式.
+
+
+
+   该函数执行前会触发`before-hack-local-variables-hook`,执行后会触发`hack-local-variables-hook`
+
+
+
+   若mode-only参数为非nil,则之后名为"mode:"的file-local变量会生效,若文件中指明了"mode:",则该函数返回该函数值,否则返回nil
+
+
+
+   * 变量file-local-variables-alist
+
+
+
+   该变量一定为buffer-local变量,它是一个存储了file-local变量信息的alist.
+
+
+
+   每个file-local-variables-alist中元素的格式为`(VAR . VALUE)`,这里VAR为file-local变量,value为变量的值.
+
+
+
+   当Emacs访问一个文件时,它其实是先将所有的file-local变量收集了起来存入file-local-variables-alist变量中,然后再调用hack-local-variables函数来让他们生效.
+
+
+
+   * 配置项safe-local-variable-values
+
+
+
+   该变量是一个由`(VAR . VALUE)`组成的list. 这里VAR为变量名,而VALUE为VAR的值,并且该值被认为是safe的.
+
+
+
+   * (safe-local-variable-p symbol value)
+
+
+
+   判断給symbol变量设置为value是否safe
+
+
+
+   * (risky-local-variable-p symbol)
+
+
+
+   该函数判断symbol变量是否认为是risky
+
+
+
+   risky的变量在生效前,除非明确被设置到`safe-local-variable-value`中,佛则一定需要经过用户的确认.
+
+
+
+   所谓risky变量,指的是它的属性`risky-local-variable`为non-nil的变量.
+
+
+
+   此外,任何以`-command`,`-frame-alist`,`-function`,`functions`,`-hook`,`-hooks`,`-form`,`-forms`,`-map`,`map-alist`,`-mode-alist`,`-program`和`-predicate`结尾的变量都自动认为是risky的.
+
+
+
+   * 变量ignored-local-variables
+
+
+
+   该变量的值为由变量组成的list, 该list中的对应变量不能被设置为file-local变量,即使在文件中将它设置为file-local变量,也无效果.
+
+
+
+   * 配置型enable-local-eval
+
+
+
+   `:Eval`是一个明显的潜在漏洞,因此Emacs通常在处理该函数时都要经过用户的确认.
+
+
+
+   通过设置enable-local-eval值,可以改变这一行为. 该变量可以有三个值:
+
+
+
+   1. t
+
+
+
+   表示无条件执行
+
+
+
+   2. nil
+
+
+
+   表示无条件不执行
+
+
+
+   3. 其他(默认为'mayb)
+
+
+
+   表示询问用户.
+
+
+
+   * 配置型safe-local-eval-forms
+
+
+
+   该变量为一个由正则表达式组成的list. 当`Eval:`参数的值能够匹配上其中一个正则的S表达式,则认为是安全的.
+
+
+
+   如果`Eval:`参数的值为一个调用函数的S表达式,且调用的函数拥有`safe-local-eval-function`属性,则该属性所表示的函数被用来判断该S表达式是否为安全的. `safe-local-eval-function`函数得值,可以是一个函数列表,表示其中任何一个函数返回t即为安全,也可以是t,表示所有的S表达式都安全.
+
+
+
+   由于Text属性值也可能包含要被调用的函数,因此它也认为是一个潜在的漏洞, 因此,若一个变量的值为带有Text属性的String,则该string的Text属性被忽略.
+
+** Directory-Local变量
+
+   在目录中指定了某个变量为Directory-local变量后,当某个buffer访问该目录(极其子目录)下的文件后,相关变量自动成为buffer-local变量.
+
+
+
+   有两种方式来定义directory-local变量:
+
+
+
+   1. 把他们放到特定的文件中,该文件名由常量`dir-locals-file`决定,默认为`.dir-locals.el/_dir-locals`
+
+
+
+   基于速度的考虑,一般在访问远程文件时,会禁用该特性,但通过设置变量`enable-remote-dir-locals`为t,可以为远程文件也打开该特性.
+
+
+
+   dir-locals-file文件的格式为一个list,其中每个元素的格式可以是:
+
+   * (major-mode . directory-local-variable-value-alist)
+
+
+
+   表示当指定major-mode开启时,对应的directory-local变量生效
+
+
+
+   * (nil. directory-local-variable-value-alist)
+
+
+
+   表示对所有major-mode,对应的directory-local变量生效
+
+
+
+   * (subdirectory-name-string . dir-locals-file-format-list)
+
+
+
+   表示对于指定子目录下的所有文件,directory-local变量生效.
+
+
+
+   下面是一个例子:
+
+   #+BEGIN_SRC emacs-lisp
+
+     ((nil . ((indent-tabs-mode . t)
+
+              (fill-column . 80)))
+
+      (c-mode . ((c-file-style . "BSD")
+
+                 (subdirs . nil)))  ; =>这里subdirs不是变量名,而是一个关键字,表示该设置,只对当前目录下的文件有效,而对子目录下的文件无效.
+
+      ("src/imported"
+
+       . ((nil . ((change-log-default-name
+
+                   . "ChangeLog.local"))))))
+
+   #+END_SRC
+
+
+
+   由于手工修改该文件格式会比较容易出错,因此Emacs提供了命令add-dir-local-variable/delete-dir-local-variable/copy-file-locals-to-dir-locals命令来维护directory-locale变量
+
+
+
+   2. 为目录定义"project class"
+
+
+
+   首先使用函数dir-locals-set-class-variables定义一组变量/值的键值对的集合.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (dir-locals-set-class-variables 'unwritable-directory
+
+                                     '((nil . ((some-useful-setting . value)))))
+
+   #+END_SRC
+
+
+
+   然后使用函数dir-locals-set-directory-class函数为目录分配这组键值对的集合
+
+   #+BEGIN_SRC emacs-lisp
+
+     (dir-locals-set-directory-class
+
+      "/usr/include/" 'unwritable-directory)
+
+   #+END_SRC
+
+*** 相关函数
+
+    * (hack-dir-local-variables)
+
+
+
+    为访问当前目录(及子目录)下文件的所有buffer开启directory-local变量
+
+
+
+    该函数通过调用函数dir-locals-set-class-variables和dir-locals-set-directory-class来完成此操作.
+
+
+
+    * (hack-dir-local-variables-non-file-buffer)
+
+
+
+    为当前buffer启用directory-local变量,一般用于那些non-file buffer中.
+
+
+
+    对这些non-file buffer开启directory-local变量时会从`default-directory`和它的父目录中查找directory-local变量的定义
+
+
+
+    * (dir-locals-set-class-variables project-class  dir-locals-file-format-list)
+
+
+
+    该函数定义一组directory-local变量及其值,并分配改组变量为project-class
+
+    #+BEGIN_SRC emacs-lisp
+
+      (dir-locals-set-class-variables 'unwritable-directory
+
+                                      '((nil . ((some-useful-setting . value)))))
+
+    #+END_SRC
+
+
+
+    * (dir-locals-set-directory-class directory project-class &optioinal mtime)
+
+
+
+    为directory(及其子目录下)下的所有文件分配project-class所表示的directory-local变量.
+
+
+
+    当Emacs从`.dir-locals.el`文件中读取directory-local变量时,也是通过调用该函数来实现的,这是会带上mtime参数.
+
+
+
+    mtime参数存储的是`.dir-locals.el`的modification time. Emacs使用该时间来检查已有的directory-local变量是否依然有效.
+
+
+
+    * 变量dir-locals-class-alist
+
+
+
+    该变量是一个alist,它维护了project-class及对应directory-local变量的对应关系.
+
+
+
+    * 变量dir-locals-directory-cache
+
+
+
+    该变量是一个alist,它维护了目录名称,对应的project-class和对应`.dir-locals.el`的modification time
+
+
+
+    * 变量enable-dir-local-variables
+
+
+
+    是否启用directory-locall变量特性.
+
+** Terminal-Lock变量
+
+
+
+** 空变量
+
+   前面说到,变量的值其实就是取得symbol中的value cell中存储的对象. 当symbol中的value cell没有存储任何对象时(nil也是一个对象),这时访问该变量会抛出`void-variable` error. 我们称这种变量为空变量.
+
+   (*NOTE:* 上述的情况在Emacs默认的动态作用域下是成立的,若明确指定了静态作用域,则另当别论了,但这种情况比较少用到)
+
+
+
+   那么创建这种空变量呢? 这就需要用到makeunbound函数了.
+
+
+
+   * (makeunbound symbol)
+
+
+
+   将当前作用域下的局部变量symbol中的value cell清空,使之成为空变量.
+
+
+
+   若要判断某个变量是否为空变量,则可以使用boundp函数
+
+
+
+   * (boundp symbol)
+
+
+
+   该函数检查symbol的value cell是否有值,若有值则返回t,否则返回nil. 因此我们也可以定义函数
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun void-variable-p (variable)
+
+       (null (boundp variable)))
+
+   #+END_SRC
+
+
+
+   下面是一些boundp的例子
+
+   #+BEGIN_SRC emacs-lisp
+
+     (boundp 'abracadabra)          ; Starts out void.
+
+     ;; => nil
+
+     (let ((abracadabra 5))         ; Locally bind it.
+
+       (boundp 'abracadabra))
+
+     ;; => t
+
+     (boundp 'abracadabra)          ; Still globally void.
+
+     ;; => nil
+
+     (setq abracadabra 5)           ; Make it globally nonvoid.
+
+     ;; => 5
+
+     (boundp 'abracadabra)
+
+     ;; => t
+
+   #+END_SRC
+
+
+
+** 变量别名
+
+   变量及其别名公用同一个值,修改其中一个也会同时更改另一个值.
+
+
+
+   * (defvaralias new-alias base-variable &optional docstring)
+
+
+
+   为base-variable定义一个名为new-alias的变量别名,可以为这个别名分配一个新的docstring
+
+
+
+   该函数返回base-variable
+
+
+
+   * (indirect-variable alias-variable)
+
+
+
+   返回别名链中最末端的那个非别名变量
+
+
+
+   若出现了循环定义的别名,则该函数抛出`cyclic-variable-indirection` error
+
+** 废弃变量
+
+   * (make-obsolete-variable obsolete-variable current-variable when &optional access-type)
+
+
+
+   在编译时警告一个变量即将废弃不用了,其中:
+
+
+
+   参数obsolete-variable为即将不用的变量
+
+
+
+   参数current-variable若为symbol,则会提示用新的变量current-variable代替老的变量obsolete-variable. 若current-name为string,则直接警告该string.
+
+
+
+   参数when指明了obsolete-variable从什么时候开始废弃,通常为一个表示版本号的字符串.
+
+
+
+   参数access-type指明了对obsolete-variable的哪种操作会触发警告,可以使'get或'set
+
+
+
+   * (define-obsolete-variable-alias obsolete-variable current-variable &optional when docstring)
+
+
+
+   该宏创建obsolete-variable为current-variable的别名,并标记obsolete-variable为即将废弃的变量.
+
+
+
+   该宏其实等价于:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defvaralias OBSOLETE-NAME CURRENT-NAME DOCSTRING)
+
+     (make-obsolete-variable OBSOLETE-NAME CURRENT-NAME WHEN)
+
+   #+END_SRC
+
+
+
+** 受限的变量
+
+   默认情况下,一个Lisp变量的值可以是任何的Lisp object. 但有些变量不是用Lisp来定义的,而是用C来定义. 这些用C定义的变量有可能只能存储特定类型的值. 如果变量类型为:
+
+
+
+   * DEFVAR_LISP
+
+
+
+   该变量跟在lisp中定义的变量一样,它的值可以是任意的.
+
+
+
+   * DEFVAR_INT
+
+
+
+   该变量的值只能是整型
+
+
+
+   * DEFVAR_BOOL
+
+
+
+   该变量的值只能为t或者nil
+
+
+
+   其中变量`byte-boolean-vars`中列出了所有类型的DEFVAR_BOOL的变量
+
+
+
+** 变量的作用域
+
+
+
+   与C++不同的是,Elisp中的变量默认情况下是处于动态作用域中. 当然,Elisp也支持静态作用域.
+
+
+
+*** 动态作用域
+
+    当一个变量处于动态作用域中时,这就意味着,这个变量的值是受到运行环境的影响的. 举个例子:
+
+    #+BEGIN_SRC emacs-lisp
+
+      (setq foo 'outer)                       ;outer
+
+      (defun say-foo()
+
+        foo)
+
+
+
+      (say-foo)                               ;=>outer
+
+      (let ((foo 'inner))
+
+        (say-foo))                            ;=>inner,在调用say-foo的运行环境中,foo的值为局部定义的'inner,因此say-foo的返回值为'inner
+
+
+
+      (say-foo)                               ;=>outer, 在调用say-foo的运行环境中,foo的值为全局值'outer,因此say-foo的返回值为'outer
+
+    #+END_SRC
+
+
+
+    拥有动态作用域值的变量被成为special-variable,可以使用函数special-variable-p来判断一个symbol是否为special variable.
+
+    * (special-variable-p symbol)
+
+
+
+    判断symbol所表示的变量是否为special-variable. (由defvar,defconst和defcustom定义的变量都是special variable)
+
+
+
+    *
+
+
+
+
+
+    elisp实现动态作用域的方法很简单,每个symbol都由一个value cell,这个value cell所持有的值就是该变量在当前动态作用域下的值. 当为该变量创建一个动态局部作用域时,elisp将当前value cell的值压入一个栈中,并将该symbol的value cell存上新值. 当退出该动态局部作用域时,Elisp从栈中弹出以前的值,并重新存入symbol的value cell中.
+
+*** 静态作用域
+
+    当一个变量处于静态作用域下时,该变量的值在定义该变量处就已经被确定了,即它的值为定义环境的值. 例如
+
+
+
+    事实上,Elisp使用一个alist来存储静态作用域中各变量与值的关系. 这种alist的结构为`'((symbol1 value1)(symbol2 value2)... t)`.
+
+    这种alist可以作为eval函数的第二个参数用来指明eval执行语句的静态作用域环境.
+
+
+
+    可以使用lexical-let和lexical-let*来创建静态作用域. 这两个语句的语法跟let和let*一样,但BODY中的lambda函数会创建闭包.
+
+** 泛化变量(Generalized Variables)
+
+   泛化变量(Generalized Variables)或称位置列表(place form)其实就是变量值所被存储的内存地址.
+
+
+
+   泛化变量可能是: 一个普通的lisp变量或者aref,car,caar,cadr,cdr,cdar,cddr,elt,get,gethash,nth,nthcdr,symbol-function,symbol-plist,symbol-value,default-value,frame-parameter,terminal-parameter,keymap-parent,match-data,overlay-get,overlay-start,overlay-end,process-buffer,process-filter,process-get,process-sentinel,window-buffer,window-display-table,window-dedicated-p,window-hscroll,window-parameter,window-point,window-start函数的返回值.
+
+
+
+   * (setf place-form1 value1 place-form2 value2...)
+
+
+
+   可以使用setf宏来操作泛化变量. 它的作用类似setq,但setq只能为symbol赋值,而setf可以为任何泛化变量赋值. 例如
+
+   #+BEGIN_SRC emacs-lisp
+
+     (setq a '(1 2 3))                       ;(1 2 3)
+
+     (setf (cadr a) 'two)                    ;将a中的第二个元素的值改为two
+
+     a                                       ;(1 two 3)
+
+
+
+   #+END_SRC
+
+
+
+   * (gv-define-simple-setter name setter-function &optional fix-return)
+
+
+
+   * (gv-define-setter name arglist &rest body)
+
+
+
+** 取变量值
+
+   当在静态作用域下,Elisp取变量值时,它会先查看该变量是否存在静态作用域下的绑定值. 然后再查看该变量的动态作用域下的绑定值(即该symbol的value cell所存储的值)
+
+
+
+   除了直接引用变量可以取得变量值外,还可以使用symbol-value函数来获取变量的动态作用域下的值
+
+   * (symbol-value symbol)
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defvar num 123)
+
+     (symbol-value 'num)                     ;123
+
+   #+END_SRC
+
+
+
+   *需要注意的是:* 该函数只能用来获取symbol动态绑定的值,而不能用在静态环境下获取它静态绑定的值
+
+   #+BEGIN_SRC emacs-lisp
+
+     (lexical-let ((num 234))
+
+       (symbol-value 'num)                   ;123
+
+       num)                  ;234
+
+   #+END_SRC
+
+
+
+   * (buffer-local-value symbol buffer)
+
+
+
+   返回symbol变量在指定buffer中的buffer作用域中的值, 若symbol变量在指定buffer中没有buffer-local绑定值,则返回它的默认值.
+
+
+
+   * (default-value symbol)
+
+
+
+   取symbol变量的默认值
+
+
+
+   * (default-boundp symbol)
+
+
+
+   判断symbol变量的默认值是否为不为空
+
+
+
+   *

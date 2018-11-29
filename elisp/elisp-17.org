@@ -1,0 +1,192 @@
+#+TITLE: Documentation
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#documentation][Documentation]]
+  - [[#获取doc-string][获取doc-string]]
+  - [[#替换doc-string中的key-binding][替换doc-string中的key binding]]
+  - [[#将键序列输出为文本格式][将键序列输出为文本格式]]
+
+* Documentation
+
+
+
+** 获取doc-string
+
+
+
+   * (documentation-property symbol property &optional verbatim)
+
+
+
+   查看symbol的property属性中存储的doc-string,它会自动从DOC文件中或编译的字节码代码中抽取出对应的doc-string
+
+
+
+   若参数verbatim为nil,则,找到的doc-string会传入函数`substitute-command-keys'进行键绑定说明的转换
+
+   #+BEGIN_SRC emacs-lisp
+
+     (documentation-property 'command-line-processed
+
+                             'variable-documentation) ; => "Non-nil once command line has been processed"
+
+     (symbol-plist 'command-line-processed)           ; => (variable-documentation 188902)
+
+     (documentation-property 'emacs 'group-documentation) ; => "Customization of the One True Editor."
+
+   #+END_SRC
+
+
+
+   * (documentation function &optional verbatim)
+
+
+
+   该函数返回function的doc-string,其中function可以是macro,named keyboard macro,special forms,oridnary function
+
+
+
+   若参数verbatim为nil,则,找到的doc-string会传入函数`substitute-command-keys'进行键绑定说明的转换
+
+
+
+   若function没有函数定义,则抛出`void-function'错误,若函数定义没有doc-string,则返回nil
+
+
+
+   * (face-documentation face)
+
+
+
+   返回face的doc-string
+
+
+
+   * doc-directory
+
+
+
+   DOC文件的存放路径,Emacs可能要从DOC文件中读取doc-string
+
+
+
+** 替换doc-string中的key binding
+
+
+
+   当doc-string中要引用绑定的键序列时,使用特殊的引用形式可以通过函数`substitute-command-keys'转换为指定命令真实的绑定键序列.
+
+
+
+   * `\[COMMAND]'
+
+
+
+   显示调用COMMAND时的键序列,若COMMAND没有绑定键序列,则显示为M-x COMMAND
+
+
+
+   * `\{MAPVAR}'
+
+
+
+   使用函数`describe-bindings'显示MAPVAR所表示的keymap中的summary
+
+
+
+   * `\<MAPVAR>'
+
+
+
+   转换为空值,该形式的说明会产生一个副作用:it specifies MAPVAR's value as the keymap for any following `\[COMMAND]' sequences in this documentation string.
+
+
+
+   * `\='
+
+
+
+   引用接下来的那个字符;例如`\=\['在显示时显示为`\[',而`\=\='显示为`\='
+
+
+
+** 将键序列输出为文本格式
+
+   * (key-description sequence &optional prefix)
+
+
+
+   将sequence中的input event转换为文本格式
+
+   #+BEGIN_SRC emacs-lisp
+
+     (key-description [?\M-3 delete])        ; => "M-3 <delete>"
+
+     (key-description [delete] "\M-3")       ; => "M-3 <delete>"
+
+   #+END_SRC
+
+
+
+   * (single-key-description event &optinal no-angles)
+
+
+
+   将input event转换为文本形式字符串.
+
+
+
+   若参数no-angle为非nil,则在包围在function keys和event symols的尖括号会被忽略,这是为了与旧版本的Emacs兼容.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (single-key-description ?\C-x)          ; => "C-x"
+
+     (key-description "\C-x \M-y \n \t \r \f123") ; => "C-x SPC M-y SPC C-j SPC TAB SPC RET SPC C-l 1 2 3"
+
+     (single-key-description 'delete)             ; => "<delete>"
+
+     (single-key-description 'C-mouse-1)          ; => "<C-mouse-1>"
+
+     (single-key-description 'C-mouse-1 t)        ; => "C-mouse-1"
+
+   #+END_SRC
+
+
+
+   * (text-char-description character)
+
+
+
+   返回描述character的字符串,类似`single-key-description'的作用
+
+   #+BEGIN_SRC emacs-lisp
+
+     (text-char-description ?\C-c)           ; => "^C"
+
+     (text-char-description ?\M-m)           ; => "\xed"
+
+     (text-char-description ?\C-\M-m)        ; => "\x8d"
+
+     (text-char-description (+ 128 ?m))      ; => "M-m"
+
+     (text-char-description (+ 128 ?\C-m))   ; => "M-^M"
+
+   #+END_SRC
+
+
+
+   * 命令(read-kbd-macro string &optional need-vector)
+
+
+
+   `key-description'的逆操作
+
+
+
+   参数string中包含了用空格分隔的key descriptions,该函数会返回一个string或vector,包含了对应的events.
+
+
+
+   若参数need-vector,则总是返回vector

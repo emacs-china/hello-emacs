@@ -1,0 +1,61 @@
+#+TITLE: 二进制函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#二进制函数][二进制函数]]
+
+* 二进制函数
+
+  二进制函数只能作用于Integer型参数.
+
+
+
+  * 逻辑位移
+
+  (lsh Integer count)
+
+
+
+  lsh是logical shift的缩写,它向左移动count位(若count为负数,则表示向右移动), 使用0填充
+
+
+
+  * 算术位移
+
+  (ash Integer count)
+
+
+
+  ash是arithmetic shift的缩写,它跟lsh类似,但当对负数进行右移时,使用符号位进行填充,即该函数不会改变Integer的正负号
+
+
+
+  * and操作
+
+  (logand &rest ints-or-markers)
+
+
+
+  对所有Integer的所有位做and操作,若没有参数,则返回-1,即所有位都是1的Integer
+
+
+
+  * or操作
+
+  (logior &rest ints-or-markers)
+
+  对所有Integer的所有位做or操作,若没有参数,则返回0,即所有位都是0的Integer
+
+
+
+  * xor操作
+
+  (logxor &rest ints-or-markers)
+
+  对所有Integer的所有位做xor操作,若没有参数,则返回0,即所有位都是0的Integer
+
+  * not操作
+
+  (lognot integer)
+
+  对Integer的所有位做not操作

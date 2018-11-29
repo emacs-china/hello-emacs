@@ -1,0 +1,733 @@
+#+TITLE: Command Loop
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#command-loop][Command Loop]]
+  - [[#command-loop概述][Command Loop概述]]
+  - [[#command][Command]]
+  - [[#disabling-commands][Disabling Commands]]
+  - [[#command-history][Command History]]
+  - [[#如何分辨command是否通过interactive方式调用][如何分辨Command是否通过Interactive方式调用]]
+  - [[#generic-command][generic command]]
+  - [[#获取command-loop中的信息][获取Command Loop中的信息]]
+  - [[#command的prefix-argument][Command的prefix argument]]
+  - [[#quitting][Quitting]]
+  - [[#keyboard-macro][Keyboard Macro]]
+
+* Command Loop
+
+  当进入Emacs后,Emacs会循环读取key sequences,读取对应的命令,并显示结果. 这个过程称为Command Loop.
+
+** Command Loop概述
+
+
+
+   1. command loop第一步是调用函数`read-key-sequence'来读取key sequence,并转换为一个command或keyboard macro.
+
+
+
+   2. 在执行command前,调用`undo-boundary'来保存undo信息
+
+
+
+   3. 执行`pre-command-hook'中的函数
+
+
+
+   在执行command前,会触发`pre-command-hook',这时变量`this-command'的值为将要运行的command,而`last-command'的值为上一次运行的command
+
+
+
+   执行该hook参数时,不抛出quitting,也不抛出error,但会把抛出error的函数移除该hook
+
+
+
+   4. Emacs通过调用`command-execute'来读取传递給command的参数列表
+
+
+
+   1. 若command为keyboard macro,则Emacs通过`execute-kbd-macro'来执行command
+
+
+
+   2. 若command为命令(interactively callable function),则通过`call-interactively'来读取参数并执行command
+
+
+
+   5. 执行`post-command-hook'中的函数
+
+
+
+   在执行command后,会触发`post-command-hook',这时变量`this-command'的值为刚运行的command,而`last-command'的值为再上一次运行的command
+
+
+
+   执行该hook参数时,不抛出quitting,也不抛出error,但会把抛出error的函数移除该hook
+
+** Command
+
+   所谓Command,不仅仅指的带有top-level `interactive' form的函数. 还可以是声明为interactive的autoload object,某些primitive functions,以及strings和vectors(被当成是keyboard macro来看待),
+
+
+
+   * (commandp object &optional for-call-interactively)
+
+
+
+   判断object是否为command
+
+
+
+   若参数for-call-interactively为非nil,则只有在object能被`call-interactively'调用时才返回t,这时keyboard macro返回nil
+
+
+
+   * (command-execute command &optional record-flag keys special)
+
+
+
+   执行command
+
+
+
+   若command为string或vector,则被认为是keyboard macro,会使用`execute-kbd-macro'执行command. 否则连同参数keys和record-flag一起传递給`call-interactively'一起调用
+
+
+
+   参数special,若为非nil,则表示忽略preifix argument但是不clear它. 常用来执行特殊event
+
+
+
+   * 命令(execute-extended-command prefix-argument)
+
+
+
+   该命令使用`completing-read'从minibuffer中读取命令,并用`command-execute'执行该命令,并返回执行结果
+
+
+
+   若读取的命令需要prefix argument,则会将参数prefix-argument传递給它.
+
+
+
+   当用interactively的方式运行该命令时,参数prefix-argument的值就是传递給`execute-extended-command'的prefix-argument
+
+
+
+   默认情况下,M-x执行的就是该命令
+
+** Disabling Commands
+
+
+
+   "Disabling a Command"給一个command加上标记,运行command时实际上会调用`disabled-command-function'所指向的函数,默认的行为是会要求用户确认是否执行该函数.
+
+
+
+   被disable的command,其symbol的`disabled'属性被设置为非nil,若`disabled'属性为一个string,则警告信息中会包含该string
+
+
+
+   * (enable-command command)
+
+
+
+   允许command(symbol格式)不经确认就执行该command
+
+
+
+   *该命令会同时修改init文件,使之在以后的session中也生效*
+
+
+
+   * (disable-command command)
+
+
+
+   使得command在之前,需要经过确认.
+
+
+
+   *该命令会同时修改init文件,使之在以后的session中也生效*
+
+
+
+   * 变量disabled-command-function
+
+
+
+   该变量的值为一个function. 当用户交互式的调用一个disabled command时,实际上调用的是该函数.
+
+
+
+   在该function中可以使用`this-command-keys'来探测用户实际的输入的key sequence,并以此来找到需要执行的函数.
+
+
+
+   若值为nil,则disabled function跟普通function一样执行.
+
+** Command History
+
+   command loop会记录执行过的complex command的历史记录.
+
+
+
+   所谓complex command指的是其 *interactive argument* 会从minibuffer中读取参数值的command.(在执行command的过程中明确使用到minibuffer的,不算)
+
+
+
+   * command-history
+
+
+
+   记录了最近执行过的complex command的list
+
+
+
+   * 命令(repeat-complex-command N)
+
+
+
+   编辑并重新执行最后执行过的/倒数第N个complex command
+
+
+
+   * 命令(list-command-history)
+
+
+
+   列出在minibuffer中输入过的command的历史
+
+
+
+** 如何分辨Command是否通过Interactive方式调用
+
+   一个比较好的方法是在interactive form中设置某个标识为非nil. 例如
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun foo (&optional print-message)
+
+       (interactive "p")
+
+       (when print-message
+
+         (message "foo")))
+
+   #+END_SRC
+
+
+
+
+
+   另一种方法是使用函数`called-interactively-p'
+
+
+
+   * (called-interactively-p kind)
+
+
+
+   若正在执行的function是通过`call-interactively'调用的,则返回t
+
+
+
+   参数kind只能是'interactive或'any
+
+
+
+   若参数kind为'interactive,则只有当function是直接由用户调用的情况下,才返回t(例如if the user typed a key sequence bound to the calling function, but _not_ if the user ran a keyboard macro that called the function)
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun foo ()
+
+       (interactive)
+
+       (when (called-interactively-p 'any)
+
+         (message "Interactive!")
+
+         'foo-called-interactively))
+
+
+
+     ;; Type `M-x foo'.
+
+     -| Interactive!
+
+
+
+     (foo)
+
+     => ni
+
+   #+END_SRC
+
+
+
+   若参数kind为'any,则包括keyboard macro在内,也返回t
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun bar ()
+
+       (interactive)
+
+       (message "%s" (list (foo) (called-interactively-p 'any))))
+
+
+
+     ;; Type `M-x bar'.
+
+     -| (nil t)
+
+   #+END_SRC
+
+
+
+** generic command
+
+
+
+   第一次执行用M-x COMMAND<RET>来执行generic command,Emacs会提示你选择哪一种具体实现,并保存选择信息,下一次就不会询问了. 若执行时带了prefix argument,则又会重复该过程.
+
+
+
+   COMMAND的不同实现存储在变量`COMMAND-alternatives'中,只有在该变量存在时,才能使用宏`define-alternatives'定义COMMAND的另一个实现方式.
+
+
+
+   If CUSTOMIZATIONS is non-`nil', it should consist of alternating `defcustom' keywords (typically `:group' and `:version') and values to add to the declaration of `COMMAND-alternatives'.
+
+
+
+   * 宏(define-alternatvies comand &rest customizations)
+
+
+
+   定义新命令COMMAND,参数COMMAND为一个symbol
+
+
+
+** 获取Command Loop中的信息
+
+
+
+   * last-command
+
+
+
+   上次运行的command名称
+
+
+
+   当一个command从command loop中退出时,会从`this-command'中复制该值
+
+
+
+   * real-last-command
+
+
+
+   类似`last-command',但不会被Lisp程序所修改
+
+
+
+   * last-repeatable-command
+
+
+
+   类似`last-command'但不保存input event. 这里面保存的是`repeat'命令会重复执行的command
+
+
+
+   * this-command
+
+
+
+   正在执行的命令名称,但有些命令会在执行时人工修改该值
+
+
+
+   * this-original-command
+
+
+
+   类似this-command,但当command remapping发生时,`this-command'存储的是实际运行的command名称,而`this-original-command'存储的是触发的原始command的名称
+
+
+
+   * (this-command-keys)
+
+
+
+   返回调用command的key sequence,返回类型为string或vector
+
+
+
+   但若command调用了`read-key-sequence',则返回的是最后读取到的key sequence
+
+   #+BEGIN_SRC emacs-lisp
+
+     (this-command-keys)
+
+     ;; Now use `C-u C-x C-e' to evaluate that.
+
+     => "^U^X^E"
+
+   #+END_SRC
+
+
+
+   * (this-command-keys-vector)
+
+
+
+   类似`this-command-keys',只是返回的值总是vector
+
+
+
+   * (clear-this-command-keys &optional keep-record)
+
+
+
+   This function empties out the table of events for `this-command-keys' to return.
+
+
+
+   Unless KEEP-RECORD is non-`nil', it also empties the records that the function `recent-keys' will subsequently return.
+
+
+
+   一般常用于读取一个密码后
+
+
+
+   * last-nomenu-event
+
+
+
+   该变量斥候最后发生的input event(不包括mouse menu event)
+
+
+
+   使用该变量的一个场景是用来告诉`x-popup-menu'在哪里弹出一个menu. 在`y-or-n-p'内也用到了该变量值
+
+
+
+   * last-command-event
+
+
+
+   This variable is set to the last input event that was read by the command loop as part of a command
+
+
+
+   在`self-insert-command'中用到该变量来决定插入哪个character
+
+   #+BEGIN_SRC emacs-lisp
+
+     last-command-event
+
+     ;; Now use `C-u C-x C-e' to evaluate that.
+
+     => 5
+
+
+
+     ;; The value is 5 because that is the ASCII code for `C-e'.
+
+   #+END_SRC
+
+
+
+   * last-event-frame
+
+
+
+   该变量记录了最后的input event是在哪个frame中调用的.
+
+
+
+   Usually this is the frame that was selected when the event was generated, but if that frame has redirected input focus to another frame, the value is the frame to which the event was redirected.
+
+
+
+** Command的prefix argument
+
+
+
+   prefix argument有两种表现形式:"raw"和"numeric". coomand loop内部,和lisp变量使用raw表现形式
+
+
+
+   Here are the possible values of a raw prefix argument:
+
+
+
+   * `nil', meaning there is no prefix argument.
+
+     Its numeric value is 1, but numerous commands make a distinction between `nil' and the integer 1.
+
+
+
+   * An integer, which stands for itself.
+
+
+
+   * A list of one element, which is an integer.
+
+     This form of prefix argument results from one or a succession of `C-u's with no digits.
+
+     The numeric value is the integer in the list, but some commands make a distinction between such a list and an integer alone.
+
+
+
+   * The symbol `-'.
+
+     This indicates that `M--' or `C-u -' was typed, without following digits.
+
+     The equivalent numeric value is -1, but some commands make a distinction between the integer -1 and the symbol `-'.
+
+
+
+   * (prefix-numeric-value arg)
+
+
+
+   这里的arg为raw格式的prefix argument. 该函数将arg转换为对应的numeric格式.
+
+
+
+   若arg为nil,则返回1
+
+
+
+   若arg为-,则返回-1
+
+
+
+   若arg为数字,则返回该数字
+
+
+
+   若arg为list,则返回(car arg)
+
+
+
+   * current-prefix-arg
+
+
+
+   该变量存储的是当前命令的raw prefix argument.
+
+
+
+   command可以直接检查该变量的值,但大多数是使用`(interactive "P")'来获取该参数的值
+
+
+
+   * prefix-arg
+
+
+
+   下一个命令使用的raw prefix argument.
+
+
+
+   类似`universal-argument'这样的函数,通过设置该变量来为接下来要执行的命令设置prefix argument
+
+
+
+   * last-prefix-arg
+
+
+
+   上一个command的raw prefix argument
+
+
+
+   * (universal-argument)
+
+
+
+   该命令读取用户的输入,并将用户的输入值设置为变量`prefix-arg'的值,这样就为下一个待执行的command设置了prefix argument
+
+
+
+   小心使用该函数
+
+
+
+   * (digit-argument arg)
+
+
+
+   This command adds to the prefix argument for the following command.
+
+   The argument ARG is the raw prefix argument as it was before this command;
+
+   it is used to compute the updated prefix argument.
+
+
+
+   * (negative-argument arg)
+
+
+
+   This command adds to the numeric argument for the next command.
+
+   The argument ARG is the raw prefix argument as it was before this command;
+
+   its value is negated to form the new prefix argument
+
+
+
+** Quitting
+
+   当Lisp函数正在运行时,可以按下`C-g',让Emacs退出当前的工作.
+
+
+
+   然而当command loop在等待keyboard input时,按下C-g并不会引发quitting,Emacs只是把它当成一个普通的input character.
+
+
+
+   when `C-g' follows a prefix key, they combine to form an undefined key. The effect is to cancel the prefix key as well as any prefix argument.
+
+
+
+   而当在minibuffer中输入时,`C-g'的意义又不一样,它中断并退出minibuffer
+
+
+
+   `C-g'通过设置变量`quit-flag'为t来表示要quit,Emacs检查该变量的值并产生quitting
+
+
+
+   若想在执行Lisp函数时阻止quitting的产生,只需要将变量`inhibit-quit'绑定为非nil值即可.这时,即使`quit-falg'设置为t,依然不会产生quitting
+
+
+
+   * quit-flag
+
+
+
+   该值为非nil,除非`inhibit-quit'被设置为非nil,否则Emacs立即退出当前执行的任务.
+
+
+
+   * inhibit-quit
+
+
+
+   当`quit-flag'设置为非nil时,该变量决定Emacs是否执行退出
+
+
+
+   * 宏(with-local-quit body...)
+
+
+
+   该宏执行body,执行过程中,即使`inhibit-quit'设置为非nil,也运行产生quitting.
+
+
+
+   若body运行过程中,被quitting中断,则返回nil,否则返回最后语句的执行结果.
+
+
+
+   若进入`with-local-quit'时,`inhibit-quit'为nil,则执行body时若产生quitting,则Emacs设置`quit-flag'并产生一个普通quit.
+
+
+
+   若进入`with-local-quit'是,`inhibit-quit'为非nil,这时普通的quitting被推迟. 非nil的`quit-flag'会触发一种特殊的quit--local quit. 它会终止body的执行并退出`with-local-quit'. *退出`with-local-quit'后的`quit-flag'依然为非nil*.
+
+
+
+   * (keyboard-quit)
+
+
+
+   该函数设置产生quit的条件,默认绑定到C-g
+
+
+
+** Keyboard Macro
+
+
+
+   一个"keyboard macro"指的是一系列的input event,这一系列的input event可以认为是一个command.(A "keyboard macro" is a canned sequence of input events that can be considered a command and made the definition of a key)
+
+
+
+   keyboard macro的lisp表现形式为一个string或由event组成的vector
+
+
+
+   * (execute-kbd-macro kbdmacro &optional count loopfunc)
+
+
+
+   把kbdmacro当作一系列的event来执行.
+
+
+
+   若kbdmacro为string或vector,则就好像用户直接输入一样.  The sequence is _not_ expected to be a single key sequence
+
+
+
+   若kbdmacro为symbol,则执行该symbol的函数定义,若该symbol的函数定义还是一个symbol,则不断的递归下去. 最终,其函数定义应该是一个string或vector,否则会抛出error
+
+
+
+   参数count表示重复执行多少次kdbmacro,若count为nil,则执行一次,若count为0,表示执行无穷多次
+
+
+
+   若loopfunc为非nil,则配次循环都会不带参数调用该函数,或函数返回nil,则停止执行该macro
+
+
+
+   * executing-kbd-macro
+
+
+
+   当前正在执行的kbd-macro,nil表示没有在执行kbd-macro
+
+
+
+   * defining-kbd-macro
+
+
+
+   只有当正在定义的kbd-macro的情况下,该值才为非nil.
+
+
+
+   该值为'append表示正在为现有的macro添加定义( The value is `append' while appending to the definition of an existing macro)
+
+
+
+   命令`start-kbd-macro',`kmacro-start-macro'和`end-kbd-macro'会设置该值--尽量不要自己去设置该值
+
+
+
+   The variable is always local to the current terminal and cannot be buffer-local
+
+
+
+   * last-kbd-macro
+
+
+
+   最近所定义的kbd-macro
+
+
+
+   * kbd-macro-termination-hook
+
+
+
+   当keyboard macro执行完成后触发该hook(不管是正常结束还是异常结束都触发)

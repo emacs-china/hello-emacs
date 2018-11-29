@@ -1,0 +1,296 @@
+#+TITLE: 控制结构
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#控制结构][控制结构]]
+  - [[#顺序结构][顺序结构]]
+  - [[#条件表达式][条件表达式]]
+  - [[#组合条件][组合条件]]
+  - [[#循环][循环]]
+  - [[#使用catchthrow模拟goto语句][使用catch/throw模拟goto语句]]
+
+* 控制结构
+
+** 顺序结构
+
+   * (progn bodys)
+
+   顺序执行bodys,bodys中的最后一个form的返回值为progn的返回值
+
+
+
+   * (prog1 form1 bodys)
+
+   类似progn,但form1的返回值为prog1的返回值
+
+
+
+   * (prog2 form1 form2 bodys)
+
+   类似progn,但form2的返回值为prog2的返回值
+
+** 条件表达式
+
+   * (if condition then-form else-bodys)
+
+   注意,then-form只能是一句form,而else-bodys可以为多个form,事实上它包含了一个隐含的progn
+
+
+
+   * (when condition then-bodys)
+
+
+
+   * (unless condition else-bodys)
+
+
+
+   * (cond clauses)
+
+   一个clause的格式为(condition bodys)
+
+
+
+   clause的格式也可以为(condition),这样的话,cond的返回值为非nil的condition的返回值
+
+
+
+   * (pcase EXP BRANCH1 BRANCH2 BRANCH3 ...)
+
+   一个BRANCH的格式为(UPATTERN BODYS)
+
+
+
+   pcase先计算EXP的值,并将值与各个BRANCH中的UPATTERN相比较,若相等,则执行相应的BODYS
+
+   #+BEGIN_SRC emacs-lisp
+
+     (pcase (get-return-code x)
+
+       ('success       (message "Done!"))
+
+       ('would-block   (message "Sorry, can't do it now"))
+
+       ('read-only     (message "The shmliblick is read-only"))
+
+       ('access-denied (message "You do not have the needed rights"))
+
+       (code           (message "Unknown return code %S" code)))
+
+   #+END_SRC
+
+
+
+   UPATTERN可以是下面几种格式
+
+   * `(QPATTERN1 . QPATTERN2)
+
+     该模式匹配一个cons cell,它的car匹配QPATTERN1,而cdr匹配QPATTERN2
+
+     #+BEGIN_SRC emacs-lisp
+
+       (setq form '(1 . 2))
+
+       (pcase form
+
+         (`(,x . ,y) (message "%s + %s = %s" x y (+ x y)))) ;这里x绑定为值1,y绑定为值2
+
+                                               ;=>"1 + 2 = 3"
+
+     #+END_SRC
+
+   * `ATOM
+
+     该模式匹配任何`equal` ATOM的atom
+
+     #+BEGIN_SRC emacs-lisp
+
+       (pcase (get-return-code x)
+
+         (`success       (message "Done!"))
+
+         (`would-block   (message "Sorry, can't do it now"))
+
+         (`read-only     (message "The shmliblick is read-only")) ;注意,symbol前需要用反引号引起来
+
+         (`access-denied (message "You do not have the needed rights"))) ;这里access-denied为atom,使用equal来进行匹配
+
+     #+END_SRC
+
+   * `,UPATTERN
+
+     该模式匹配任何符合UPATTERN的object,并会绑定object到UPATTERN中的变量中
+
+     #+BEGIN_SRC emacs-lisp
+
+       (setq form '(add 1 2))
+
+       (pcase form
+
+         (`(add ,x ,y) (message "%s + %s = %s" x y (+ x y)))) ;这里x绑定为值1,y绑定为值2
+
+                                               ;=>"1 + 2 = 3"
+
+
+
+     #+END_SRC
+
+   * SYMBOL
+
+     该模式匹配任何object,并且将该symbol绑定到object上.
+
+     #+BEGIN_SRC emacs-lisp
+
+       (pcase (get-code x)
+
+         (code (message "code is %s" code)))   ;这里code为一个symbol,它的值为(get-code x)的结果
+
+     #+END_SRC
+
+   * -
+
+     该模式匹配任何object,但与SYMBOL不同在于不会将object绑定到任何symbol上
+
+   * (pred PRED)
+
+     返回(PRED object)的值
+
+     #+BEGIN_SRC emacs-lisp
+
+       (pcase x
+
+         ((pred numberp) (message "x is number"))
+
+         ((pred stringp) (message "x is string")))
+
+     #+END_SRC
+
+   * (or UPATTERN1 UPATTERN2 ...)
+
+     任何一个UPATTERN匹配都行
+
+   * (and UPATTERN1 UPATTERN2 ...)
+
+     所有UPATTERN都必须匹配
+
+   * (guard EXP)
+
+     若EXP的计算结果为非nil,则匹配,否则不匹配
+
+
+
+** 组合条件
+
+   * (not condition)
+
+
+
+   * (and conditions)
+
+
+
+   * (or conditions)
+
+** 循环
+
+   * (while condition bodys)
+
+   while先判断condition的值,只要condition为非nil,则循环执行bodys,bodys可以为空.
+
+
+
+   要模拟repeat bodys until condition,可以使用如下的结构
+
+   #+BEGIN_SRC emacs-lisp
+
+     (while (bodys
+
+             (not condition)))
+
+   #+END_SRC
+
+
+
+   * (dolist (var list [result]]) bodys)
+
+   对list的每个element,绑定到变量var中,然后执行bodys中的语句,最后返回result的计算结果(默认为nil).
+
+   #+BEGIN_SRC emacs-lisp
+
+     (defun reverse (list)
+
+       (let (value)
+
+         (dolist (elt list value)
+
+           (setq value (cons elt value)))))
+
+   #+END_SRC
+
+
+
+   * (dotimes (var count [result]) bodys)
+
+   类似dolist,但var的值的范围为[0,count)
+
+
+
+   * (do (var initial [step-form]) (end-test [RESULT-FORM] bodys...))
+
+
+
+   类似for(var=initial;end-test;var=step-form){bodys...}
+
+** 使用catch/throw模拟goto语句
+
+   可以在catch中使用throw来跳出循环,throw语句会跳转到catch处,例如
+
+   #+BEGIN_SRC emacs-lisp
+
+     ;; (catch tag bodys)
+
+     (defun foo-outer ()
+
+       (catch 'foo
+
+         (foo-inner)))
+
+
+
+     ;; (throw tag value)
+
+     (defun foo-inner ()
+
+       ...
+
+       (if x
+
+           (throw 'foo t))                   ;这里第一个参数必须与catch的第一个参数匹配. 第二个参数t,作为catch的返回值
+
+       ...)
+
+     ;; 从这个例子中可以看出,throw可以跨函数间捕获
+
+   #+END_SRC
+
+
+
+   throw会根据其第一个参数来查询匹配的catch,匹配的catch它的第一个参数需要eq throw的第一个参数.
+
+
+
+   catch语句的返回值由throw的第二个参数决定
+
+
+
+   若有多个catch可供匹配,则最内层那个catch被匹配.
+
+
+
+   throw操作退出多个lisp结构时,就好像正常退出这些lisp结构一样.
+
+   具体来说,throw操作会这些lisp结构中使解绑用let绑定的变量,退出了save-excursion语句后,会还原buffer和postion. 退出save-restriction语句后,会还原narrowing状态. 它还会调用unwind-protect语句定义的清理动作.
+
+
+
+   若一个throw的tag没有相应的catch tag来匹配,则会抛出`no-catch`错误. 错误内容为throw语句中的`(tag value)`

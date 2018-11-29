@@ -1,0 +1,49 @@
+#+TITLE: wait function
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#wait-function][wait function]]
+
+* wait function
+
+  wait function用于等待一段时间或等待input.
+
+
+
+  * (sit-for seconds &optional nodisp)
+
+
+
+  sit-for等待一段时间或直到收到某个input event. 在这段时间内Emacs会实时更新屏幕显示.
+
+
+
+  若等待不是由收到input而中断的,则返回t,否则返回nil
+
+
+
+  参数seconds可以是浮点数. (sit-for 0)等价于(redisplay),它只是立即更新屏幕显示.
+
+
+
+  若参数nodisp为非nil,则sit-for在等价期间不会更新屏幕显示.
+
+
+
+  在Emacs处于batch mode时,`sit-for'不能被interrupt event中断,这时等价于`sleep-for'
+
+
+
+  * (sleep-for seconds &optional millisec)
+
+
+
+  该函数等价seconds秒,等待期间不会被input event打断,也不会更新屏幕显示. 它总是返回nil
+
+
+
+  参数seconds可以为浮点数.
+
+
+
+  参数millisec表示在等待seconds秒后,再等待millisec毫秒

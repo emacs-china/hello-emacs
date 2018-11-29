@@ -1,0 +1,133 @@
+#+TITLE: Font Lock Mode
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#font-lock-mode][Font Lock Mode]]
+  - [[#font-lock-mode的基础说明][Font Lock Mode的基础说明]]
+  - [[#基于搜索的高亮][基于搜索的高亮]]
+
+* Font Lock Mode
+
+  Font Lock Mode根据Major Mode的语法规则来对buffer内容进行作色.
+
+
+
+  Font Lock Mode通过两种途径来寻找要高亮作色的文本:
+
+  + 根据syntax table的语法规则来作色,这种方法优先进行
+
+  + 通过查询(通常通过正则表达式),这种方法随后运行
+
+** Font Lock Mode的基础说明
+
+   很多变量用来控制Font Lock Mode如何高亮显示. 但Major Mode不应该直接设置这些变量,它应该通过设置`font-lock-defaults'变量来实现这一目的.
+
+
+
+   Font Lock minor mode启动时,会根据`font-lock-defaults'的值来自动设置其他变量.
+
+
+
+   + font-lock-defaults
+
+
+
+   该变量的值可以为nil,表示Font Lock mode不做任何高亮,需要用户手工通过Edit->Text Properties->Faces菜单手工指定那些文本高亮.
+
+
+
+   若该变量的值为非nil,则其格式应该为:
+
+   #+BEGIN_SRC emacs-lisp
+
+     (KEYWORDS [KEYWORDS-ONLY [CASE-FOLD [SYNTAX-ALIST [SYNTAX-BEGIN OTHER-VARS...]]]])
+
+   #+END_SRC
+
+   其中:
+
+   - KEYWORDS
+
+
+
+   会被设置为`font-lock-keywords'的值. 该变量会影响基于查询的高亮.
+
+
+
+   KEYWORDS可能是一个symbol,一个变量或一个返回值为list的函数
+
+
+
+   KEYWORDS也可以是一个由多个symbol组成的list,每个symbol对应高亮的一个等级. 其中第一个symbol对应'mode default'等级的高亮,下一个symbol对应'level 1'级的高亮,再下一个symbol对应'level2'级别的高亮依次类推.
+
+
+
+   'mode default'级别的高亮通常与'level 1'级别的高亮一样,它在当变量`font-lock-maximum-decoration'为nil时被使用.
+
+
+
+   - KEYWORD-ONLY
+
+
+
+   会被用来设置`font-lock-keyword-only'的值. 该变量标识了是否只采用基于搜索的高亮.
+
+
+
+   若该变量为nil,则Font Lock mode会使用基于语法的高亮,否则Font Lock mode不会使用基于语法的高亮
+
+
+
+   - CASE-FOLD
+
+
+
+   被用来设置`font-lock-keywords-case-fold-search'的值. 该变量表明了在基于搜索的高亮时,是否忽略大小写的差异.
+
+
+
+   若为非nil,则表示Font Lock mode在搜索时忽略大小写
+
+
+
+   - SYNTAX-ALIST
+
+
+
+   被用来作为Font Lock mode基于语法高亮时使用的syntax table.
+
+
+
+   该变量的值若为nil,则其应该为由格式`(CHAR-OR-STRING . STRING)'组成的list.
+
+
+
+   若变量的值为nil,则Font Lock mode使用函数`syntax-table'返回的syntax table作为依据.
+
+
+
+   - SYNTAX-BEGIN
+
+
+
+   该变量用于设置`font-lock-beginning-of-syntax-function'的值.
+
+
+
+   一般设置该值为nil,而使用`syntax-begin-function'代替
+
+
+
+   - OTHER-VARS
+
+
+
+   剩下的所有元素都统一叫做OTHER-VARS, 其中每个元素的格式应该为(VARIABLE . VALUE),表示将VARIABLE设置为buffer local变量,然后设置值为VALUE
+
+
+
+   一样用于设置影响Font Lock mode高亮的其他变量
+
+** 基于搜索的高亮
+
+   直接控制基于搜索高亮的变量是`font-lock-keywords',它一般由`font-lock-defautls'的'KEYWORDS'元素指定

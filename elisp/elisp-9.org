@@ -1,0 +1,92 @@
+#+TITLE: 光标移动
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#光标移动][光标移动]]
+  - [[#函数][函数]]
+
+* 光标移动
+
+** 函数
+
+   * 按单个字符移动
+
+
+
+   goto-char /forward-char /backward-char
+
+
+
+   * 跳转到指定字符串的位置
+
+
+
+   (search-forward myStr)  ;光标位于myStr的尾部
+
+
+
+   (search-backward myStr) ;光标位于myStr的头部
+
+
+
+   * 正则查询
+
+
+
+   (re-search-forward myRegex) / (search-forward-regexp myRegex)
+
+
+
+   (re-search-backward myRegex) / (search-backward-regexp myRegex)
+
+
+
+   * 跳到第一个不是"a"-"z"的位置
+
+
+
+   (skip-chars-forward "a-z")
+
+
+
+   (skip-chars-backward "a-z")
+
+
+
+   * 跳到buffer的开头/末尾
+
+
+
+   beginning-of-buffer / end-of-buffer
+
+
+
+   * 按词移动
+
+
+
+   forward-word /backward-word
+
+
+
+   * 按行移动
+
+
+
+   没有backward-line,而且每次移动都是移动到行首的,所以(forward-line 0)可以移动到当前行的行首
+
+
+
+   (forward-line N) N可以为负数,表示backward-line
+
+
+
+   * 移动到行首/尾
+
+
+
+   (beginning-of-line)
+
+
+
+   (end-of-line)

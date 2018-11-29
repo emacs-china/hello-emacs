@@ -1,0 +1,275 @@
+#+TITLE: Tabulated List Mode
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#tabulated-list-mode][Tabulated List Mode]]
+  - [[#指定tabulated-data的格式][指定tabulated data的格式]]
+  - [[#其他函数][其他函数]]
+
+* Tabulated List Mode
+
+  Tabulated List Mode是一种用列表来显示数据的Major Mode,这种数据往往由一条条的记录组成,每条记录的内容又可以划分到多个列中.
+
+
+
+  Tabulated List Mode继承至Special mode,且同时被多个子mode继承,例如Process Menu mode和Package Menu Mode
+
+
+
+  要想继承Tabulated List Mode,需要在`define-derived-mode'中的BODY中通过设置一些变量(下面会讲到)来定义数据的结构,然后调用函数`tabulated-list-init-header'来初始化header line
+
+  同时,继承的子mode还需要定义一个"listing command",该命令不是major mode command,它是給用户使用的命令封装,该命令通常完成以下几个动作
+
+  1. 创建或切换到某个特定buffer
+
+  2. 开启新的Major mode
+
+  3. 指定要以列表方式显示的数据.
+
+  4. 调用`tabulated-list-print'函数,以弹出该buffer
+
+
+
+** 指定tabulated data的格式
+
+   通过定义以下变量来指定tabulated data的格式
+
+
+
+   + tabulated-list-format
+
+     该变量为buffer-local变量,它定义了数据的格式.
+
+
+
+   该变量为一个vector,且vector中的每个元素都表示一个数据列,其格式为`(NAME WIDHT SORT)'. 其中:
+
+   - NAME为列的名称
+
+
+
+   - WIDHT为每列的保留宽度,该参数对最后一列来说无意义
+
+
+
+   - SORT指定了根据该列排序记录的方式.
+
+     | 值           | 意义                                                                                 |
+
+     |--------------+--------------------------------------------------------------------------------------|
+
+     | nil          | 表示不排序                                                                           |
+
+     | t            | 表示根据字符串排序                                                                   |
+
+     | 其他判断函数 | 使用该判断函数传入`sort'进行排序. 该判断函数的参数为`tabulated-list-entries'中的元素 |
+
+
+
+   + tabulated-list-entries
+
+
+
+   该变量为buffer-local变量,它指定了要显示的记录数据. 它的值 *可以为一个list,或一个函数*
+
+
+
+   若该值为list,则list中的每个元素格式应该为`(ID CONTENTS)',其中
+
+   - ID可以为nil,或一个标识某条记录的lisp object
+
+
+
+   - CONTENT为一个表示记录内容的vector,其中vector中的每个元素表示记录的一列内容.
+
+
+
+   vector中的元素可能为字符串或者格式为`(LABEL . PROPERTIES)'的list,
+
+
+
+   若元素为字符串则表示直接显示该字符串
+
+
+
+   若元素为`(LABEL . PROPERTIES)'格式的list,则表示用`LABEL'和`PROPERTIES'作为参数调用`insert-text-button'的方式来插入一个text button(参见[[info:elisp#Making%20Buttons][Making Buttons]])
+
+
+
+   若`tabulated-list-entries'的值为为一个函数,则不带参数调用该函数应该返回上面格式的list
+
+
+
+   + tabulated-list-revert-hook
+
+
+
+   该hook在重载入Tabulated List Buffer前会被触发, *常用于对`tabulated-list-entries'的值作预处理.*
+
+
+
+   + tabulated-list-printer
+
+
+
+   该变量的值应该为一个函数, 该函数接收`tabulated-list-entries'中的ID和CONTENTS两个参数, *其返回值才作为真正的列内容显示*
+
+
+
+   默认该变量的函数,直接插入CONTENTS
+
+
+
+   + tabulated-list-sort-key
+
+
+
+   该变量指定了根据那几列对记录进行排序.以及是从大到小还是从小到大排序
+
+
+
+   - nil表示不排序
+
+
+
+   - (NAME . FLIP)格式的cons表示根据名为NAME的列排序,FLIP表示是否反转排序顺序
+
+
+
+   + 函数(tabulated-list-init-header)
+
+     该函数为Tabulated List buffer生成并设置`header-line-format'(参见[[info:elisp#Header%20Lines][Header Lines]]),并为header line分配keymap以便允许通过点击header列来排序
+
+
+
+   该函数依赖上面所述的变量
+
+
+
+   + 函数(tabulated-list-print &optional remember-pos)
+
+     该函数刷新tabulated list buffer. *该函数通常被list command所调用*
+
+
+
+   该函数会作以下动作:
+
+   1. 清空buffer
+
+
+
+   2. 根据`tabulated-list-sort-key'对`tabulated-list-entries'中的数据进行排序
+
+
+
+   3. 调用`tabulated-list-printer'所表示的函数输出记录
+
+
+
+   若参数REMEMBER-POS为非nil,则该函数在刷新buffer前会记住当前行的ID,并在刷新后自动定位到该ID行
+
+
+
+   + (tabulated-list-print-entry id cols)
+
+
+
+   在光标处插入新entry,entry信息由ID和COLS决定
+
+
+
+   其中ID是一个用于标示entry的lisp对象,而COLS为一个由各列信息组成的vector
+
+
+
+   + (tabulated-list-print-col n col-desc x) ??
+
+
+
+   为光标处entry插入一个特定的entry列
+
+
+
+   其中N为列编号,COL-DESC为列描述,X为光标处的列编号
+
+
+
+   该函数在插入后,返回列编号
+
+
+
+** 其他函数
+
+   + (tabulated-list-get-id &optional POS)
+
+
+
+   返回POS位置entry的ID. POS默认为光标当前位置
+
+
+
+   + (tabulated-list-get-entry &optional POS)
+
+
+
+   返回POS位置entry的信息. 返回的格式为一个由列信息组成的vector
+
+
+
+   POS默认为光标当前位置
+
+
+
+   + (tabulated-list-delete-entry)
+
+
+
+   删除光标所在位置的entry. 并返回一个(ID COLS...)的列表来暂时被删除entry的信息.
+
+
+
+   *该函数同时会将光标移动到entry的最开头位置*
+
+
+
+   *该函数只会更改buffer内容,而不会更改`tabulated-list-entries'的值*
+
+
+
+   + (tabulated-list-set-col COL DESC &optional CHANGE-ENTRY-DATA)
+
+
+
+   更改当前位置的entry中第COL列的内容为DESC
+
+
+
+   COL可以是列的位置,也可以是列的名称.
+
+
+
+   CHANGE-ENTRY-DATA指示了是否同时更改`tabulated-list-entries'的值
+
+
+
+   + (tabulated-list-put-tag tag &optional advance)
+
+
+
+   将TAG放入当前entry的padding区域
+
+
+
+   TAG为字符串,且大小不能大于`tabulated-list-padding'的值
+
+
+
+   若ADVANCE为非nil,则光标同时移动到下一行
+
+
+
+   + tabulated-list-padding
+
+
+
+   每个entry前预留于padding的字符个数

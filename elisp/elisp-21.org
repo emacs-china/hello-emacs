@@ -1,0 +1,908 @@
+#+TITLE: 调试ELisp程序
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#调试elisp程序][调试ELisp程序]]
+  - [[#debugger][debugger]]
+    - [[#配置何时进入debugger][配置何时进入debugger]]
+    - [[#debugger使用说明][debugger使用说明]]
+    - [[#debugger内部实现使用到的变量与函数][debugger内部实现使用到的变量与函数]]
+  - [[#edebug][edebug]]
+    - [[#使用edebug的一般步骤][使用Edebug的一般步骤]]
+    - [[#edebug中的命令][Edebug中的命令]]
+      - [[#execution-mode][Execution Mode]]
+      - [[#jumping命令][Jumping命令]]
+      - [[#breaks][Breaks]]
+      - [[#evaluation][Evaluation]]
+      - [[#evalution-list-buffer][Evalution List Buffer]]
+      - [[#其他命令][其他命令]]
+      - [[#捕获errors][捕获Errors]]
+      - [[#edebug-views][Edebug Views]]
+    - [[#edebug中的输出格式][Edebug中的输出格式]]
+    - [[#trace-buffer][Trace Buffer]]
+  - [[#test-coverage][test coverage]]
+    - [[#使用步骤][使用步骤]]
+    - [[#高亮说明][高亮说明]]
+    - [[#give-advice-to-the-test-coverage-too][give advice to the test coverage too]]
+  - [[#profiling][Profiling]]
+  - [[#trace][Trace]]
+    - [[#trace-function-function-optional-buffer-context][(trace-function FUNCTION &optional BUFFER CONTEXT)]]
+    - [[#trace-function-background-function-optional-buffercontext][(trace-function-background FUNCTION &optional BUFFERCONTEXT)]]
+    - [[#untrace-function-function][(untrace-function FUNCTION)]]
+    - [[#untrace-all][(untrace-all)]]
+
+* 调试ELisp程序
+
+  有以下几种调试Elisp程序的方法
+
+  * 若运行程序时抛出异常,可以使用Emacs内置的debugger或edebug
+
+  * 通过查看编译器定位问题.
+
+  * 使用ERT包来写回归测试
+
+  * 使用profile来定义性能关注点
+
+** debugger
+
+*** 配置何时进入debugger
+
+    当Elisp程序运行时,若发生error,则根据配置项`debug-on-error`决定是否进入debugger.
+
+
+
+    * 配置项debug-on-error
+
+
+
+    若值为t,则任何种类的error都会进入debugger.
+
+
+
+    若值为nil,则任何种类的error都不会进入debugger
+
+
+
+    若值为error conditon的列表,则只有指定种类的error会进入debugger
+
+
+
+    * 配置项debug-ignored-errors
+
+
+
+    该变量在debug-on-error的基础上,屏蔽指定种类的error不触发debugger.
+
+
+
+    该变量的值为一个由error condition和正则表达式组成的list. 任何符合error condtion的error,和error message匹配指定正则表达式的error,都不会触发debugger
+
+
+
+    * 配置项eval-expression-debug-on-error
+
+
+
+    该配置项的值为t时,使用eval-expression命令时,会将debug-on-error的值临时改为t.
+
+
+
+    若该配置项为nil,则不会修改debug-on-error的值.
+
+
+
+    * 变量debug-on-signal
+
+
+
+    默认情况下,若error被condition-case所捕获,则不会进入debugger,但若该变量为非nil,则会先进入debugger,再被condition-case所捕获.
+
+
+
+    当然,是否进入debugger,还要看debug-on-error和debug-ignored-errors的值
+
+
+
+    一般不会使用该变量,而使用condition-case-unless-debug代替.
+
+
+
+    * debug-on-event
+
+
+
+    当Emacs捕获到指定event发生时,进入debugger
+
+
+
+    * debug-on-message
+
+
+
+    该变量为一个正则表达式,当在echo area显示了符合该正则的message时,进入debugger.
+
+
+
+    该变量常用于寻找引起特定message的原因.
+
+
+
+    * 配置项debug-on-quit
+
+
+
+    当按下C-g时,会产生一个quit,quit和error不是一回事,因此quit默认是不进入debugger的.
+
+
+
+    通过设置该值为非nil,则当quit发生时,进入debugger
+
+
+
+    * 命令(debug-on-entry function-symbol)
+
+
+
+    该命令标注当指定的function被调用时,主动进入debugger(无论有没有error/quit发生)
+
+    #+BEGIN_SRC emacs-lisp
+
+      (defun fact (n)
+
+        (if (zerop n) 1
+
+          (* n (fact (1- n)))))               ; => fact
+
+      (debug-on-entry 'fact)                  ; => fact
+
+      (fact 3)                                ; => 进入debugger
+
+    #+END_SRC
+
+
+
+    * 命令(cancel-debug-on-entry &optional function-symbol)
+
+
+
+    该函数取消debug-on-entry对指定function的操作.
+
+
+
+    若function-symbol为nil,则表示debug-on-entry对所有函数的操作.
+
+
+
+    * (debug &rest debugger-args)
+
+
+
+    显式调用debugger. 程序执行到该语句,会立刻进入debugger.
+
+
+
+    通常debugger只是把debugger-args的值显示在backtrace buffer的首部,以方便用户可以看到它.
+
+
+
+    然而,有些debugger-arg有其特殊的意义:
+
+    * 第一个参数为lambda
+
+
+
+    当debugger是由于参数`debug-on-next-call`设置为非nil的情况下进入了函数而触发的,则该变量会显示为`Debugger entered--entering a function:`
+
+
+
+    * 第一个参数为debug
+
+
+
+    当debugger是由于设置了参数`debug-on-entry`的情况下进入了函数而触发的,则该变量会显示为`Debugger entered--entering a function`
+
+
+
+    * 第一个参数为t
+
+
+
+    当debugger是由于参数`debug-on-next-call`设置为非nil的情况下进入了函数而触发的,则该变量会显示为`Debugger entered--beginning evaluation of function call form`
+
+
+
+    * 第一个参数为exit,第二个参数为debug
+
+
+
+    当debugger是由于之前被b标记过的stack frame退出而触发的情况下,会显示为`Debugger entered--returning value:`加上返回的值
+
+
+
+    * 第一个参数为error
+
+
+
+    当debugger是由于error/quit未捕获而触发时,会显示为`Debugger entered--Lisp error:`加上error的信息
+
+
+
+    * 当第一个参数为nil
+
+
+
+    TODO 不知道什么意思.
+
+
+
+
+
+*** debugger使用说明
+
+    当进入debugger后,会有一个名为*Backtrace*的buffer出现.
+
+
+
+    在该buffer的第一行显示了进入debugger的原因,下面是backtrace.
+
+
+
+    backtrace由一系列的stack frame组成,每行一个stack frame. 其中
+
+    * 光标所在的stack frame为当前frame,有些debugger命令会对当前frame进行操作
+
+    * 若某stack frame以*开头,表示离开这个stack frame会再次调用debugger.
+
+    * 若stack frame中的函数名带了下划线,表示debugger可以找到该函数的源代码.
+
+
+
+    当进入debugger后,会根据`eval-expression-debug-on-error`的值来临时更改`debug-on-error`的值.若`eval-expression-debug-on-error`的值为t,则会设置debug-on-error的值为t. 这意味着在debug中触发的任意error都会产生一个backtrace. 若不想这样,可以设置`eval-expression-debug-on-error`为nil,或在`debugger-mode-hook`中设置`debug-on-error`为nil
+
+
+
+    Debugger中的命令:
+
+    * c
+
+
+
+    continue. 退出debugger,并且继续向下执行.
+
+
+
+    * d
+
+
+
+    步进一个S表达式,然后看步进的那个S表达式做了什么操作.
+
+
+
+    * b
+
+
+
+    为当前frame加上断点标记. 加了标志的frame,在行头会加上一个*
+
+
+
+    * u
+
+
+
+    取消b命令为frame加上的断点标志.
+
+
+
+    * j
+
+
+
+    像b命令一样为当前frame加上标记,然后像命令c一样继续执行程序,但是在执行时会临时屏蔽`debug-on-entry`标记
+
+
+
+    * e
+
+
+
+    执行输入的S表达式. 通过该命令,可以修改debugger的变量.
+
+
+
+    * R
+
+
+
+    类似e,但是会把执行S表达式的结果,保存到一个名为*Debugger-record*的buffer中.
+
+
+
+    * q
+
+
+
+    退出debugger,退出程序的执行过程
+
+
+
+    * r
+
+
+
+    读取一个S表达式,并将其计算结果作为当前frame的返回值.
+
+
+
+    当debugger是由于捕获到异常而触发时,无法使用该命令.
+
+
+
+    * l
+
+
+
+    列出会debug-on-entry的函数列表. 该列表根据`debug-on-entry`的值来过滤函数.
+
+
+
+    * v
+
+
+
+    显示/不现实当前stack frame中的局部变量
+
+
+
+*** debugger内部实现使用到的变量与函数
+
+    * debugger
+
+
+
+    该变量的值需要是一个函数,当触发debugger时,实际上是通过调用该函数来实现的.
+
+
+
+    该变量默认值为`debug`
+
+
+
+    * (backtrace)
+
+
+
+    This function prints a trace of Lisp function calls currently active.
+
+
+
+    #+BEGIN_SRC emacs-lisp
+
+      (defun show-back-trace()
+
+        (backtrace))
+
+
+
+      (show-back-trace)
+
+
+
+      ;; ==================>
+
+      backtrace()
+
+      show-back-trace()
+
+      eval((show-back-trace) nil)
+
+      eval-last-sexp-1(nil)
+
+      eval-last-sexp(nil)
+
+      call-interactively(eval-last-sexp nil nil)
+
+      command-execute(eval-last-sexp)
+
+
+
+
+
+    #+END_SRC
+
+
+
+    * 变量debug-on-next-call
+
+
+
+    若该值为nil,则在执行下一个eval,apply或funcall之前,先会调用debugger.
+
+
+
+    进入debugger后,会将该值设置为nil,但debugger中的d命令会将该变量设置为t
+
+
+
+    * (backtrace-debug level flag)
+
+
+
+    * 变量command-debug-status
+
+
+
+    该变量记录了当前interctive command的debug状态.
+
+
+
+    * (backtrace-frame frame-number)
+
+** edebug
+
+*** 使用Edebug的一般步骤
+
+    1. 引入函数/宏到edebug中来调试
+
+
+
+    将光标移动到要debug的函数/宏定义上,按下C-u C-M-x(eval-defun)
+
+
+
+    一旦函数/宏被引入到edebug来调试,任何调用该函数/宏的操作都会触发edebug执行.
+
+
+
+    2. Edebug跳转到定义Elisp源代码的buffer,且该buffer暂时变为只读的.
+
+
+
+    3. 使用Edebug命令开始调试,可以使用`?`来显示Edebug命令
+
+
+
+    4. 若不需要在用Edebug调试了,需要将函数/宏引出Edebug,方法是再执行一边函数/宏的定义即可.
+
+*** Edebug中的命令
+
+**** Execution Mode
+
+     Edebug在调试程序时,也支持各种execution modes. 但它并不是实际上的major-mode或minor-mode
+
+
+
+     execution mode决定了Edebug下一次在哪里暂停,以及在暂停时显示多少执行的信息.
+
+
+
+     | 命令  | 说明                                                                              |
+
+     |-------+-----------------------------------------------------------------------------------|
+
+     | S     | Stop:不再往下执行程序,等待用户输入更多的Edebug命令(edebug-stop)                   |
+
+     | <SPC> | Step:步进下一个语句(edebug-step-mode)                                             |
+
+     | n     | Next:跳到下一个Form(edebug-next-mode)                                             |
+
+     | t     | Trace:每执行一个语句(会在echo area显示每个语句执行的结果)就暂停一段时间(默认为1s,由参数`edebug-sit-for-seconds`确定) |
+
+     | T     | Rapid trace:类似t,但并不暂停(edebug-Trace-fast-mode)                              |
+
+     | g     | Go:继续执行直到下一个端口(edebug-go-mode)                                         |
+
+     | c     | Continue:继续执行,在每个断点处都停顿一下,然后继续执行(edebug-continue-mode)       |
+
+     | C     | Rapid continue:类似c,但在断点处并不停顿(edebug-continue-fast-mode)                |
+
+     | G     | Go non-stop:忽略断点的存在,继续执行程序.                                          |
+
+
+
+     在程序执行过程中,可以用S或其他命令暂停程序的执行
+
+**** Jumping命令
+
+     Jumping系列命令告诉Edebug,让程序执行直到指定的位置
+
+
+
+     | 命令 | 说明                                        |
+
+     |------+---------------------------------------------|
+
+     | h    | 执行到光标所在位置(edebug-goto-here)        |
+
+     | f    | 执行一个sexp(edebug-forward-sexp)           |
+
+     | o    | 执行完(跳出)当前的sexp(edebug-step-out)     |
+
+     | i    | 进入form所调用的函数/宏定义(edebug-step-in) |
+
+     |      |                                            |
+
+**** Breaks
+
+     在三种情况下,Edebug会暂停程序的执行:
+
+
+
+     * 设置断点
+
+       | 命令                   | 说明                                                                                            |
+
+       |------------------------+-------------------------------------------------------------------------------------------------|
+
+       | b                      | 设置断点(edebug-set-breakpoint),若带prefix argument,则该断点为临时断点                          |
+
+       | u                      | 取消断点(edebug-unset-breakpoint)                                                               |
+
+       | x CONDITION-FORM <RET> | 设置条件断点,当运行CONDITION-FORM的结果为非nil时,断点生效(edebug-set-conditional-breakpoint). 若带prefix argument,则断点为零时断点 |
+
+       | B                      | 光标跳转到下一个断点处(edebug-next-breakpoint)                                                              |
+
+
+
+     re-evaluting/reinstrumenting函数定义会移除之前的所有断点
+
+
+
+     设置条件断点时,CONDITION-FORM抛出的error会被忽略,当成返回nil来看待.
+
+
+
+     一般情况下,Edebug会在断点处暂停程序的执行. 然而,当Edebug处于Go-nonstop mode下时,会完全忽略断点.
+
+
+
+     * 当某个条件(Global Condition)匹配时
+
+
+
+     若变量`edebug-global-break-condtion`的计算结果为非nil则暂停程序的执行. 同样的,若计算过程中抛出error,则当返回nil处理.
+
+
+
+     可以在edebug模式下使用X命令来设置该条件. 也可以在任何buffer的任何时候,通过C-x X X来调用(edebug-set-global-break-condition)设置该条件
+
+
+
+     * 插入断点代码
+
+
+
+     使用(edebug)主动调用edebug,进入断点模式.
+
+
+
+     若执行(eedbug)时,该函数并未引入到edebug中,则该函数其实调用的是(debug)
+
+**** Evaluation
+
+     | 命令          | 说明                                                                    |
+
+     |---------------+-------------------------------------------------------------------------|
+
+     | e EXP <RET>   | 在Edebug的外部上下文环境中计算EXP(edebug-eval-expression)               |
+
+     | M-: EXP <RET> | 在Edebug的上下文环境中计算EXP(eval-expression)                          |
+
+     | C-x C-e       | 在Edebug的外部上下文环境中计算光标前的expression(edebug-eval-last-sexp) |
+
+
+
+**** Evalution List Buffer
+
+     在Edebug中可以按E命令,进入名为*edebug*的"evaluation list buffer".
+
+
+
+     在该buffer中可以交互式的运行SEXP,且在该buffer中计算的SEXP,处于Edebug外部的上下文环境中.
+
+
+
+     可以在该buffer中使用Lisp Interaction mode中的命令. 还可以执行以下命令:
+
+
+
+     * C-j (edebug-eval-print-last-sexp)
+
+
+
+     在edebug的外部上下文环境中,计算光标前的expression,并将结果插入到当前buffer
+
+
+
+     * C-x C-e (edebug-eval-last-sexp)
+
+
+
+     在edebug的外部上下文环境中,计算光标前的expression
+
+
+
+     * C-c C-u (edebug-update-eval-list)
+
+
+
+     基于当前buffer的内容,创建新的evaluation list
+
+
+
+     evalution list由多个evalutation list groups组成. 每个groups由多个Lisp expression组成,group之间使用注释行来区分.
+
+
+
+     当edebug每次暂停程序执行时,每个evaluation list group中的地一个Lisp expression都会自动执行一遍.
+
+
+
+     #+BEGIN_SRC emacs-lisp
+
+       (current-buffer)
+
+       #<buffer *scratch*>
+
+                                               ;---------------------------------------------------------------
+
+       (selected-window)
+
+       #<window 16 on *scratch*>
+
+                                               ;---------------------------------------------------------------
+
+       (point)
+
+       196
+
+                                               ;---------------------------------------------------------------
+
+       bad-var
+
+       "Symbol's value as variable is void: bad-var"
+
+                                               ;---------------------------------------------------------------
+
+       (recursion-depth)
+
+       0
+
+                                               ;---------------------------------------------------------------
+
+       this-command
+
+       eval-last-sexp
+
+                                               ;---------------------------------------------------------------
+
+
+
+     #+END_SRC
+
+
+
+     * C-c C-d (edebug-delete-eval-list)
+
+
+
+     从evalution list中删除光标所在的group
+
+
+
+     * C-c C-w (edebug-where)
+
+
+
+     切换回当前暂停点的原代码buffer处
+
+
+
+**** 其他命令
+
+     | 命令 | 说明                                                                                 |
+
+     |------+--------------------------------------------------------------------------------------|
+
+     | ?    | 显示Edebug的帮助信息(edebug-help)                                                    |
+
+     | C-]  | Abort one level back to the previous command level(`abort-recursive-edit')           |
+
+     | q    | 终止程序运行并退出edebug,但`unwind-protect`和`condition-case`中的代码还是会执行      |
+
+     | Q    | 类似q,但`unwind-protect`和`condition-case`中的代码不会执行(edebug-top-level-nonstop) |
+
+     | r    | 重新在echo area中显示上次expression的运算结果(edebug-previous-result)                |
+
+     | d    | 显示backtrace(但是不显示Edebug自己的function,并且此时处于标准debugger模式下),(edebug-backtrace) |
+
+     |      |                                                                                      |
+
+**** 捕获Errors
+
+     默认情况下,若某函数被引入edebug中,则当该函数抛出error时,会自动激活edebug.
+
+
+
+     但可以通过配置变量`edebug-on-error`和`edebug-on-quit`来改变这一情况.
+
+**** Edebug Views
+
+
+
+*** Edebug中的输出格式
+
+    当Edebug输出循环list结构时,可能会出错,这时需要设置一下几个变量
+
+
+
+    * 配置项edebug-print-length
+
+
+
+    * 配置项edebug-print-level
+
+
+
+    * 配置项edebug-print-circle
+
+
+
+*** Trace Buffer
+
+    通过设置变量`edebug-trace`的值为非nil,可以使得Edebug将每次执行的过程都记录下来.
+
+
+
+    记录存储在名为`*edebug-trace*`的buffer中. 它记录了使用什么参数调用那个函数,返回值是什么.
+
+** test coverage
+
+*** 使用步骤
+
+    通过testcover库,能够对代码进行铺盖面测试. 方法是:
+
+
+
+    1. 载入testcover库
+
+
+
+    (require 'testcover)
+
+
+
+    2. 执行命令testcover-start
+
+
+
+    M-x testcover-start <RET> FILE <RET>
+
+
+
+    3. 然后对你的代码进行测试
+
+
+
+    4. 测试完成后执行命令testcover-mark-all命令会高亮出覆盖面不完全的地方
+
+
+
+    M-x testcover-mark-all
+
+
+
+    5. 使用命令testcover-next-mark跳转到下一个高亮点
+
+
+
+*** 高亮说明
+
+    一般来说,红色的高亮表示这个地方从来没有测试过.
+
+
+
+    棕色的高亮表示这个地方的计算结果每次都一样的,而这往往意味着测试得还不够充分.
+
+
+
+*** give advice to the test coverage too
+
+    可以通过将代码包裹进一些宏(这些宏本身不会改变代码的执行结果)中,来告诉testcover一些信息.
+
+
+
+    * (1value form)
+
+
+
+    该宏告诉testcover,form的计算结果每次都应该一样的.
+
+
+
+    * (noreturn form)
+
+
+
+    该宏告诉testcover,form不应该返回. 若form返回了,会收到一个run-time error
+
+** Profiling
+
+   * 使用M-x profiler-start开启性能监控,然后选择监控cpu还是mem还是两者都监控.
+
+
+
+   * 执行操作,运行待测试的函数
+
+
+
+   * 执行M-x profiler-report显示性能检测结果.
+
+
+
+   在报告中
+
+
+
+   * 按j可以跳转到函数定义处.
+
+
+
+   * 按d可以显示函数的documentation
+
+
+
+   * 可以使用C-x C-w保存检测报告
+
+
+
+   * 使用=比较两个检测结果
+
+
+
+   * 执行M-x profiler-stop结束监控过程
+
+** Trace
+
+*** (trace-function FUNCTION &optional BUFFER CONTEXT)
+
+
+
+    可以追踪函数FUNCTION的执行过程. 当调用到FUNCTION函数时,会在trace buffer中输出FUNCTION的参数以及返回值.
+
+
+
+    参数BUFFER,指明了在哪个buffer中输出trace信息. 默认buffer名由变量`trace-buffer'决定
+
+
+
+    *使用该函数追踪FUNCTION时,总会弹出`trace-buffer' buffer.因此不要用该函数追踪哪些会切换buffer的函数,对于这种函数使用`trace-function-background'代替*
+
+
+
+    使用`untrace-function'或`untrace-all'停止对FUNCTION的追踪.
+
+
+
+*** (trace-function-background FUNCTION &optional BUFFERCONTEXT)
+
+
+
+    类似`trace-function',但追踪函数FUNCTION时,不会弹出buffer也不会改变window configuration
+
+
+
+*** (untrace-function FUNCTION)
+
+
+
+    取消对FUNCTION的追踪
+
+
+
+*** (untrace-all)
+
+
+
+    取消对所有的函数的追踪

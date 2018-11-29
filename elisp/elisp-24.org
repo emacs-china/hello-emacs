@@ -1,0 +1,33 @@
+#+TITLE: 关于输入法
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#关于输入法][关于输入法]]
+
+* 关于输入法
+
+  读取event的函数会调用当前使用的输入法. 但`read-event'读取一个print character(包括<SPC>)时,会以该character作为参数,调用`input-method-function'所表示的函数
+
+
+
+  * input-method-function
+
+    `read-event'读取一个print character(包括<SPC>)时,会以该character作为参数,调用`input-method-function'所表示的函数
+
+
+
+  该input-method-function的返回值应该是一系列由event组成的list. 若返回nil表示没有输入,这样`read-event'会等待下一个event产生.
+
+
+
+  若input-method-function中又调用了`read-event'或`read-key-sequence',则需要记住把`input-method-function'的值绑定为nil,否则会发生无限递归.
+
+
+
+  The input method function is not called when reading the second and subsequent events of a key sequence.
+
+  Thus, these characters are not subject to input method processing.
+
+  The input method function should test the values of `overriding-local-map' and `overriding-terminal-local-map';
+
+  if either of these variables is non-`nil', the input method should put its argument into a list and return that list with no further processing.

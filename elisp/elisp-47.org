@@ -1,0 +1,13 @@
+#+TITLE: Dired-mode相关函数
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#dired-mode相关函数][Dired-mode相关函数]]
+
+* Dired-mode相关函数
+
+  * 获取dired中marked file
+
+
+
+  使用函数`dired-get-marked-files`

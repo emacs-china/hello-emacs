@@ -1,0 +1,449 @@
+#+TITLE: Loading
+#+AUTHOR: DarkSun
+
+* 目录                                                    :TOC_4_gh:noexport:
+- [[#loading][Loading]]
+  - [[#load命令][Load命令]]
+  - [[#autoload][Autoload]]
+  - [[#features][Features]]
+  - [[#查找定义所在的文件][查找定义所在的文件]]
+  - [[#unloading][Unloading]]
+  - [[#hooks][Hooks]]
+
+* Loading
+
+** Load命令
+
+   * (load filename &optional missing-ok nomessage nosuffix must-suffix)
+
+
+
+   load先查找filename.elc文件,再查找filename.el文件,再查找filename文件
+
+
+
+   若开启了Auto-Compression-mode(默认开启),则load在查找后一个文件前还会查找前一个文件的压缩版本(参见变量`jka-compr-load-suffixes').
+
+
+
+   若nosuffix参数为非nil,则load不会查找filename.elc和filename.el,但不影响auto-compression-mode的作用
+
+
+
+   若must-suffix参数为非nil,则load认为加载的文件名后缀必须为.el和.elc(或他们的压缩版本),除非filename中包含了明确的目录名称.
+
+
+
+   若参数missing-ok,则在找不到要加载的文件时,不抛出错误,只是返回nil
+
+
+
+   若`load-prefer-newer'配置项为非nil,则load会挑选filename.elc和filename.el中最近较新的那个来加载
+
+
+
+   若filename为相对路径,则load会在变量`load-path'中定义的路径中查询,查询到的第一个存在文件作为要加载的文件. 需要注意的是:需要在`load-path'中添加nil才回在当前路径搜索要load的文件
+
+
+
+   load在加载文件时,会同时设置变量`load-file-name'的值为加载文件的文件名.
+
+
+
+   若load顺利加载文件,则返回t
+
+
+
+   * (load-file filename)
+
+
+
+   加载filename所明确指定的文件,并不会为它添加.el会.elc后缀(但不影响Auto Compression Mode的作用)
+
+
+
+   若filename为相对路径,则认为是相对于当前路径来说的. (该函数并不涉及到load-path变量)
+
+
+
+   * (load-library library)
+
+
+
+   类似load
+
+
+
+   * 变量`load-file-name'
+
+
+
+   存储的是load时实际加载的文件名称.
+
+
+
+   * 变量`load-in-progress'
+
+
+
+   若Emacs正在加载某个文件,则该值为非nil,否则为nil
+
+
+
+   * 变量`load-read-functioin'
+
+
+
+   该变量指明的函数,用于替代`load'和`eval-region'中的`read'函数
+
+
+
+   该变量默认为nil,表示`read'
+
+
+
+   * 变量`load-suffixes'
+
+
+
+   load在搜索文件时,会根据该变量中设置的后缀,添加到filename参数后面来寻找文件.
+
+
+
+   默认为'(".elc" ".el")
+
+
+
+   * 变量`load-file-rep-suffixes'
+
+
+
+   This is a list of suffixes that indicate representations of the same file.
+
+
+
+   该变量一般以""开头,若开了Auto Compression Mode则会把`jka-compr-load-suffixes'的内容也加进去.
+
+
+
+   * (get-load-suffixes)
+
+
+
+   返回load函数尝试添加的文件后缀. 它的值一般是`load-suffixes'与`load-file-rep-suffixes'的集合.
+
+
+
+   * 配置项load-prefer-newer
+
+
+
+   若该配置项为非nil,则load会检测所有可能的加载文件,并挑选最新的那个来加载
+
+
+
+   * 变量load-path
+
+
+
+   load函数搜索加载文件的路径列表,nil表示当前工作目录
+
+
+
+   可以在运行emacs时用-L选项指定load-path的值
+
+
+
+   对于每个load-path中的目录,emacs都会去检查是否有subdirs.el这个文件,若存在该文件,则加载它. 由emacs自动生成的subdirs.el会自动将该目录下的所有以 *字母与数字结尾* 的子目录路径添加到load-path中.
+
+
+
+   * 命令(locate-library library &optional nosuffix path interactive-call)
+
+
+
+   找到指定library所表示的精确文件名. 它的搜索方式与load一致.
+
+
+
+   参数nosuffix与load参数中的一样. 非nil表示不添加.elc和.el后缀
+
+
+
+   若PATH为非nil,则表示用参数PATH的值代替load-path的值
+
+
+
+   当作为命令运行locate-library时,参数interactive-call的值为t,则会在echo area中显示file name,否则函数直接返回文件名称
+
+
+
+   * 命令(list-load-path-shadows &optional stringp)
+
+
+
+   该命令列出隐藏的Emacs Lisp文件的列表.
+
+
+
+   所谓隐藏文件指的是这样一些文件,虽然在load-path中有定义其目录,但是由于在搜索到其目录之前已经发现了符合条件的加载文件,因此load命令无法加载到这些文件.
+
+
+
+   参数stringp指定是以字符串的形式返回文件列表,还是显示在buffer中.
+
+** Autoload
+
+
+
+   autoload让你在一开始只是记录函数/宏所对应的加载文件路径. 当第一次用到该函数/宏(或查看其帮助文档)时才开始加载对应的文件.
+
+
+
+   有两种方法设置一个autoload函数:使用autoload函数和在源代码中使用特定的注释
+
+
+
+   * (autoload function-or-macro filename &optional docstring interactive type)
+
+
+
+   该函数指定function-or-macro为autoload函数/宏. 其源代码定义在filename中.
+
+
+
+   若filename中不包含目录名称或.el/.elc的后缀,该函数会自动在加载时添加后缀,并且该函数不会加载不带后缀的文件.
+
+
+
+   参数doc-string使得在不加载实际文件前,也能够查看function-or-macro的对应说明.
+
+
+
+   参数interactive为非nil,则表示function-or-macro为命令. 这使得Emacs能够为M-x提供该命令的补全而不用加载function-or-macro的真实定义.
+
+
+
+   当参数function-or-macro为macro/keymap时,可以将type参数设置为'macro或'keymap
+
+
+
+   若function-or-macro已经有一个非autoload的非空函数,则autoload什么也不做,只是返回nil
+
+
+
+   * (autoloadp object)
+
+
+
+   判断object是否为autoload类型的对象
+
+
+
+   * 使用特殊注释定义autoload对象
+
+
+
+   在定义真实的函数定义前,加上注释`;;;###autoload'(这种特殊的注释,被称为autoload cookie)
+
+
+
+   随后执行M-x update-file-autoloads/update-directory-autoloads命令,会将autoload的调用命令写道生成的loaddefs.el中.
+
+
+
+   * 变量generate-autoload-cookie
+
+
+
+   该变量指定了定义autoload对象的特殊注释格式,默认为`;;;###autoload'
+
+
+
+   * 变量generate-autoload-file
+
+
+
+   该变量定义了将生成的autoload语句放到哪个文件中,默认为`loaddefs.el'
+
+
+
+   * (autoload-do-load autoload-object &optional name macro-only)
+
+
+
+   加载autoload-object所在的源代码文件.
+
+
+
+   参数name若为非nil则需要时一个表示autoload-function的symbol. 这时它的返回值为该symbol的实际定义函数.
+
+
+
+   若参数macro-only为'macro,则autoload-do-load不加载函数,只加载macro
+
+** Features
+
+   features是除autoload外推迟加载的另一种方式.
+
+
+
+   一个feature是一个表示函数与变量的集合的symbol,可以在文件中用provide声明一个feature,同时使用require来加载一个feature
+
+
+
+   需要注意的是: 不要在let内使用require,否则可能会产生不可预知的后果.
+
+
+
+   Although top-level calls to `require' are evaluated during byte compilation, `provide' calls are not.  Therefore, you can ensure that a file of definitions is loaded before it is byte-compiled by including a `provide' followed by a `require' for the same feature, as in the following example.
+
+   #+BEGIN_SRC emacs-lisp
+
+     (provide 'my-feature)  ; Ignored by byte compiler,
+
+                                             ;   evaluated by `load'.
+
+     (require 'my-feature)  ; Evaluated by byte compiler.
+
+   #+END_SRC
+
+
+
+   * (provide feature &optional subfeatures)
+
+
+
+   该函数声明已经加载了feature,下次再require该feature时,不会去重新加载该feature所在的文件
+
+
+
+   这里参数subfeatures应该而我一个由symbol组成的list,表示该版本的feature,提供了一系列的subfeatures
+
+
+
+
+
+   * (require feature &optional filename noerror)
+
+
+
+   该函数检查该Emacs Session是否已经加载了feature,若没有,则使用load加载filename.
+
+
+
+   若参数filename为nil,则使用feature的字符串表示作为load的参数. 但要注意的是,这种情况下,require只会加载带有.el/.elc为后缀的文件(auto comression mode也有效果). 一个名为feature而不带任何后缀的文件不会被加载.
+
+
+
+   若noerror参数为非nil,则当load文件失败时,只返回nil,而不抛出error.否则返回参数feature.
+
+
+
+   若加载filename成功,而该文件没有provide feature,则require抛出error:`Required feature FEATURE was not provided'
+
+
+
+   *require语句会在编译阶段得到执行.*
+
+
+
+   * (featurep feature &optional subfeature)
+
+
+
+   若feature已经加载到该Emacs Session(即feature是否为`features'中的member)则返回t.
+
+
+
+   若subfeature为非nil,则只有在subfeature也被provided了的情况下才返回t
+
+
+
+   * 变量features
+
+
+
+   该变量为一个由symbol组成的list,每个symbol都是加载到该Emacs Session中的feature
+
+** 查找定义所在的文件
+
+   * (symbol-file symbol &optional type)
+
+
+
+   查找定义symbol的文件路径.
+
+
+
+   参数type指定了symbol的类型,可以是nil,'defun,defvar或defface
+
+
+
+   symbol-file实际是从`load-history'变量中查找symbol所在的文件的.
+
+** Unloading
+
+   * (unload-feature feature &optional force)
+
+
+
+   回收feature所定义的函数/变量,恢复之前的symbol定义.
+
+
+
+   若变量`FEATURE-unload-function'的值为某个函数,则unload-feature会在执行清理前执行该函数. 若该函数返回nil,则unload-feature接着执行正常的清理过程,否则,unload-feature不再进行下一步的清理.
+
+
+
+   默认情况下,unload-feature不会unload被其他库依赖的feature, 但若force参数为非nil,则unload-feature不会检查依赖关系.
+
+
+
+   unload-feature函数也是根据变量`load-history'的内容来行动的.
+
+
+
+   * 变量unload-feature-special-hooks
+
+
+
+   该变量为一个hooks列表,在执行unload操作前,会先删除这些hooks中的定义在library中的函数.
+
+** Hooks
+
+   * after-load-functions
+
+
+
+   load完某个文件后,会执行该hook,每个hook函数会接收一个参数:刚加载文件的绝对路径
+
+
+
+   * 宏(with-eval-after-load library-or-feature bodys...)
+
+
+
+   若library-or-feature为library,则在每次加载完library文件后,都执行一次bodys代码
+
+
+
+   若在执行该宏的时候,library已经被加载过了,则该宏会立刻执行一次bodys
+
+   #+BEGIN_SRC emacs-lisp
+
+     (with-eval-after-load "edebug" (def-edebug-spec c-point t)
+
+   #+END_SRC
+
+
+
+   若library-or-feature为feature,则在执行(provide feature)之后才回执行bodys的内容
+
+
+
+   若执行bodys时抛出error,不会unload已加载的文件,但是会阻止bodys中的下面语句的执行.
+
+
+
+   一般该宏没什么用.
